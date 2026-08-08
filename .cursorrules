@@ -1,0 +1,55 @@
+# 🤖 AI Code Assistant Rules
+
+> **Stack:** Next.js (App Router) · TypeScript · Shadcn UI · Tailwind CSS · Prisma · Neon (Postgres)
+> **Architecture:** Feature-Based Monolith (See: docs/architecture/)
+
+---
+
+## 📁 1. Architectural Boundaries (STRICT)
+- **Feature Isolation:** All domain logic belongs in `src/features/[domain]/`. Do not create feature-specific components, services, or types in the root `src/components/` or `src/lib/` directories.
+- **Root Components:** `src/components/ui/` is ONLY for Shadcn primitives. `src/components/shared/` is ONLY for components used across multiple features.
+- **No Cross-Feature Coupling:** Do not import directly from `features/inventory/services` into `features/purchasing/components`. Use Server Actions or shared types from `src/types/` as the bridge.
+
+## 🛢️ 2. Data Flow & Logic Layering (STRICT)
+- **The Pipeline:** UI Component → Server Action → Service → Prisma.
+- **Server Actions (`actions/`):** Must be thin wrappers. They ONLY validate input (using Zod) and call a Service function. Never put Prisma queries or complex business logic directly in an Action.
+- **Services (`services/`):** This is where business logic, calculations, and Prisma database calls live. Services must be pure TypeScript functions that are easily testable.
+- **No DB in UI:** NEVER import Prisma Client or write database queries inside React components. Fetch data via Server Components or Server Actions.
+
+## ⚛️ 3. Next.js App Router Rules
+- **Server by Default:** Assume all React components are Server Components unless they require interactivity.
+- **Client Components:** Only add `'use client'` if the component uses hooks, event handlers, or browser-only APIs. Keep `'use client'` as the very first line in the file.
+- **Data Fetching:** Fetch data in Server Components at the `page.tsx` level and pass it down as props. Prefer Server Actions for mutations.
+
+## 🎨 4. UI & Styling (STRICT - Design Tokens)
+- **Shadcn Only:** Use Shadcn UI components for all base UI elements. Do NOT build raw HTML elements styled with Tailwind from scratch.
+- **No Hardcoded Colors:** NEVER use hardcoded hex codes (e.g., `#FF0000`, `bg-blue-500`). ALWAYS use the Tailwind design token classes mapped in `tailwind.config.ts` (e.g., `bg-primary`, `text-muted-foreground`).
+- **No External UI Libraries:** Do NOT install or use Material Tailwind, DaisyUI, or MUI. Shadcn + Tailwind is the exclusive styling system.
+
+## 🛡️ 5. Type Safety & Validation
+- **No `any`:** Never use the `any` type. Use `unknown` and narrow it, or define a proper interface.
+- **Zod First:** Define all data shapes and validation rules using Zod schemas in `features/[domain]/types/`. Infer TypeScript interfaces from Zod schemas using `z.infer<typeof MySchema>`.
+
+## 🏭 6. ERP Business Logic Rules
+- **Soft Deletes:** NEVER physically delete financial or operational records. Use a `status: 'Cancelled'` or `deletedAt` timestamp.
+- **State Machines:** Status transitions must be strictly enforced in the `services/` layer. Return a specific error if an invalid transition is attempted.
+- **Currency & Math:** Never use JavaScript floats for financial calculations. Use a decimal library (e.g., `decimal.js`) or calculate in integer cents on the backend.
+
+## 📝 7. Code Structure & AI Context Formatting
+- **New File Creation:** When writing new files, divide code into logical, numbered blocks using the separator format below.
+- **Code Updates:** When suggesting updates to existing code, clearly state the file path, identify the block number being modified, and provide the complete updated block.
+
+**Block Separator Format:**
+// ───────────────── BLOCK 1: Imports ────────────────────────────
+// ───────────────── BLOCK 2: Types & Zod Schemas ────────────────
+// ───────────────── BLOCK 3: Component / Service ────────────────
+// ───────────────── BLOCK 4: Exports ────────────────────────────
+
+**Update Format Example:**
+📁 File: `src/features/purchasing/components/StatusCell.tsx`
+📦 BLOCK 3 of 4 — Update Required
+
+## 🛠️ 8. Git & Version Control
+- Always provide proper git commands after significant code suggestions.
+- **Commit Format:** `git commit -m "type: descriptive message"` (Types: feat, fix, refactor, style, docs, chore).
+- **Branch Awareness:** Never assume the target branch is `main`. If branch is unknown, ask the user before providing git push commands.
