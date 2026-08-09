@@ -1,0 +1,85 @@
++----------------------------------------------------------+
+|                                                          |
+|          NEXT.JS             |
+|          mrp-system                                      |
+|                                                          |
+|          Generated: 2026-08-08 04:58:51                  |
+|                                                          |
++----------------------------------------------------------+
+
+  mrp-system/
+  |
+  ├── docs/
+  │   ├── ai-instructions/  (empty)
+  │   └── architecture/  (empty)
+  ├── public/
+  │   ├── [IMG]  file.svg
+  │   ├── [IMG]  globe.svg
+  │   ├── [IMG]  next.svg
+  │   ├── [IMG]  vercel.svg
+  │   └── [IMG]  window.svg
+  ├── src/
+  │   ├── app/
+  │   │   ├──        favicon.ico
+  │   │   ├── [CSS]  globals.css
+  │   │   ├── [TS]   layout.tsx
+  │   │   └── [TS]   page.tsx
+  │   ├── components/
+  │   │   ├── shared/  (empty)
+  │   │   └── ui/
+  │   │       └── [TS]   button.tsx
+  │   ├── features/
+  │   │   ├── dashboard/
+  │   │   │   ├── actions/  (empty)
+  │   │   │   ├── components/  (empty)
+  │   │   │   ├── services/  (empty)
+  │   │   │   └── types/  (empty)
+  │   │   ├── forecasts/
+  │   │   │   ├── actions/  (empty)
+  │   │   │   ├── components/  (empty)
+  │   │   │   ├── services/  (empty)
+  │   │   │   └── types/  (empty)
+  │   │   ├── inventory/
+  │   │   │   ├── actions/  (empty)
+  │   │   │   ├── components/  (empty)
+  │   │   │   ├── services/  (empty)
+  │   │   │   └── types/  (empty)
+  │   │   ├── mrp/
+  │   │   │   ├── services/  (empty)
+  │   │   │   └── types/  (empty)
+  │   │   ├── products/
+  │   │   │   ├── actions/  (empty)
+  │   │   │   ├── components/  (empty)
+  │   │   │   ├── forms/  (empty)
+  │   │   │   ├── modals/  (empty)
+  │   │   │   ├── services/  (empty)
+  │   │   │   └── types/  (empty)
+  │   │   └── purchasing/
+  │   │       ├── actions/  (empty)
+  │   │       ├── components/  (empty)
+  │   │       ├── forms/  (empty)
+  │   │       ├── modals/  (empty)
+  │   │       ├── services/  (empty)
+  │   │       └── types/  (empty)
+  │   ├── hooks/  (empty)
+  │   └── lib/
+  │       └── [TS]   utils.ts
+  ├── [MD]   AGENTS.md
+  ├── [MD]   CLAUDE.md
+  ├── [JSON] components.json
+  ├──        .cursorrules
+  ├──        eslint.config.mjs
+  ├──        .gitignore
+  ├── [TS]   next.config.ts
+  ├── [TS]   next-env.d.ts
+  ├── [JSON] package.json
+  ├── [JSON] package-lock.json
+  ├──        postcss.config.mjs
+  ├── [TXT]  project-structure.txt
+  ├── [MD]   README.md
+  ├── [JSON] tsconfig.json
+  └── [SH]   update-structure.sh
+
++----------------------------------------------------------+
+|  SUMMARY:  Folders: 44   | Files: 26   | Total: 70       |
++----------------------------------------------------------+
