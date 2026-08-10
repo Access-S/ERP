@@ -3,7 +3,7 @@
 |          NEXT.JS             |
 |          mrp-system                                      |
 |                                                          |
-|          Generated: 2026-08-09 06:05:29                  |
+|          Generated: 2026-08-10 05:00:38                  |
 |                                                          |
 +----------------------------------------------------------+
 
@@ -17,7 +17,9 @@
   │   └── [IMG]  window.svg
   ├── src/
   │   ├── app/
-  │   │   ├── (app)/
+  │   │   ├── (system)/
+  │   │   │   ├── playground/
+  │   │   │   │   └── [TS]   page.tsx
   │   │   │   ├── [TS]   layout.tsx
   │   │   │   └── [TS]   page.tsx
   │   │   ├──        favicon.ico
@@ -25,22 +27,34 @@
   │   │   └── [TS]   layout.tsx
   │   ├── components/
   │   │   ├── shared/
-  │   │   │   └── [TS]   app-sidebar.tsx
+  │   │   │   ├── [TS]   app-sidebar.tsx
+  │   │   │   └── [TS]   StackedDialog.tsx
   │   │   └── ui/
+  │   │       ├── [TS]   alert.tsx
+  │   │       ├── [TS]   avatar.tsx
+  │   │       ├── [TS]   badge.tsx
   │   │       ├── [TS]   button.tsx
+  │   │       ├── [TS]   card.tsx
   │   │       ├── [TS]   collapsible.tsx
+  │   │       ├── [TS]   dialog.tsx
   │   │       ├── [TS]   input.tsx
+  │   │       ├── [TS]   label.tsx
+  │   │       ├── [TS]   select.tsx
   │   │       ├── [TS]   separator.tsx
   │   │       ├── [TS]   sheet.tsx
   │   │       ├── [TS]   sidebar.tsx
   │   │       ├── [TS]   skeleton.tsx
+  │   │       ├── [TS]   sonner.tsx
+  │   │       ├── [TS]   table.tsx
+  │   │       ├── [TS]   tabs.tsx
+  │   │       ├── [TS]   textarea.tsx
   │   │       └── [TS]   tooltip.tsx
   │   ├── hooks/
   │   │   └── [TS]   use-mobile.ts
-  │   └── lib/
-  │       └── [TS]   utils.ts
-  ├── [MD]   AGENTS.md
-  ├── [MD]   CLAUDE.md
+  │   ├── lib/
+  │   │   └── [TS]   utils.ts
+  │   └── types/
+  │       └── [TS]   navigation.ts
   ├── [JSON] components.json
   ├──        .cursorrules
   ├──        eslint.config.mjs
@@ -51,10 +65,9 @@
   ├── [JSON] package-lock.json
   ├──        postcss.config.mjs
   ├── [TXT]  project-structure.txt
-  ├── [MD]   README.md
   ├── [JSON] tsconfig.json
   └── [SH]   update-structure.sh
 
 +----------------------------------------------------------+
-|  SUMMARY:  Folders: 9    | Files: 36   | Total: 45       |
+|  SUMMARY:  Folders: 11   | Files: 47   | Total: 58       |
 +----------------------------------------------------------+
