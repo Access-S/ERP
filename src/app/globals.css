@@ -100,7 +100,7 @@
   
   --secondary: oklch(0.11 0 0);          /* Dark gray secondary */
   --secondary-foreground: oklch(0.985 0 0);
-  
+
   --muted: oklch(0.11 0 0);              /* Muted background */
   --muted-foreground: oklch(0.556 0 0);  /* Gray text */
   
@@ -138,5 +138,58 @@
   }
   html {
     @apply font-sans;
+  }
+
+  /* 
+     ADD THIS: Forces Sonner to stay in sync with your OKLCH tokens 
+     even before the JS theme listener kicks in.
+  */
+ [data-sonner-toast] {
+    --normal-bg: var(--card) !important;
+    --normal-border: var(--border) !important;
+    --normal-text: var(--foreground) !important;
+    
+    --success-bg: var(--card) !important;
+    --success-border: var(--border) !important;
+    --success-text: var(--foreground) !important;
+
+    --error-bg: var(--card) !important;
+    --error-border: var(--border) !important;
+    --error-text: var(--foreground) !important;
+
+    --info-bg: var(--card) !important;
+    --info-border: var(--border) !important;
+    --info-text: var(--foreground) !important;
+  }
+}
+
+@layer utilities {
+  .animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  .animate-shimmer {
+    background-size: 200% 100%;
+    background-image: linear-gradient(
+      90deg,
+      rgb(255 255 255 / 0.05) 25%,
+      rgb(255 255 255 / 0.15) 50%,
+      rgb(255 255 255 / 0.05) 75%
+    );
+    animation: shimmer 3.0s infinite linear;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
   }
 }

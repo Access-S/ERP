@@ -13,6 +13,8 @@ import {
   Cpu,
   ChevronDown,
 } from "lucide-react"
+// Import from our new global types folder
+import type { NavItem, NavGroup } from "@/types/navigation"
 
 import {
   Sidebar,
@@ -28,23 +30,12 @@ import {
 } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 
-// ─── TYPES (Fixes Loose End: Type Safety) ───────
-interface NavItem {
-  title: string
-  url: string
-  icon: React.ElementType
-}
-
-interface NavGroup {
-  label: string
-  items: NavItem[]
-}
-
 const navGroups: NavGroup[] = [
   {
     label: "Overview",
     items: [
       { title: "Dashboard", url: "/", icon: LayoutDashboard },
+      { title: "UI Playground", url: "/playground", icon: LayoutDashboard },
     ],
   },
   {

@@ -1,9 +1,8 @@
-// ─── BLOCK 1: Imports ────────────────────────────
 import type { Metadata } from "next"
 import { Inter, Geist_Mono, Bebas_Neue } from "next/font/google"
+import { Toaster } from "sonner"
 import "./globals.css"
 
-// ─── BLOCK 2: Fonts ──────────────────────────────
 const inter = Inter({
   variable: "--font-body",
   subsets: ["latin"],
@@ -20,13 +19,11 @@ const bebasNeue = Bebas_Neue({
   weight: "400",
 })
 
-// ─── BLOCK 3: Metadata ───────────────────────────
 export const metadata: Metadata = {
   title: "MRP System",
   description: "Manufacturing Resource Planning ERP",
 }
 
-// ─── BLOCK 4: Component ──────────────────────────
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -38,6 +35,7 @@ export default function RootLayout({
         className={`${inter.variable} ${geistMono.variable} ${bebasNeue.variable} antialiased`}
       >
         {children}
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   )

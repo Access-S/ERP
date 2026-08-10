@@ -3,15 +3,12 @@
 |          NEXT.JS             |
 |          mrp-system                                      |
 |                                                          |
-|          Generated: 2026-08-08 04:58:51                  |
+|          Generated: 2026-08-09 06:05:29                  |
 |                                                          |
 +----------------------------------------------------------+
 
   mrp-system/
   |
-  ├── docs/
-  │   ├── ai-instructions/  (empty)
-  │   └── architecture/  (empty)
   ├── public/
   │   ├── [IMG]  file.svg
   │   ├── [IMG]  globe.svg
@@ -20,48 +17,26 @@
   │   └── [IMG]  window.svg
   ├── src/
   │   ├── app/
+  │   │   ├── (app)/
+  │   │   │   ├── [TS]   layout.tsx
+  │   │   │   └── [TS]   page.tsx
   │   │   ├──        favicon.ico
   │   │   ├── [CSS]  globals.css
-  │   │   ├── [TS]   layout.tsx
-  │   │   └── [TS]   page.tsx
+  │   │   └── [TS]   layout.tsx
   │   ├── components/
-  │   │   ├── shared/  (empty)
+  │   │   ├── shared/
+  │   │   │   └── [TS]   app-sidebar.tsx
   │   │   └── ui/
-  │   │       └── [TS]   button.tsx
-  │   ├── features/
-  │   │   ├── dashboard/
-  │   │   │   ├── actions/  (empty)
-  │   │   │   ├── components/  (empty)
-  │   │   │   ├── services/  (empty)
-  │   │   │   └── types/  (empty)
-  │   │   ├── forecasts/
-  │   │   │   ├── actions/  (empty)
-  │   │   │   ├── components/  (empty)
-  │   │   │   ├── services/  (empty)
-  │   │   │   └── types/  (empty)
-  │   │   ├── inventory/
-  │   │   │   ├── actions/  (empty)
-  │   │   │   ├── components/  (empty)
-  │   │   │   ├── services/  (empty)
-  │   │   │   └── types/  (empty)
-  │   │   ├── mrp/
-  │   │   │   ├── services/  (empty)
-  │   │   │   └── types/  (empty)
-  │   │   ├── products/
-  │   │   │   ├── actions/  (empty)
-  │   │   │   ├── components/  (empty)
-  │   │   │   ├── forms/  (empty)
-  │   │   │   ├── modals/  (empty)
-  │   │   │   ├── services/  (empty)
-  │   │   │   └── types/  (empty)
-  │   │   └── purchasing/
-  │   │       ├── actions/  (empty)
-  │   │       ├── components/  (empty)
-  │   │       ├── forms/  (empty)
-  │   │       ├── modals/  (empty)
-  │   │       ├── services/  (empty)
-  │   │       └── types/  (empty)
-  │   ├── hooks/  (empty)
+  │   │       ├── [TS]   button.tsx
+  │   │       ├── [TS]   collapsible.tsx
+  │   │       ├── [TS]   input.tsx
+  │   │       ├── [TS]   separator.tsx
+  │   │       ├── [TS]   sheet.tsx
+  │   │       ├── [TS]   sidebar.tsx
+  │   │       ├── [TS]   skeleton.tsx
+  │   │       └── [TS]   tooltip.tsx
+  │   ├── hooks/
+  │   │   └── [TS]   use-mobile.ts
   │   └── lib/
   │       └── [TS]   utils.ts
   ├── [MD]   AGENTS.md
@@ -81,5 +56,5 @@
   └── [SH]   update-structure.sh
 
 +----------------------------------------------------------+
-|  SUMMARY:  Folders: 44   | Files: 26   | Total: 70       |
+|  SUMMARY:  Folders: 9    | Files: 36   | Total: 45       |
 +----------------------------------------------------------+
