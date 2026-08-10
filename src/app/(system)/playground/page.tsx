@@ -31,8 +31,7 @@ import {
   ArrowRight,
   DatabaseZap
 } from "lucide-react"
-// Shared Component Import
-import { HoldToConfirmButton } from "@/components/shared/HoldToConfirmButton"
+import { HoldConfirmButton } from "@/components/shared/HoldConfirmButton"
 
 // ───────────────── BLOCK 2: Types & Zod Schemas ────────────────
 type DialogLayer = 'base' | 'nested';
@@ -76,17 +75,21 @@ export default function PlaygroundPage() {
               </div>
             </div>
 
-            {/* Friction & Danger */}
+             {/* Friction & Danger */}
             <div className="space-y-4">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Friction & Safety</Label>
               <div className="grid gap-4">
-                <HoldToConfirmButton 
-                  label="Hold to Void PO"
-                  holdTime={2000}
-                  onConfirm={() => toast.error("Purchase Order Voided", {
-                    description: "The transaction has been removed from the active ledger."
-                  })}
-                />
+                {/* Fix: Updated props to match HoldActionButton API */}
+<HoldConfirmButton
+  verb="Void" // That's it! Component handles "Hold to Void", "Voiding...", "Voided"
+  pastTenseOverride="Voided" // Optional: Only needed if English is irregular (like Cancel -> Cancelled)
+  holdTime={2000}
+  onConfirm={async () => {
+    toast.error("Purchase Order Voided", {
+      description: "The transaction has been removed from the active ledger."
+    })
+  }}
+/>
                 <Button variant="destructive">Instant Delete (Risky)</Button>
                 <Button variant="warning">Warning Override</Button>
               </div>
