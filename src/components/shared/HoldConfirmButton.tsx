@@ -1,245 +1,220 @@
-// ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client'
 
-import * as React from "react"
-import { AlertCircle } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { buttonVariants } from "@/components/ui/button"
+// ───────────────── BLOCK 1: Imports ────────────────────────────
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+import { type VariantProps } from 'class-variance-authority'
+import { Trash2 } from 'lucide-react'
 
-// ───────────────── BLOCK 2: Types & Zod Schemas ────────────────
-type ButtonVariant = Parameters<typeof buttonVariants>[0]["variant"]
-type ButtonSize = Parameters<typeof buttonVariants>[0]["size"]
+// ───────────────── BLOCK 2: Types & Interfaces ─────────────────
+type ButtonVariant = VariantProps<typeof buttonVariants>['variant']
 
-export interface HoldConfirmButtonProps {
-  /** Async Server Action or mutation callback */
-  onConfirm: () => Promise<void>
-  onError?: (error: unknown) => void
-  holdTime?: number
-  variant?: ButtonVariant
-  /** Sizing prop passed directly to Shadcn. Manage this at the page level. */
-  size?: ButtonSize 
+interface HoldConfirmButtonProps {
+  onConfirm: () => void
+  duration?: number
+  children: React.ReactNode
   className?: string
   disabled?: boolean
-
-  // --- TEXT API ---
-  verb?: string
-  subject?: string
-  pastTenseVerb?: string
-  label?: string
-  holdingLabel?: string
-  confirmLabel?: string
-}
-// ───────────────── BLOCK 3: Component / Service ────────────────
-const DEFAULT_HOLD_DURATION_MS = 1500
-const SUCCESS_RESET_DELAY_MS = 2000
-const ERROR_RESET_DELAY_MS = 2000
-
-const RADIUS = 10
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS
-const CHECKMARK_PATH_LENGTH = 24
-
-function useReducedMotion() {
-  const [reduced, setReduced] = React.useState(false)
-  React.useEffect(() => {
-    const mql = window.matchMedia("(prefers-reduced-motion: reduce)")
-    setReduced(mql.matches)
-    const handler = (e: MediaQueryListEvent) => setReduced(e.matches)
-    mql.addEventListener("change", handler)
-    return () => mql.removeEventListener("change", handler)
-  }, [])
-  return reduced
+  variant?: ButtonVariant
 }
 
-type ButtonState = "idle" | "holding" | "processing" | "success" | "error"
+interface HoldConfirmIconButtonProps {
+  onConfirm: () => void
+  duration?: number
+  icon?: React.ReactNode
+  className?: string
+  disabled?: boolean
+  size?: number
+  variant?: ButtonVariant
+}
 
-function HoldConfirmButton({
-  onConfirm,
-  onError,
-  holdTime = DEFAULT_HOLD_DURATION_MS,
-  variant = "destructive",
-  size, // No default! Fully controlled by the page
-  disabled,
-  className,
-  // Text API
-  verb = "Cancel",
-  subject,
-  pastTenseVerb,
-  label,
-  holdingLabel,
-  confirmLabel,
-}: HoldConfirmButtonProps) {
-  const prefersReducedMotion = useReducedMotion()
-  const [state, setState] = React.useState<ButtonState>("idle")
-  const timerRef = React.useRef<NodeJS.Timeout | null>(null)
+// ───────────────── BLOCK 3: Shared Hook ────────────────────────
+function useHoldProgress(
+  duration: number,
+  onConfirm: () => void,
+  disabled?: boolean
+) {
+  const [progress, setProgress] = useState(0)
+  const startTimeRef = useRef<number | null>(null)
+  const rafRef = useRef<number | null>(null)
+  const confirmedRef = useRef(false)
 
-  const isDisabled = disabled || state === "processing" || state === "success"
-  const isActive = state === "holding" || state === "processing"
+  // Keep mutable values fresh for the RAF loop
+  const onConfirmRef = useRef(onConfirm)
+  const durationRef = useRef(duration)
+  useEffect(() => { onConfirmRef.current = onConfirm }, [onConfirm])
+  useEffect(() => { durationRef.current = duration }, [duration])
 
-  // ─── SMART TEXT DERIVATION ───
-  const pastVerb = pastTenseVerb || `${verb}ed`
-  const idleText = label || (subject ? `Hold to ${verb} ${subject}` : `Hold to ${verb}`)
-  const holdingText = holdingLabel || (subject ? `${verb}ing ${subject}...` : `${verb}ing...`)
-  const successText = confirmLabel || (subject ? `${subject} ${pastVerb}` : pastVerb)
-  const errorText = "Failed"
-
-  const executeAction = async () => {
-    setState("processing")
-    try {
-      await onConfirm()
-      setState("success")
-      setTimeout(() => setState("idle"), SUCCESS_RESET_DELAY_MS)
-    } catch (err) {
-      setState("error")
-      onError?.(err)
-      setTimeout(() => setState("idle"), ERROR_RESET_DELAY_MS)
+  const clearRaf = useCallback(() => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
     }
-  }
+  }, [])
 
-  const startHold = () => {
-    if (isDisabled || isActive) return
-    if (prefersReducedMotion) {
-      executeAction()
+  const reset = useCallback(() => {
+    clearRaf()
+    startTimeRef.current = null
+    setProgress(0)
+    confirmedRef.current = false
+  }, [clearRaf])
+
+  const animate = useCallback(() => {
+    if (startTimeRef.current === null) return
+
+    const elapsed = Date.now() - startTimeRef.current
+    const newProgress = Math.min(elapsed / durationRef.current, 1)
+
+    setProgress(newProgress)
+
+    if (newProgress >= 1 && !confirmedRef.current) {
+      confirmedRef.current = true
+      onConfirmRef.current()
+      reset()
       return
     }
-    setState("holding")
-    timerRef.current = setTimeout(() => {
-      executeAction()
-    }, holdTime)
-  }
 
-  const cancelHold = () => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current)
-      timerRef.current = null
-    }
-    if (state === "holding") setState("idle")
-  }
+    rafRef.current = requestAnimationFrame(animate)
+  }, [reset])
 
-  React.useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current)
-    }
-  }, [])
+  const start = useCallback(() => {
+    if (disabled) return
+    confirmedRef.current = false
+    startTimeRef.current = Date.now()
+    rafRef.current = requestAnimationFrame(animate)
+  }, [disabled, animate])
 
-  const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
-    if (e.button !== 0) return
-    e.currentTarget.setPointerCapture(e.pointerId)
-    startHold()
-  }
+  const stop = useCallback(() => {
+    if (!confirmedRef.current) reset()
+  }, [reset])
 
-  const handlePointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
-    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-      e.currentTarget.releasePointerCapture(e.pointerId)
-    }
-    cancelHold()
-  }
+  // Cancel if disabled mid-hold
+  useEffect(() => {
+    if (disabled) reset()
+  }, [disabled, reset])
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
-    if ((e.key === " " || e.key === "Enter") && !e.repeat) {
-      e.preventDefault()
-      startHold()
-    }
-  }
+  useEffect(() => {
+    return () => clearRaf()
+  }, [clearRaf])
 
-  const handleKeyUp = (e: React.KeyboardEvent<HTMLButtonElement>) => {
-    if (e.key === " " || e.key === "Enter") {
-      e.preventDefault()
-      cancelHold()
-    }
-  }
+  return { progress, start, stop }
+}
+
+// ───────────────── BLOCK 4: HoldConfirmButton Component ────────
+export function HoldConfirmButton({
+  onConfirm,
+  duration = 1500,
+  children,
+  className,
+  disabled = false,
+  variant = 'secondary',
+}: HoldConfirmButtonProps) {
+  const { progress, start, stop } = useHoldProgress(duration, onConfirm, disabled)
 
   return (
-    <button
+    <Button
       type="button"
-      disabled={isDisabled}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={cancelHold}
-      onPointerLeave={cancelHold}
-      onKeyDown={handleKeyDown}
-      onKeyUp={handleKeyUp}
-      onContextMenu={(e) => e.preventDefault()}
-      aria-label={state === "success" ? successText : state === "error" ? errorText : isActive ? holdingText : idleText}
-      aria-live="polite"
+      variant={variant}
       className={cn(
-        buttonVariants({
-          variant: state === "error" ? "outline" : variant,
-          size,
-        }),
-        // w-fit prevents grids/flexboxes from stretching the button wide
-        "relative w-fit touch-none select-none overflow-hidden",
-        "transition-all duration-150 ease-in-out",
-        // Tactile "Sinking" Feel
-        isActive ? "scale-[0.96] shadow-none" : "scale-100 shadow-sm",
+        'relative overflow-hidden select-none touch-none',
+        disabled && 'opacity-50 cursor-not-allowed',
         className
       )}
+      disabled={disabled}
+      onMouseDown={start}
+      onMouseUp={stop}
+      onMouseLeave={stop}
+      onTouchStart={start}
+      onTouchEnd={stop}
+      onContextMenu={(e) => e.preventDefault()}
     >
-      {/* ICON / RING / CHECKMARK SLOT */}
-      {/* Only render when active/success/error so text stays perfectly centered in idle */}
-      {state !== "idle" && (
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center">
-          {state === "error" && <AlertCircle className="h-5 w-5 text-destructive" />}
-          {(isActive || state === "success") && (
-            <svg
-              className="h-5 w-5 -rotate-90"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              {/* Background Track */}
-              <circle
-                cx="12"
-                cy="12"
-                r={RADIUS}
-                className="text-muted-foreground/30"
-                strokeDasharray={CIRCUMFERENCE}
-                strokeDashoffset={0}
-              />
-              {/* Progress Ring (Visual only, synced to holdTime duration) */}
-              <circle
-                cx="12"
-                cy="12"
-                r={RADIUS}
-                className={cn(
-                  state === "success" ? "text-primary" : "text-foreground",
-                  "transition-property-[stroke-dashoffset] ease-linear"
-                )}
-                strokeDasharray={CIRCUMFERENCE}
-                strokeDashoffset={isActive ? 0 : CIRCUMFERENCE}
-                style={{
-                  transitionDuration: isActive ? `${holdTime}ms` : "200ms",
-                  transitionTimingFunction: isActive ? "linear" : "ease-out",
-                }}
-              />
-              {/* Checkmark Path (Draws on Success) */}
-              <path
-                d="M5 12l3 3 7-7"
-                className="text-primary transition-property-[stroke-dashoffset] duration-300 ease-in-out"
-                strokeDasharray={CHECKMARK_PATH_LENGTH}
-                strokeDashoffset={state === "success" ? 0 : CHECKMARK_PATH_LENGTH}
-                style={{ transform: "rotate(90deg)", transformOrigin: "center" }}
-              />
-            </svg>
-          )}
-        </span>
-      )}
-
-      {/* TEXT SLOT */}
-      <span className="whitespace-nowrap">
-        {state === "success"
-          ? successText
-          : state === "error"
-          ? errorText
-          : isActive
-          ? holdingText
-          : idleText}
+      {/* Fill layer */}
+      <span
+        className="absolute inset-0 bg-primary origin-left"
+        style={{ transform: `scaleX(${progress})` }}
+      />
+      {/* Content */}
+      <span className="relative z-10 flex items-center justify-center gap-2">
+        {children}
       </span>
-    </button>
+    </Button>
   )
 }
 
-// ───────────────── BLOCK 4: Exports ────────────────────────────
-export { HoldConfirmButton }
+// ───────────────── BLOCK 5: HoldConfirmIconButton Component ────
+export function HoldConfirmIconButton({
+  onConfirm,
+  duration = 1500,
+  icon,
+  className,
+  disabled = false,
+  size = 40,
+  variant = 'outline',
+}: HoldConfirmIconButtonProps) {
+  const { progress, start, stop } = useHoldProgress(duration, onConfirm, disabled)
+
+  const padding = 4
+  const strokeWidth = 3.5
+  const ringSize = size - padding * 2
+  const radius = (ringSize - strokeWidth) / 2
+  const circumference = 2 * Math.PI * radius
+  const strokeDashoffset = circumference * (1 - progress)
+
+  return (
+    <div
+      className={cn('relative inline-block', className)}
+      style={{ width: size, height: size }}
+    >
+      <Button
+        type="button"
+        variant={variant}
+        size="icon"
+        className={cn(
+          'w-full h-full select-none touch-none',
+          disabled && 'opacity-50 cursor-not-allowed'
+        )}
+        disabled={disabled}
+        onMouseDown={start}
+        onMouseUp={stop}
+        onMouseLeave={stop}
+        onTouchStart={start}
+        onTouchEnd={stop}
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        <span className="relative z-10 flex items-center justify-center">
+          {icon || <Trash2 className="h-4 w-4" />}
+        </span>
+      </Button>
+
+      <svg
+        className="absolute pointer-events-none"
+        width={ringSize}
+        height={ringSize}
+        viewBox={`0 0 ${ringSize} ${ringSize}`}
+        style={{ top: padding, left: padding }}
+      >
+        <circle
+          cx={ringSize / 2}
+          cy={ringSize / 2}
+          r={radius}
+          fill="none"
+          className="stroke-border"
+          strokeWidth={strokeWidth}
+        />
+        <circle
+          cx={ringSize / 2}
+          cy={ringSize / 2}
+          r={radius}
+          fill="none"
+          className="stroke-primary"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          transform={`rotate(-90 ${ringSize / 2} ${ringSize / 2})`}
+        />
+      </svg>
+    </div>
+  )
+}

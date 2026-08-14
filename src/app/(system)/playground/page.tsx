@@ -1,196 +1,341 @@
-// ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client'
 
-import * as React from "react"
-import { useState } from "react"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+// ───────────────── BLOCK 1: Imports ────────────────────────────
+import { useState } from 'react'
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { toast } from "sonner"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { 
-  ShieldCheck, 
-  User, 
-  MousePointer2, 
-  Plus, 
-  CheckCircle, 
-  AlertTriangle, 
-  Settings,
-  ArrowRight,
-  DatabaseZap
-} from "lucide-react"
-import { HoldConfirmButton } from "@/components/shared/HoldConfirmButton"
+  HoldConfirmButton,
+  HoldConfirmIconButton,
+} from '@/components/shared/HoldConfirmButton'
+import {
+  Calendar,
+  CalendarMonthSelect,
+  CalendarNextTrigger,
+  CalendarPresetTrigger,
+  CalendarPrevTrigger,
+  CalendarTable,
+  CalendarTableDays,
+  CalendarViewControl,
+  CalendarWeekDays,
+  CalendarYearSelect,
+} from '@/components/shared/calendar'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { Trash2, AlertTriangle, RotateCcw, Shield } from 'lucide-react'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { type CalendarDateRange, type CalendarValue } from '@/types/calendar'
 
-// ───────────────── BLOCK 2: Types & Zod Schemas ────────────────
-type DialogLayer = 'base' | 'nested';
+// ───────────────── BLOCK 2: Types ──────────────────────────────
+interface ActionLog {
+  id: number
+  label: string
+  timestamp: string
+}
 
-// ───────────────── BLOCK 3: Component ──────────────────────────
+// ───────────────── BLOCK 3: Page Component ─────────────────────
 export default function PlaygroundPage() {
-  const [activeLayer, setActiveLayer] = useState<DialogLayer>('base');
-  const [isLoading, setIsLoading] = useState(false);
+  const [logs, setLogs] = useState<ActionLog[]>([])
+  const [nextId, setNextId] = useState(1)
 
-  const simulateLoading = () => {
-    setIsLoading(true);
-    setTimeout(() => setIsLoading(false), 2000);
-  };
+  // Calendar test states
+  const [singleDate, setSingleDate] = useState<CalendarValue>(undefined)
+  const [dateRange, setDateRange] = useState<CalendarValue>(undefined)
+
+  const handleConfirm = (label: string) => {
+    const now = new Date().toLocaleTimeString()
+    setLogs((prev) => [{ id: nextId, label, timestamp: now }, ...prev])
+    setNextId((id) => id + 1)
+  }
+
+  const clearLogs = () => {
+    setLogs([])
+    setNextId(1)
+  }
+
+  const formatValue = (val: CalendarValue): string => {
+    if (!val) return 'None'
+    if (val instanceof Date) return val.toLocaleDateString()
+    if (Array.isArray(val)) return val.map((d) => d.toLocaleDateString()).join(', ')
+    if (typeof val === 'object' && 'from' in val) {
+      const r = val as CalendarDateRange
+      return `${r.from.toLocaleDateString()} → ${r.to?.toLocaleDateString() || '...'}`
+    }
+    return 'Unknown'
+  }
+
+  const scrollTags = Array.from({ length: 50 }, (_, i) => `v1.0.0-beta.${i}`)
 
   return (
-    <div className="space-y-6 p-8 bg-background min-h-screen">
-      <h1 className="text-4xl font-heading tracking-wider text-foreground uppercase tracking-tighter">UI PLAYGROUND</h1>
+    <div className="container mx-auto py-12 px-4 max-w-5xl">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight">
+          Component Playground
+        </h1>
+        <p className="text-muted-foreground mt-2">
+          Test shared components in isolation before feature integration.
+        </p>
+      </div>
 
-      {/* ─── SECTION 1: BUTTON ARSENAL ─── */}
-      <Card className="border-border/50 bg-card shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg font-sans flex items-center gap-2">
-            <Settings className="h-5 w-5 text-primary" />
-            Button Arsenal
-          </CardTitle>
-          <CardDescription className="font-sans">
-            Tactile primitives and friction-based safety actions.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-8">
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Standard Variants */}
-            <div className="space-y-4">
-              <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Standard Variants</Label>
-              <div className="grid gap-2">
-                <Button variant="default">Primary Action</Button>
-                <Button variant="success">Success / Approve</Button>
-                <Button variant="outline">Outline / Neutral</Button>
-                <Button variant="ghost">Ghost / Toolbar</Button>
-              </div>
-            </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* LEFT COLUMN: HoldConfirm Buttons */}
+        <div className="space-y-6">
+          {/* Traditional Fill Button */}
+          <Card>
+            <CardHeader>
+              <CardTitle>HoldConfirmButton</CardTitle>
+              <CardDescription>
+                Fill-layer button. Hold to trigger, release to cancel.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-6">
+              <HoldConfirmButton
+                onConfirm={() => handleConfirm('Traditional button executed')}
+                duration={1500}
+              >
+                <AlertTriangle className="h-4 w-4" />
+                Hold to Confirm
+              </HoldConfirmButton>
 
-             {/* Friction & Danger */}
-            <div className="space-y-4">
-              <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Friction & Safety</Label>
-              <div className="grid gap-4">
-                {/* Fix: Updated props to match HoldActionButton API */}
-<HoldConfirmButton
-  verb="Void" // That's it! Component handles "Hold to Void", "Voiding...", "Voided"
-  pastTenseOverride="Voided" // Optional: Only needed if English is irregular (like Cancel -> Cancelled)
-  holdTime={2000}
-  onConfirm={async () => {
-    toast.error("Purchase Order Voided", {
-      description: "The transaction has been removed from the active ledger."
-    })
-  }}
-/>
-                <Button variant="destructive">Instant Delete (Risky)</Button>
-                <Button variant="warning">Warning Override</Button>
-              </div>
-            </div>
+              <HoldConfirmButton
+                onConfirm={() => handleConfirm('Danger button executed')}
+                duration={2000}
+                variant="destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+                Hold to Delete (2s)
+              </HoldConfirmButton>
+            </CardContent>
+          </Card>
 
-            {/* Interactive States */}
-            <div className="space-y-4">
-              <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Async & Icons</Label>
-              <div className="grid gap-2">
-                <Button loading={isLoading} onClick={simulateLoading}>
-                  {isLoading ? "Syncing Database" : "Test Async Flow"}
-                </Button>
-                <div className="flex gap-2">
-                  <Button size="icon" variant="outline"><Plus /></Button>
-                  <Button size="icon" variant="outline"><DatabaseZap /></Button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </CardContent>
-      </Card>
-
-      {/* ─── SECTION 2: STACKED DIALOG ─── */}
-      <Card className="max-w-2xl border-border/50 bg-card shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg font-sans flex items-center gap-2">
-            <MousePointer2 className="h-5 w-5 text-primary" />
-            Stacked Depth
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Dialog onOpenChange={(open) => !open && setActiveLayer('base')}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                Open Management Console
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-
-            <DialogContent 
-              className={cn(
-                "fixed left-[50%] top-[50%] z-50 w-full max-w-lg -translate-x-1/2 border-border/50 bg-card p-6 shadow-2xl transition-all duration-300 ease-in-out",
-                activeLayer === 'nested' 
-                  ? "!-translate-y-[calc(50%+60px)] scale-95 opacity-50 blur-[1px]" 
-                  : "-translate-y-1/2 scale-100 opacity-100 blur-none"
-              )}
-            >
-              <DialogHeader>
-                <div className="flex items-center gap-2 mb-1">
-                  <ShieldCheck className="h-5 w-5 text-primary" />
-                  <DialogTitle className="font-sans text-xl tracking-tight">System Identity</DialogTitle>
-                </div>
-              </DialogHeader>
-
-              <div className="grid gap-6 py-8 text-left">
-                <div className="flex justify-between items-center border-b border-border/40 pb-4">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Access Level</p>
-                    <p className="text-sm font-mono tracking-tighter uppercase text-primary">Super_User_01</p>
-                  </div>
-                  <Badge variant="outline" className="border-success/20 text-success bg-success/5 uppercase text-[10px]">
-                    Verified
-                  </Badge>
-                </div>
-              </div>
-
-              <DialogFooter>
-                <Dialog onOpenChange={(open) => setActiveLayer(open ? 'nested' : 'base')}>
-                  <DialogTrigger asChild>
-                    <Button variant="default" className="w-full">
-                      Edit Security Profile
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[420px] border-border bg-card shadow-2xl animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-8 duration-300">
-                    <DialogHeader>
-                      <DialogTitle className="font-sans text-lg text-primary text-center">Update Details</DialogTitle>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-6 text-left">
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-bold uppercase text-muted-foreground">Legal Name</Label>
-                        <Input defaultValue="Bora Baloglu" className="h-9 bg-background focus-visible:ring-primary/50" />
-                      </div>
+          {/* Icon Ring Button */}
+          <Card>
+            <CardHeader>
+              <CardTitle>HoldConfirmIconButton</CardTitle>
+              <CardDescription>
+                SVG ring progress. All Shadcn variants supported.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-8">
+              <div className="flex items-center gap-4">
+                {(['default', 'secondary', 'outline', 'ghost', 'destructive'] as const).map(
+                  (v) => (
+                    <div key={v} className="flex flex-col items-center gap-2">
+                      <HoldConfirmIconButton
+                        variant={v}
+                        onConfirm={() => handleConfirm(`${v} icon button executed`)}
+                        duration={1500}
+                        icon={<Trash2 className="h-4 w-4" />}
+                      />
+                      <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                        {v}
+                      </span>
                     </div>
-                    <DialogFooter className="gap-2 sm:flex-row-reverse">
-                      <Button onClick={() => { setActiveLayer('base'); toast.success("Identity updated"); }}>
-                        Save
-                      </Button>
-                      <DialogClose asChild>
-                        <Button variant="ghost">Cancel</Button>
-                      </DialogClose>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </CardContent>
-      </Card>
+                  )
+                )}
+              </div>
+
+              <div className="flex items-center gap-6">
+                {[32, 40, 48].map((s) => (
+                  <div key={s} className="flex flex-col items-center gap-2">
+                    <HoldConfirmIconButton
+                      variant="outline"
+                      onConfirm={() => handleConfirm(`${s}px icon button executed`)}
+                      duration={1500}
+                      icon={<Trash2 className={s === 32 ? 'h-3 w-3' : s === 48 ? 'h-5 w-5' : 'h-4 w-4'} />}
+                      size={s}
+                    />
+                    <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                      {s}px
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ScrollArea */}
+          <Card>
+            <CardHeader>
+              <CardTitle>ScrollArea</CardTitle>
+              <CardDescription>
+                Custom scrollable container with scrollFade gradient overlay.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-6">
+              <ScrollArea className="h-64 w-48 rounded-md border" scrollFade>
+                <div className="p-4">
+                  <h4 className="mb-4 font-medium text-sm leading-none">Tags</h4>
+                  {scrollTags.map((tag) => (
+                    <div key={tag}>
+                      <div className="text-sm">{tag}</div>
+                      <Separator className="my-2" />
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* RIGHT COLUMN: Calendar */}
+        <div className="space-y-6">
+          {/* Range Calendar */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Calendar — Range Selection</CardTitle>
+              <CardDescription>
+                Compound component with presets. Click start date, then end date.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-4">
+              <Calendar
+                className="[--cell-size:--spacing(8)]"
+                selectionMode="range"
+                value={dateRange}
+                onChange={setDateRange}
+              >
+                <div className="border rounded-lg p-4 w-full max-w-xs">
+                  <CalendarViewControl>
+                    <CalendarPrevTrigger />
+                    <CalendarMonthSelect />
+                    <CalendarYearSelect />
+                    <CalendarNextTrigger />
+                  </CalendarViewControl>
+                  <CalendarTable>
+                    <CalendarWeekDays />
+                    <CalendarTableDays />
+                  </CalendarTable>
+                  <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
+                    {presets.map((preset) => (
+                      <CalendarPresetTrigger
+                        asChild
+                        key={preset.value}
+                        value={preset.value}
+                      >
+                        <Button className="flex-1" size="sm" variant="outline">
+                          {preset.label}
+                        </Button>
+                      </CalendarPresetTrigger>
+                    ))}
+                  </div>
+                </div>
+              </Calendar>
+
+              <div className="w-full max-w-xs p-3 rounded-md bg-muted">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                  Selected Range
+                </p>
+                <p className="text-sm font-mono text-foreground">
+                  {formatValue(dateRange)}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Single Date Calendar */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Calendar — Single Selection</CardTitle>
+              <CardDescription>
+                Standard single-date picker.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-4">
+              <Calendar
+                className="[--cell-size:--spacing(7)]"
+                selectionMode="single"
+                value={singleDate}
+                onChange={setSingleDate}
+              >
+                <div className="border rounded-lg p-4 w-full max-w-[280px]">
+                  <CalendarViewControl>
+                    <CalendarPrevTrigger />
+                    <CalendarMonthSelect />
+                    <CalendarYearSelect />
+                    <CalendarNextTrigger />
+                  </CalendarViewControl>
+                  <CalendarTable>
+                    <CalendarWeekDays />
+                    <CalendarTableDays />
+                  </CalendarTable>
+                </div>
+              </Calendar>
+
+              <div className="w-full max-w-[280px] p-3 rounded-md bg-muted">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                  Selected Date
+                </p>
+                <p className="text-sm font-mono text-foreground">
+                  {formatValue(singleDate)}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Event Log — Full Width */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Event Log</CardTitle>
+              <CardDescription>
+                {logs.length === 0
+                  ? 'No actions triggered yet.'
+                  : `${logs.length} action${logs.length > 1 ? 's' : ''} triggered.`}
+              </CardDescription>
+            </div>
+            {logs.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearLogs}
+                className="gap-1"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Reset
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent>
+            {logs.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Interact with any component above to see actions logged here.
+              </p>
+            ) : (
+              <ul className="space-y-2 max-h-48 overflow-y-auto">
+                {logs.map((log) => (
+                  <li
+                    key={log.id}
+                    className="flex items-center justify-between text-sm px-3 py-2 rounded-md bg-muted"
+                  >
+                    <span className="font-medium text-foreground">
+                      {log.label}
+                    </span>
+                    <span className="text-xs text-muted-foreground font-mono">
+                      {log.timestamp}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
+
+const presets = [
+  { label: 'Last 7 days', value: 'last7Days' as const },
+  { label: 'Last 14 days', value: 'last14Days' as const },
+  { label: 'Last 30 days', value: 'last30Days' as const },
+  { label: 'This month', value: 'thisMonth' as const },
+] as const
 
 // ───────────────── BLOCK 4: Exports ────────────────────────────

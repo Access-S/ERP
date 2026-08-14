@@ -3,7 +3,7 @@
 |          NEXT.JS             |
 |          mrp-system                                      |
 |                                                          |
-|          Generated: 2026-08-10 05:00:38                  |
+|          Generated: 2026-08-14 03:37:00                  |
 |                                                          |
 +----------------------------------------------------------+
 
@@ -28,6 +28,7 @@
   │   ├── components/
   │   │   ├── shared/
   │   │   │   ├── [TS]   app-sidebar.tsx
+  │   │   │   ├── [TS]   HoldConfirmButton.tsx
   │   │   │   └── [TS]   StackedDialog.tsx
   │   │   └── ui/
   │   │       ├── [TS]   alert.tsx
@@ -69,5 +70,5 @@
   └── [SH]   update-structure.sh
 
 +----------------------------------------------------------+
-|  SUMMARY:  Folders: 11   | Files: 47   | Total: 58       |
+|  SUMMARY:  Folders: 11   | Files: 48   | Total: 59       |
 +----------------------------------------------------------+
