@@ -1,7 +1,7 @@
 'use client'
 
 // ───────────────── BLOCK 1: Imports ────────────────────────────
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Slot } from '@radix-ui/react-slot'
 import { Button } from '@/components/ui/button'
 import {
@@ -47,9 +47,37 @@ interface CalendarContextValue {
   disabledDates: Date[]
   weekStartsOn: 0 | 1
   applyPreset: (preset: CalendarPresetValue) => void
+  today?: Date
+  focusedDate?: Date
+  setFocusedDate: (date: Date) => void
+}
+
+interface DayCellProps {
+  date: Date
+  isCurrentMonth: boolean
+  isToday: boolean
+  isDisabled: boolean
+  isSelected: boolean
+  isRangeStart: boolean
+  isRangeEnd: boolean
+  isInRange: boolean
+  isFocused: boolean
+  selectionMode: CalendarSelectionMode
+  onSelect: (date: Date) => void
+  onHoverChange: (date: Date | undefined) => void
 }
 
 // ───────────────── BLOCK 3: Date Utilities ─────────────────────
+function normalizeDate(date: Date): Date {
+  const d = new Date(date)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+function formatDateKey(date: Date): string {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
+}
+
 function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1)
 }
@@ -70,12 +98,14 @@ function startOfWeek(date: Date, weekStartsOn: 0 | 1 = 0): Date {
 function addMonths(date: Date, amount: number): Date {
   const d = new Date(date)
   d.setMonth(d.getMonth() + amount)
+  d.setHours(0, 0, 0, 0)
   return d
 }
 
 function addDays(date: Date, amount: number): Date {
   const d = new Date(date)
   d.setDate(d.getDate() + amount)
+  d.setHours(0, 0, 0, 0)
   return d
 }
 
@@ -111,16 +141,23 @@ function getCalendarDays(viewDate: Date, weekStartsOn: 0 | 1 = 0): Date[] {
   const days: Date[] = []
   let current = new Date(startWeek)
 
-  while (isBefore(current, startWeek) || days.length < 42) {
+  while (days.length < 42) {
     days.push(new Date(current))
     current = addDays(current, 1)
-    if (days.length >= 42 && isAfter(current, end)) break
   }
   return days
 }
 
-function getWeekdays(weekStartsOn: 0 | 1 = 0): string[] {
-  const days = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+function getWeekdays(weekStartsOn: 0 | 1 = 0): { short: string; full: string }[] {
+  const days = [
+    { short: 'Su', full: 'Sunday' },
+    { short: 'Mo', full: 'Monday' },
+    { short: 'Tu', full: 'Tuesday' },
+    { short: 'We', full: 'Wednesday' },
+    { short: 'Th', full: 'Thursday' },
+    { short: 'Fr', full: 'Friday' },
+    { short: 'Sa', full: 'Saturday' },
+  ]
   if (weekStartsOn === 1) return [...days.slice(1), days[0]]
   return days
 }
@@ -146,14 +183,34 @@ function CalendarProvider({
   weekStartsOn = 0,
 }: Omit<CalendarProps, 'className' | 'children'>) {
   const isControlled = controlledValue !== undefined
+
+  // ── Normalize intake boundaries (memoized) ──
+  const normalizedMinDate = useMemo(
+    () => (minDate ? normalizeDate(minDate) : undefined),
+    [minDate]
+  )
+  const normalizedMaxDate = useMemo(
+    () => (maxDate ? normalizeDate(maxDate) : undefined),
+    [maxDate]
+  )
+  const normalizedDisabledDates = useMemo(
+    () => disabledDates.map((d) => normalizeDate(d)),
+    [disabledDates]
+  )
+
   const [selected, setSelected] = useState<CalendarValue>(defaultValue)
   const [viewDate, setViewDate] = useState<Date>(() => {
     const initial = isControlled ? controlledValue : defaultValue
-    if (initial instanceof Date) return initial
-    if (Array.isArray(initial) && initial.length > 0) return initial[0]
-    if (initial && typeof initial === 'object' && 'from' in initial) return initial.from
-    return new Date()
+    if (initial instanceof Date) return normalizeDate(initial)
+    if (Array.isArray(initial) && initial.length > 0)
+      return normalizeDate(initial[0])
+    if (initial && typeof initial === 'object' && 'from' in initial)
+      return normalizeDate(initial.from)
+    return normalizeDate(new Date())
   })
+
+  const [today, setToday] = useState<Date | undefined>()
+  const [focusedDate, setFocusedDate] = useState<Date | undefined>()
   const [hoverDate, setHoverDate] = useState<Date | undefined>()
 
   const onChangeRef = useRef(onChange)
@@ -161,89 +218,204 @@ function CalendarProvider({
     onChangeRef.current = onChange
   }, [onChange])
 
-  const currentSelected = isControlled ? controlledValue : selected
+  // ── Defensive setters (stable identity) ──
+  const handleSetViewDate = useCallback((date: Date) => {
+    setViewDate(normalizeDate(date))
+  }, [])
 
+  const handleSetHoverDate = useCallback((date?: Date) => {
+    setHoverDate(date ? normalizeDate(date) : undefined)
+  }, [])
+
+  const handleSetFocusedDate = useCallback((date: Date) => {
+    setFocusedDate(normalizeDate(date))
+  }, [])
+
+  // ── Current selected value + ref for stable callbacks ──
+  // Declared BEFORE the useEffect that reads from it (code ordering).
+  const currentSelected = isControlled ? controlledValue : selected
+  const currentSelectedRef = useRef(currentSelected)
+  currentSelectedRef.current = currentSelected
+
+  // ── SSR-safe today + focusedDate initialization ──
+  // Both are undefined on server + first client render (no hydration mismatch).
+  // After mount, today is set to now, and focusedDate is set to the
+  // selected date or today — giving the roving tabindex a logical home.
+  useEffect(() => {
+    const now = normalizeDate(new Date())
+    setToday(now)
+
+    setFocusedDate((prev) => {
+      if (prev) return prev
+      const sel = currentSelectedRef.current
+      if (sel instanceof Date) return normalizeDate(sel)
+      if (Array.isArray(sel) && sel.length > 0) return normalizeDate(sel[0])
+      if (sel && typeof sel === 'object' && 'from' in sel && sel.from)
+        return normalizeDate(sel.from)
+      return now
+    })
+  }, [])
+
+  // ── Sync viewDate when controlled value changes externally ──
+  useEffect(() => {
+    if (!isControlled || !controlledValue) return
+
+    let incomingDate: Date | undefined
+    if (controlledValue instanceof Date) {
+      incomingDate = controlledValue
+    } else if (Array.isArray(controlledValue) && controlledValue.length > 0) {
+      incomingDate = controlledValue[0]
+    } else if (
+      controlledValue &&
+      typeof controlledValue === 'object' &&
+      'from' in controlledValue &&
+      controlledValue.from
+    ) {
+      incomingDate = controlledValue.from
+    }
+
+    if (incomingDate) {
+      const normalized = normalizeDate(incomingDate)
+      setViewDate((prev) =>
+        isSameMonth(prev, normalized) ? prev : normalized
+      )
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isControlled, controlledValue])
+
+  // ── Stable selectDate: reads from ref, also syncs focusedDate ──
   const selectDate = useCallback(
     (date: Date) => {
+      const normalizedDate = normalizeDate(date)
+      setFocusedDate(normalizedDate)
+      const current = currentSelectedRef.current
+
       if (selectionMode === 'single') {
-        if (!isControlled) setSelected(date)
-        onChangeRef.current?.(date)
+        if (!isControlled) setSelected(normalizedDate)
+        onChangeRef.current?.(normalizedDate)
       } else if (selectionMode === 'range') {
-        const range = currentSelected && typeof currentSelected === 'object' && 'from' in currentSelected
-          ? (currentSelected as CalendarDateRange)
-          : undefined
+        const range =
+          current &&
+          typeof current === 'object' &&
+          'from' in current
+            ? (current as CalendarDateRange)
+            : undefined
 
         if (!range || range.to) {
-          const newRange: CalendarDateRange = { from: date }
+          const newRange: CalendarDateRange = { from: normalizedDate }
           if (!isControlled) setSelected(newRange)
           onChangeRef.current?.(newRange)
         } else {
-          let from = range.from
-          let to = date
+          let from = normalizeDate(range.from)
+          let to = normalizedDate
           if (isBefore(to, from)) [from, to] = [to, from]
           const newRange: CalendarDateRange = { from, to }
           if (!isControlled) setSelected(newRange)
           onChangeRef.current?.(newRange)
         }
       } else {
-        const arr = (currentSelected as Date[] | undefined) || []
-        const exists = arr.some((d) => isSameDay(d, date))
-        const newArr = exists ? arr.filter((d) => !isSameDay(d, date)) : [...arr, date]
+        const arr = (current as Date[] | undefined) || []
+        const exists = arr.some((d) => isSameDay(d, normalizedDate))
+        const newArr = exists
+          ? arr.filter((d) => !isSameDay(d, normalizedDate))
+          : [...arr, normalizedDate]
         if (!isControlled) setSelected(newArr)
         onChangeRef.current?.(newArr)
       }
     },
-    [isControlled, currentSelected, selectionMode]
+    [isControlled, selectionMode]
   )
 
   const applyPreset = useCallback(
     (preset: CalendarPresetValue) => {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
+      if (selectionMode !== 'range') {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(
+            'Calendar: applyPreset is only supported in range selection mode'
+          )
+        }
+        return
+      }
+
+      const now = normalizeDate(new Date())
       let from: Date
-      let to: Date = today
+      let to: Date = now
 
       switch (preset) {
         case 'last7Days':
-          from = addDays(today, -6)
+          from = addDays(now, -6)
           break
         case 'last14Days':
-          from = addDays(today, -13)
+          from = addDays(now, -13)
           break
         case 'last30Days':
-          from = addDays(today, -29)
+          from = addDays(now, -29)
           break
         case 'thisMonth':
-          from = startOfMonth(today)
-          to = endOfMonth(today)
+          from = startOfMonth(now)
+          to = endOfMonth(now)
           break
       }
+
+      if (normalizedMinDate && isBefore(from, normalizedMinDate))
+        from = normalizedMinDate
+      if (normalizedMaxDate && isAfter(to, normalizedMaxDate))
+        to = normalizedMaxDate
+
+      if (normalizedMinDate && isBefore(to, normalizedMinDate)) return
+      if (normalizedMaxDate && isAfter(from, normalizedMaxDate)) return
+
+      if (isBefore(to, from)) [from, to] = [to, from]
 
       const range: CalendarDateRange = { from, to }
       if (!isControlled) setSelected(range)
       setViewDate(from)
+      setFocusedDate(from)
       onChangeRef.current?.(range)
     },
-    [isControlled]
+    [isControlled, selectionMode, normalizedMinDate, normalizedMaxDate]
+  )
+
+  // ── Memoized context value ──
+  const contextValue = useMemo<CalendarContextValue>(
+    () => ({
+      viewDate,
+      setViewDate: handleSetViewDate,
+      selected: currentSelected,
+      selectDate,
+      hoverDate,
+      setHoverDate: handleSetHoverDate,
+      selectionMode,
+      minDate: normalizedMinDate,
+      maxDate: normalizedMaxDate,
+      disabledDates: normalizedDisabledDates,
+      weekStartsOn,
+      applyPreset,
+      today,
+      focusedDate,
+      setFocusedDate: handleSetFocusedDate,
+    }),
+    [
+      viewDate,
+      currentSelected,
+      hoverDate,
+      today,
+      focusedDate,
+      selectDate,
+      handleSetViewDate,
+      handleSetHoverDate,
+      handleSetFocusedDate,
+      selectionMode,
+      normalizedMinDate,
+      normalizedMaxDate,
+      normalizedDisabledDates,
+      weekStartsOn,
+      applyPreset,
+    ]
   )
 
   return (
-    <CalendarContext.Provider
-      value={{
-        viewDate,
-        setViewDate,
-        selected: currentSelected,
-        selectDate,
-        hoverDate,
-        setHoverDate,
-        selectionMode,
-        minDate,
-        maxDate,
-        disabledDates,
-        weekStartsOn,
-        applyPreset,
-      }}
-    >
+    <CalendarContext.Provider value={contextValue}>
       {children}
     </CalendarContext.Provider>
   )
@@ -287,6 +459,7 @@ export function CalendarPrevTrigger({
       type="button"
       variant="outline"
       size="icon"
+      aria-label="Previous month"
       className={cn('h-7 w-7 cursor-pointer', className)}
       onClick={() => setViewDate(addMonths(viewDate, -1))}
       {...props}
@@ -306,6 +479,7 @@ export function CalendarNextTrigger({
       type="button"
       variant="outline"
       size="icon"
+      aria-label="Next month"
       className={cn('h-7 w-7 cursor-pointer', className)}
       onClick={() => setViewDate(addMonths(viewDate, 1))}
       {...props}
@@ -382,7 +556,7 @@ export function CalendarTable({
   children: React.ReactNode
 }) {
   return (
-    <div className={cn('w-full', className)} role="grid">
+    <div className={cn('w-full', className)} role="grid" aria-label="Calendar">
       {children}
     </div>
   )
@@ -396,36 +570,54 @@ export function CalendarWeekDays({ className }: { className?: string }) {
     <div className={cn('grid grid-cols-7 mb-1', className)} role="row">
       {weekdays.map((day) => (
         <div
-          key={day}
+          key={day.short}
           className="text-center text-xs font-medium text-muted-foreground py-1"
           role="columnheader"
         >
-          {day}
+          <abbr title={day.full} aria-label={day.full} className="no-underline">
+            {day.short}
+          </abbr>
         </div>
       ))}
     </div>
   )
 }
 
-function DayCell({ date }: { date: Date }) {
+// ── Pure function: computes all boolean flags for a single day ──
+function computeDayState(
+  date: Date,
+  ctx: {
+    viewDate: Date
+    selected: CalendarValue
+    selectionMode: CalendarSelectionMode
+    hoverDate?: Date
+    minDate?: Date
+    maxDate?: Date
+    disabledSet: Set<string>
+    today?: Date
+    focusedDate?: Date
+  }
+) {
   const {
     viewDate,
     selected,
     selectionMode,
-    selectDate,
     hoverDate,
-    setHoverDate,
     minDate,
     maxDate,
-    disabledDates,
-  } = useCalendar()
+    disabledSet,
+    today,
+    focusedDate,
+  } = ctx
 
   const isCurrentMonth = isSameMonth(date, viewDate)
-  const isToday = isSameDay(date, new Date())
+  const isToday = today ? isSameDay(date, today) : false
+  const isFocused = focusedDate ? isSameDay(date, focusedDate) : false
+  const dateKey = formatDateKey(date)
   const isDisabled =
     (minDate && isBefore(date, minDate)) ||
     (maxDate && isAfter(date, maxDate)) ||
-    disabledDates.some((d) => isSameDay(d, date))
+    disabledSet.has(dateKey)
 
   let isSelected = false
   let isRangeStart = false
@@ -461,23 +653,62 @@ function DayCell({ date }: { date: Date }) {
     isSelected = selected.some((d) => isSameDay(d, date))
   }
 
+  return {
+    isCurrentMonth,
+    isToday,
+    isDisabled,
+    isSelected,
+    isRangeStart,
+    isRangeEnd,
+    isInRange,
+    isFocused,
+  }
+}
+
+// ── Memoized presentational component with roving tabindex ──
+const DayCell = React.memo(function DayCell({
+  date,
+  isCurrentMonth,
+  isToday,
+  isDisabled,
+  isSelected,
+  isRangeStart,
+  isRangeEnd,
+  isInRange,
+  isFocused,
+  selectionMode,
+  onSelect,
+  onHoverChange,
+}: DayCellProps) {
+  const ref = useRef<HTMLButtonElement>(null)
+
+  // Move actual DOM focus when this cell becomes the focused cell.
+  // This fires only when isFocused changes (false→true), thanks to
+  // React.memo — only 2 cells re-render on each arrow key press.
+  useEffect(() => {
+    if (isFocused) {
+      ref.current?.focus()
+    }
+  }, [isFocused])
+
   return (
     <button
+      ref={ref}
       type="button"
       role="gridcell"
-      aria-selected={isSelected || isInRange}
+      aria-selected={isSelected}
       aria-disabled={isDisabled}
       disabled={isDisabled}
-      tabIndex={isCurrentMonth ? 0 : -1}
-      onClick={() => !isDisabled && selectDate(date)}
-      onMouseEnter={() => selectionMode === 'range' && setHoverDate(date)}
-      onMouseLeave={() => selectionMode === 'range' && setHoverDate(undefined)}
+      tabIndex={isFocused ? 0 : -1}
+      onClick={() => !isDisabled && onSelect(date)}
+      onMouseEnter={() => selectionMode === 'range' && onHoverChange(date)}
+      onMouseLeave={() => selectionMode === 'range' && onHoverChange(undefined)}
       className={cn(
         'relative flex items-center justify-center text-sm transition-colors cursor-pointer',
         'h-[var(--cell-size,2rem)] w-[var(--cell-size,2rem)]',
         !isCurrentMonth && 'text-muted-foreground opacity-50',
         isDisabled && 'opacity-50 cursor-not-allowed',
-        isToday && !isSelected && !isInRange && 'border border-primary',
+        isToday && !isSelected && !isInRange && !isDisabled && 'border border-primary',
         isInRange && 'bg-primary/10 text-primary rounded-none',
         isRangeStart && !isRangeEnd && 'bg-primary text-primary-foreground rounded-md rounded-r-none',
         isRangeEnd && !isRangeStart && 'bg-primary text-primary-foreground rounded-md rounded-l-none',
@@ -489,17 +720,143 @@ function DayCell({ date }: { date: Date }) {
       {date.getDate()}
     </button>
   )
-}
+})
 
 export function CalendarTableDays({ className }: { className?: string }) {
-  const { viewDate, weekStartsOn } = useCalendar()
-  const days = getCalendarDays(viewDate, weekStartsOn)
+  const {
+    viewDate,
+    weekStartsOn,
+    selected,
+    selectionMode,
+    selectDate,
+    hoverDate,
+    setHoverDate,
+    minDate,
+    maxDate,
+    disabledDates,
+    today,
+    focusedDate,
+    setFocusedDate,
+    setViewDate,
+  } = useCalendar()
+
+  const days = useMemo(
+    () => getCalendarDays(viewDate, weekStartsOn),
+    [viewDate, weekStartsOn]
+  )
+
+  const disabledSet = useMemo(
+    () => new Set(disabledDates.map((d) => formatDateKey(d))),
+    [disabledDates]
+  )
+
+  // ── Keyboard navigation handler ──
+  // Arrow keys move focus by day/week, Home/End jump to week start/end,
+  // PageUp/Down navigate months (Shift+PageUp/Down for years),
+  // Enter/Space selects the focused date.
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!focusedDate) return
+
+    let newDate: Date | undefined
+
+    switch (e.key) {
+      case 'ArrowUp':
+        newDate = addDays(focusedDate, -7)
+        break
+      case 'ArrowDown':
+        newDate = addDays(focusedDate, 7)
+        break
+      case 'ArrowLeft':
+        newDate = addDays(focusedDate, -1)
+        break
+      case 'ArrowRight':
+        newDate = addDays(focusedDate, 1)
+        break
+      case 'Home': {
+        const day = focusedDate.getDay()
+        const offset = (day - weekStartsOn + 7) % 7
+        newDate = addDays(focusedDate, -offset)
+        break
+      }
+      case 'End': {
+        const day = focusedDate.getDay()
+        const offset = (day - weekStartsOn + 7) % 7
+        newDate = addDays(focusedDate, 6 - offset)
+        break
+      }
+      case 'PageUp':
+        newDate = e.shiftKey
+          ? new Date(focusedDate.getFullYear() - 1, focusedDate.getMonth(), focusedDate.getDate())
+          : addMonths(focusedDate, -1)
+        break
+      case 'PageDown':
+        newDate = e.shiftKey
+          ? new Date(focusedDate.getFullYear() + 1, focusedDate.getMonth(), focusedDate.getDate())
+          : addMonths(focusedDate, 1)
+        break
+      case 'Enter':
+      case ' ': {
+        e.preventDefault()
+        const focusedKey = formatDateKey(focusedDate)
+        const isFocusedDisabled =
+          (minDate && isBefore(focusedDate, minDate)) ||
+          (maxDate && isAfter(focusedDate, maxDate)) ||
+          disabledSet.has(focusedKey)
+        if (!isFocusedDisabled) {
+          selectDate(focusedDate)
+        }
+        return
+      }
+      default:
+        return
+    }
+
+    if (newDate) {
+      e.preventDefault()
+      setFocusedDate(newDate)
+      if (!isSameMonth(newDate, viewDate)) {
+        setViewDate(newDate)
+      }
+    }
+  }
 
   return (
-    <div className={cn('grid grid-cols-7', className)}>
-      {days.map((date, i) => (
-        <DayCell key={i} date={date} />
-      ))}
+    <div
+      className={cn('grid grid-cols-7', className)}
+      role="row"
+      onKeyDown={handleKeyDown}
+    >
+      {days.map((date) => {
+        const state = computeDayState(date, {
+          viewDate,
+          selected,
+          selectionMode,
+          hoverDate,
+          minDate,
+          maxDate,
+          disabledSet,
+          today,
+          focusedDate,
+        })
+
+        return (
+          <DayCell
+            key={formatDateKey(date)}
+            date={date}
+            isCurrentMonth={state.isCurrentMonth}
+            isToday={state.isToday}
+            isDisabled={state.isDisabled}
+            isSelected={state.isSelected}
+            isRangeStart={state.isRangeStart}
+            isRangeEnd={state.isRangeEnd}
+            isInRange={state.isInRange}
+            isFocused={state.isFocused}
+            selectionMode={selectionMode}
+            onSelect={selectDate}
+            onHoverChange={setHoverDate}
+          />
+        )
+      })}
     </div>
   )
 }

@@ -178,8 +178,10 @@ export default function PlaygroundPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [nestedOpen, setNestedOpen] = useState(false)
 
-  // ── Sheet States ──
-  const [sheetOpen, setSheetOpen] = useState(false)
+  // ── Sheet State ──
+  const [activeSheetSide, setActiveSheetSide] = useState<
+    'left' | 'right' | 'top' | 'bottom' | null
+  >(null)
 
   // ── Collapsible State ──
   const [collapsibleOpen, setCollapsibleOpen] = useState(false)
@@ -718,9 +720,13 @@ export default function PlaygroundPage() {
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
               {(['left', 'right', 'top', 'bottom'] as const).map((side) => (
-                <Sheet key={side} open={sheetOpen && side === 'right'} onOpenChange={setSheetOpen}>
+                <Sheet
+                  key={side}
+                  open={activeSheetSide === side}
+                  onOpenChange={(open) => setActiveSheetSide(open ? side : null)}
+                >
                   <SheetTrigger asChild>
-                    <Button variant="outline" size="sm" onClick={() => setSheetOpen(true)}>
+                    <Button variant="outline" size="sm">
                       {side.charAt(0).toUpperCase() + side.slice(1)}
                     </Button>
                   </SheetTrigger>
@@ -729,7 +735,7 @@ export default function PlaygroundPage() {
                       <SheetTitle>Sheet Panel</SheetTitle>
                       <SheetDescription>Side: {side}</SheetDescription>
                     </SheetHeader>
-                    <div className="py-6 space-y-4">
+                                        <div className="flex-1 px-4 py-6 space-y-4">
                       <div className="space-y-1.5">
                         <Label>Quick Action</Label>
                         <Input placeholder="Type something..." />
@@ -740,7 +746,7 @@ export default function PlaygroundPage() {
                       </div>
                     </div>
                     <SheetFooter>
-                      <Button onClick={() => { handleLog(`Sheet ${side} action`); setSheetOpen(false) }}>
+                      <Button onClick={() => { handleLog(`Sheet ${side} action`); setActiveSheetSide(null) }}>
                         Save
                       </Button>
                     </SheetFooter>
@@ -806,23 +812,25 @@ export default function PlaygroundPage() {
                     <ChevronDown className={cn("h-4 w-4 transition-transform", collapsibleOpen && "rotate-180")} />
                   </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="mt-2 space-y-2 px-2">
-                  <div className="rounded-md border p-3 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span>Steel Frame A-102</span>
-                      <Badge variant="outline">Qty: 4</Badge>
+                <CollapsibleContent className="mt-2">
+                  <div className="space-y-2 px-2">
+                    <div className="rounded-md border p-3 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span>Steel Frame A-102</span>
+                        <Badge variant="outline">Qty: 4</Badge>
+                      </div>
                     </div>
-                  </div>
-                  <div className="rounded-md border p-3 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span>Bearing Unit X-9</span>
-                      <Badge variant="outline">Qty: 2</Badge>
+                    <div className="rounded-md border p-3 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span>Bearing Unit X-9</span>
+                        <Badge variant="outline">Qty: 2</Badge>
+                      </div>
                     </div>
-                  </div>
-                  <div className="rounded-md border p-3 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span>Hydraulic Pump HP-400</span>
-                      <Badge variant="outline">Qty: 1</Badge>
+                    <div className="rounded-md border p-3 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span>Hydraulic Pump HP-400</span>
+                        <Badge variant="outline">Qty: 1</Badge>
+                      </div>
                     </div>
                   </div>
                 </CollapsibleContent>
