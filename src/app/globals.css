@@ -1,3 +1,4 @@
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -8,9 +9,9 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   /* ─── FONT TOKENS ─── */
-  --font-sans: var(--font-body);       /* Default readable font for tables/forms */
-  --font-mono: var(--font-mono);       /* Code/Data font */
-  --font-heading: var(--font-heading); /* Bebas Neue for Titles */
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-heading);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -28,6 +29,7 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -51,95 +53,91 @@
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.92 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-  --success: oklch(0.627 0.265 149.214);
+  --radius: 0.5rem;
+  --background: var(--color-olive-50);
+  --foreground: var(--color-olive-800);
+  --card: var(--color-olive-50);
+  --card-foreground: var(--color-olive-800);
+  --popover: var(--color-olive-50);
+  --popover-foreground: var(--color-olive-800);
+  --primary: var(--color-orange-600);
+  --primary-foreground: var(--color-orange-50);
+  --secondary: color-mix(in srgb, var(--color-olive-950) 6%, var(--background));
+  --secondary-foreground: var(--color-olive-800);
+  --muted: color-mix(in srgb, var(--color-olive-950) 6%, var(--background));
+  --muted-foreground: color-mix(in srgb, var(--color-olive-500) 80%, var(--color-olive-950));
+  --accent: color-mix(in srgb, var(--color-olive-950) 6%, var(--background));
+  --accent-foreground: var(--color-olive-800);
+  --destructive: var(--color-red-500);
+  --destructive-foreground: oklch(0.985 0 0);
+  --info: var(--color-blue-500);
+  --info-foreground: oklch(0.985 0 0);
+  --success: var(--color-emerald-500);
   --success-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.769 0.188 70.08);
-  --warning-foreground: oklch(0.145 0 0);
+  --warning: var(--color-amber-500);
+  --warning-foreground: var(--color-amber-950);
+  --border: color-mix(in srgb, var(--color-olive-950) 12%, var(--background));
+  --input: color-mix(in srgb, var(--color-olive-950) 13%, var(--background));
+  --ring: var(--color-orange-400);
+  --sidebar: var(--color-olive-50);
+  --sidebar-foreground: color-mix(in srgb, var(--color-olive-800) 64%, var(--sidebar));
+  --sidebar-primary: var(--color-orange-600);
+  --sidebar-primary-foreground: var(--color-orange-50);
+  --sidebar-accent: color-mix(in srgb, var(--color-olive-950) 6%, var(--sidebar));
+  --sidebar-accent-foreground: var(--color-olive-800);
+  --sidebar-border: color-mix(in srgb, var(--color-olive-950) 11%, var(--sidebar));
+  --sidebar-ring: var(--color-orange-400);
+  --chart-1: var(--color-orange-600);
+  --chart-2: var(--color-teal-600);
+  --chart-3: var(--color-cyan-900);
+  --chart-4: var(--color-amber-400);
+  --chart-5: var(--color-amber-500);
 }
 
 .dark {
-  /* ─── PITCH BLACK ERP THEME ─── */
-  --background: oklch(0 0 0);            /* Pure Pitch Black #000000 */
-  --foreground: oklch(0.985 0 0);        /* Off-white text */
-  
-  --card: oklch(0.07 0 0);               /* Very subtle lift for cards so they don't melt into bg */
-  --card-foreground: oklch(0.985 0 0);
-  
-  --popover: oklch(0.07 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  
-  --primary: oklch(0.62 0.214 259);      /* Vibrant Blue for primary buttons */
-  --primary-foreground: oklch(1 0 0);    /* Pure white text on blue buttons */
-  
-  --secondary: oklch(0.11 0 0);          /* Dark gray secondary */
-  --secondary-foreground: oklch(0.985 0 0);
-
-  --muted: oklch(0.11 0 0);              /* Muted background */
-  --muted-foreground: oklch(0.556 0 0);  /* Gray text */
-  
-  --accent: oklch(0.20 0 0);             /* Slightly lighter accent */
-  --accent-foreground: oklch(0.985 0 0);
-  
-  --destructive: oklch(0.704 0.191 22.216); /* Standard Red for errors */
-  
-  --border: oklch(1 0 0 / 12%);          /* Crisp, subtle borders */
-  --input: oklch(1 0 0 / 15%);           /* Slightly visible input borders */
-  --ring: oklch(0.62 0.214 259);         /* Blue focus rings matching primary */
-  
-  --chart-1: oklch(0.62 0.214 259);      /* Chart colors matching blue theme */
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  
-  --sidebar: oklch(0.04 0 0);            /* Very dark sidebar, almost black */
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.62 0.214 259); /* Blue active item in sidebar */
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.11 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.62 0.214 259);
-
-  --success: oklch(0.627 0.265 149.214);
-  --success-foreground: oklch(0.145 0 0);
-  --warning: oklch(0.769 0.188 70.08);
-  --warning-foreground: oklch(0.145 0 0);
+  --background: var(--color-olive-950);
+  --foreground: var(--color-olive-100);
+  --card: color-mix(in srgb, var(--background) 98%, var(--color-olive-50));
+  --card-foreground: var(--color-olive-100);
+  --popover: color-mix(in srgb, var(--background) 96%, var(--color-olive-50));
+  --popover-foreground: var(--color-olive-100);
+  --primary: var(--color-orange-700);
+  --primary-foreground: var(--color-orange-50);
+  --secondary: color-mix(in srgb, var(--color-olive-50) 8%, var(--background));
+  --secondary-foreground: var(--color-olive-100);
+  --muted: color-mix(in srgb, var(--color-olive-50) 8%, var(--background));
+  --muted-foreground: color-mix(in srgb, var(--color-olive-500) 70%, var(--color-olive-50));
+  --accent: color-mix(in srgb, var(--color-olive-50) 8%, var(--background));
+  --accent-foreground: var(--color-olive-100);
+  --destructive: color-mix(in srgb, var(--color-red-600) 90%, var(--color-olive-50));
+  --destructive-foreground: oklch(0.985 0 0);
+  --info: var(--color-blue-500);
+  --info-foreground: oklch(0.985 0 0);
+  --success: var(--color-emerald-500);
+  --success-foreground: oklch(0.985 0 0);
+  --warning: var(--color-amber-500);
+  --warning-foreground: var(--color-amber-950);
+  --border: color-mix(in srgb, var(--color-olive-50) 12%, var(--background));
+  --input: color-mix(in srgb, var(--color-olive-50) 13%, var(--background));
+  --ring: var(--color-orange-900);
+  --sidebar: color-mix(in srgb, var(--color-olive-950) 97%, var(--color-olive-50));
+  --sidebar-foreground: color-mix(in srgb, var(--color-olive-100) 64%, var(--sidebar));
+  --sidebar-primary: var(--color-orange-700);
+  --sidebar-primary-foreground: var(--color-orange-50);
+  --sidebar-accent: color-mix(in srgb, var(--color-olive-50) 8%, var(--sidebar));
+  --sidebar-accent-foreground: var(--color-olive-100);
+  --sidebar-border: color-mix(in srgb, var(--color-olive-50) 11%, var(--sidebar));
+  --sidebar-ring: var(--color-orange-900);
+  --chart-1: var(--color-blue-700);
+  --chart-2: var(--color-emerald-500);
+  --chart-3: var(--color-amber-500);
+  --chart-4: var(--color-purple-500);
+  --chart-5: var(--color-rose-500);
 }
 
 @layer base {
@@ -153,15 +151,12 @@
     @apply font-sans;
   }
 
-  /* 
-     ADD THIS: Forces Sonner to stay in sync with your OKLCH tokens 
-     even before the JS theme listener kicks in.
-  */
- [data-sonner-toast] {
+  /* Forces Sonner to stay in sync with theme tokens */
+  [data-sonner-toast] {
     --normal-bg: var(--card) !important;
     --normal-border: var(--border) !important;
     --normal-text: var(--foreground) !important;
-    
+
     --success-bg: var(--card) !important;
     --success-border: var(--border) !important;
     --success-text: var(--foreground) !important;

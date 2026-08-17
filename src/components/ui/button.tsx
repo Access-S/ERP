@@ -12,7 +12,7 @@ const buttonVariants = cva(
    * - transform-gpu: Forces hardware acceleration (Fixes the icon twitch).
    * - origin-center: Ensures the scale expands from the exact middle.
    */
-  "inline-flex shrink-0 items-center justify-center whitespace-nowrap flex-nowrap font-sans rounded-lg text-sm font-medium transition-all duration-200 outline-none select-none disabled:pointer-events-none disabled:opacity-50 cursor-pointer active:scale-[0.98] transform-gpu origin-center ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 items-center justify-center whitespace-nowrap flex-nowrap font-sans rounded-lg text-sm font-medium transition-all duration-200 outline-none select-none disabled:pointer-events-none disabled:opacity-50 cursor-pointer active:scale-[0.92] transform-gpu origin-center ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {

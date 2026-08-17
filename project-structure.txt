@@ -3,7 +3,7 @@
 |          NEXT.JS             |
 |          mrp-system                                      |
 |                                                          |
-|          Generated: 2026-08-14 03:37:00                  |
+|          Generated: 2026-08-17 01:27:22                  |
 |                                                          |
 +----------------------------------------------------------+
 
@@ -28,6 +28,7 @@
   │   ├── components/
   │   │   ├── shared/
   │   │   │   ├── [TS]   app-sidebar.tsx
+  │   │   │   ├── [TS]   calendar.tsx
   │   │   │   ├── [TS]   HoldConfirmButton.tsx
   │   │   │   └── [TS]   StackedDialog.tsx
   │   │   └── ui/
@@ -40,6 +41,7 @@
   │   │       ├── [TS]   dialog.tsx
   │   │       ├── [TS]   input.tsx
   │   │       ├── [TS]   label.tsx
+  │   │       ├── [TS]   scroll-area.tsx
   │   │       ├── [TS]   select.tsx
   │   │       ├── [TS]   separator.tsx
   │   │       ├── [TS]   sheet.tsx
@@ -55,6 +57,7 @@
   │   ├── lib/
   │   │   └── [TS]   utils.ts
   │   └── types/
+  │       ├── [TS]   calendar.ts
   │       └── [TS]   navigation.ts
   ├── [JSON] components.json
   ├──        .cursorrules
@@ -70,5 +73,5 @@
   └── [SH]   update-structure.sh
 
 +----------------------------------------------------------+
-|  SUMMARY:  Folders: 11   | Files: 48   | Total: 59       |
+|  SUMMARY:  Folders: 11   | Files: 51   | Total: 62       |
 +----------------------------------------------------------+
