@@ -1,55 +1,68 @@
-# 🤖 AI Code Assistant Rules
+🤖 AI Code Assistant Rules
+Stack: Next.js (App Router) · TypeScript · Shadcn UI · Tailwind CSS · Prisma · Neon (Postgres)
+Architecture: Feature-Based Monolith (See: docs/architecture/)
 
-> **Stack:** Next.js (App Router) · TypeScript · Shadcn UI · Tailwind CSS · Prisma · Neon (Postgres)
-> **Architecture:** Feature-Based Monolith (See: docs/architecture/)
-
----
-
-## 📁 1. Architectural Boundaries (STRICT)
-- **Feature Isolation:** All domain logic belongs in `src/features/[domain]/`. Do not create feature-specific components, services, or types in the root `src/components/` or `src/lib/` directories.
-- **Root Components:** `src/components/ui/` is ONLY for Shadcn primitives. `src/components/shared/` is ONLY for components used across multiple features.
-- **No Cross-Feature Coupling:** Do not import directly from `features/inventory/services` into `features/purchasing/components`. Use Server Actions or shared types from `src/types/` as the bridge.
-
-## 🛢️ 2. Data Flow & Logic Layering (STRICT)
-- **The Pipeline:** UI Component → Server Action → Service → Prisma.
-- **Server Actions (`actions/`):** Must be thin wrappers. They ONLY validate input (using Zod) and call a Service function. Never put Prisma queries or complex business logic directly in an Action.
-- **Services (`services/`):** This is where business logic, calculations, and Prisma database calls live. Services must be pure TypeScript functions that are easily testable.
-- **No DB in UI:** NEVER import Prisma Client or write database queries inside React components. Fetch data via Server Components or Server Actions.
-
-## ⚛️ 3. Next.js App Router Rules
-- **Server by Default:** Assume all React components are Server Components unless they require interactivity.
-- **Client Components:** Only add `'use client'` if the component uses hooks, event handlers, or browser-only APIs. Keep `'use client'` as the very first line in the file.
-- **Data Fetching:** Fetch data in Server Components at the `page.tsx` level and pass it down as props. Prefer Server Actions for mutations.
-
-## 🎨 4. UI & Styling (STRICT - Design Tokens)
-- **Shadcn Only:** Use Shadcn UI components for all base UI elements. Do NOT build raw HTML elements styled with Tailwind from scratch.
-- **No Hardcoded Colors:** NEVER use hardcoded hex codes (e.g., `#FF0000`, `bg-blue-500`). ALWAYS use the Tailwind design token classes mapped in `tailwind.config.ts` (e.g., `bg-primary`, `text-muted-foreground`).
-- **No External UI Libraries:** Do NOT install or use Material Tailwind, DaisyUI, or MUI. Shadcn + Tailwind is the exclusive styling system.
-
-## 🛡️ 5. Type Safety & Validation
-- **No `any`:** Never use the `any` type. Use `unknown` and narrow it, or define a proper interface.
-- **Zod First:** Define all data shapes and validation rules using Zod schemas in `features/[domain]/types/`. Infer TypeScript interfaces from Zod schemas using `z.infer<typeof MySchema>`.
-
-## 🏭 6. ERP Business Logic Rules
-- **Soft Deletes:** NEVER physically delete financial or operational records. Use a `status: 'Cancelled'` or `deletedAt` timestamp.
-- **State Machines:** Status transitions must be strictly enforced in the `services/` layer. Return a specific error if an invalid transition is attempted.
-- **Currency & Math:** Never use JavaScript floats for financial calculations. Use a decimal library (e.g., `decimal.js`) or calculate in integer cents on the backend.
-
-## 📝 7. Code Structure & AI Context Formatting
-- **New File Creation:** When writing new files, divide code into logical, numbered blocks using the separator format below.
-- **Code Updates:** When suggesting updates to existing code, clearly state the file path, identify the block number being modified, and provide the complete updated block.
-
-**Block Separator Format:**
+📁 1. Architectural Boundaries (STRICT)
+Feature Isolation: All domain logic belongs in src/features/[domain]/. Do not create feature-specific components, services, or types in the root src/components/ or src/lib/ directories.
+Root Components: src/components/ui/ is ONLY for Shadcn primitives. src/components/shared/ is ONLY for components used across multiple features.
+No Cross-Feature Coupling: Do not import directly from features/inventory/services into features/purchasing/components. Use Server Actions or shared types from src/types/ as the bridge.
+🛢️ 2. Data Flow & Logic Layering (STRICT)
+The Pipeline: UI Component → Server Action → Service → Prisma.
+Server Actions (actions/): Must be thin wrappers. They ONLY validate input (using Zod) and call a Service function. Never put Prisma queries or complex business logic directly in an Action.
+Services (services/): This is where business logic, calculations, and Prisma database calls live. Services must be pure TypeScript functions that are easily testable.
+No DB in UI: NEVER import Prisma Client or write database queries inside React components. Fetch data via Server Components or Server Actions.
+⚛️ 3. Next.js App Router Rules
+Server by Default: Assume all React components are Server Components unless they require interactivity.
+Client Components: Only add 'use client' if the component uses hooks, event handlers, or browser-only APIs. Keep 'use client' as the very first line in the file.
+Data Fetching: Fetch data in Server Components at the page.tsx level and pass it down as props. Prefer Server Actions for mutations.
+SSR Safety: NEVER call new Date(), Date.now(), Math.random(), or access window/document during render. These produce different values on server vs. client → hydration mismatch. Use useEffect to set time-dependent or browser-only state after mount, and render undefined until then.
+🎨 4. UI & Styling (STRICT - Design Tokens)
+Shadcn Only: Use Shadcn UI components for all base UI elements. Do NOT build raw HTML elements styled with Tailwind from scratch.
+No Hardcoded Colors: NEVER use hardcoded hex codes (e.g., #FF0000, bg-blue-500). ALWAYS use the Tailwind design token classes mapped in tailwind.config.ts (e.g., bg-primary, text-muted-foreground).
+No External UI Libraries: Do NOT install or use Material Tailwind, DaisyUI, or MUI. Shadcn + Tailwind is the exclusive styling system.
+Accessibility is Not Optional: All interactive components must meet WCAG 2.1 AA:
+Icon-only buttons MUST have aria-label.
+Grid/list components MUST have proper ARIA roles (e.g., role="grid", role="row", role="gridcell") with aria-selected only on truly selected items, not visually-highlighted ones.
+Components with more than 5 focusable elements in a group MUST use roving tabindex (one tabIndex={0}, rest tabIndex={-1}) plus arrow-key navigation.
+Abbreviated text MUST use <abbr title="..."> or aria-label so screen readers announce the full word.
+Touch targets MUST be minimum 44×44px (2.75rem) per WCAG 2.5.8.
+Animations MUST be gated with motion-safe: to respect prefers-reduced-motion: reduce.
+🛡️ 5. Type Safety & Validation
+No any: Never use the any type. Use unknown and narrow it, or define a proper interface.
+Zod First: Define all data shapes and validation rules using Zod schemas in features/[domain]/types/. Infer TypeScript interfaces from Zod schemas using z.infer<typeof MySchema>.
+🏭 6. ERP Business Logic Rules
+Soft Deletes: NEVER physically delete financial or operational records. Use a status: 'Cancelled' or deletedAt timestamp.
+State Machines: Status transitions must be strictly enforced in the services/ layer. Return a specific error if an invalid transition is attempted.
+Currency & Math: Never use JavaScript floats for financial calculations. Use a decimal library (e.g., decimal.js) or calculate in integer cents on the backend.
+📝 7. Code Structure & AI Context Formatting
+New File Creation: When writing new files, divide code into logical, numbered blocks using the separator format below.
+Code Updates: When suggesting updates to existing code, clearly state the file path, identify the block number being modified, and provide the complete updated block.
+No Snippets: When suggesting code updates, ALWAYS provide the complete block or a clearly labeled sub-block. NEVER provide partial snippets, fragments, or "just replace this line" instructions. The user must be able to copy-paste the entire block without guessing what surrounds it.
+Sub-Block Format: When a block is too large to update in full, identify the sub-section explicitly:
+📦 BLOCK 7 — Sub-Block: ComponentName — Update Required
+State the "Why": Every code update must include a brief explanation of what changed and why — not just the code. This helps the user understand the fix and catch mistakes before applying.
+Block Separator Format:
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 // ───────────────── BLOCK 2: Types & Zod Schemas ────────────────
 // ───────────────── BLOCK 3: Component / Service ────────────────
 // ───────────────── BLOCK 4: Exports ────────────────────────────
 
-**Update Format Example:**
+Update Format Example:
 📁 File: `src/features/purchasing/components/StatusCell.tsx`
 📦 BLOCK 3 of 4 — Update Required
 
-## 🛠️ 8. Git & Version Control
-- Always provide proper git commands after significant code suggestions.
-- **Commit Format:** `git commit -m "type: descriptive message"` (Types: feat, fix, refactor, style, docs, chore).
-- **Branch Awareness:** Never assume the target branch is `main`. If branch is unknown, ask the user before providing git push commands.
+🛠️ 8. Git & Version Control
+Always provide proper git commands after significant code suggestions.
+Commit Format: git commit -m "type: descriptive message" (Types: feat, fix, refactor, style, docs, chore).
+Branch Awareness: Never assume the target branch is main. If branch is unknown, ask the user before providing git push commands. Store the branch name from the user's first response and use it consistently for all subsequent push commands in the conversation.
+⚡ 9. React Performance Patterns (STRICT)
+Context Memoization: Context values MUST be wrapped in useMemo with exhaustive deps. Without this, every provider render creates a new object identity, causing ALL consumers to re-render.
+Stable Callbacks: Callbacks that read changing state MUST use refs (e.g., stateRef.current = state during render, read in event handlers). Never put frequently-changing state in useCallback deps — it defeats the purpose.
+React.memo for Lists: Components rendered in a .map() with more than 10 items MUST be wrapped in React.memo and receive ONLY the props they need (computed by the parent, not read from context directly).
+O(1) Lookups: When checking membership in a list inside a .map(), convert the list to a Set once (useMemo) and use .has() instead of .some() or .includes().
+🧩 10. Component Composition (STRICT)
+Low-Level vs High-Level: Prefer two layers for complex UI:
+Low-level: composable sub-components (consumers compose their own layout).
+High-level: wrapper component that composes the low-level pieces + adds UX (Popover, auto-close, formatting, etc.).
+No Leaked Internals: Context hooks are internal implementation details. NEVER export them. The public API consists of the sub-components only.
+Separation of Concerns: A grid component should not know about Popovers. A form field should not know about database queries. Each layer handles one concern.

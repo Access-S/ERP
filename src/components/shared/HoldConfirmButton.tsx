@@ -17,6 +17,7 @@ interface HoldConfirmButtonProps {
   className?: string
   disabled?: boolean
   variant?: ButtonVariant
+  fillClassName?: string // Added to allow custom fill tokens for different variants
 }
 
 interface HoldConfirmIconButtonProps {
@@ -27,6 +28,7 @@ interface HoldConfirmIconButtonProps {
   disabled?: boolean
   size?: number
   variant?: ButtonVariant
+  'aria-label'?: string
 }
 
 // ───────────────── BLOCK 3: Shared Hook ────────────────────────
@@ -109,15 +111,40 @@ export function HoldConfirmButton({
   className,
   disabled = false,
   variant = 'secondary',
+  fillClassName,
 }: HoldConfirmButtonProps) {
   const { progress, start, stop } = useHoldProgress(duration, onConfirm, disabled)
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      start()
+    }
+  }
+
+  const handleKeyUp = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      stop()
+    }
+  }
+
+  // Determine the best default fill based on the button variant.
+  // Solid buttons (primary/destructive) get a neutral contrasting sweep.
+  // Outline/secondary buttons get a solid primary sweep.
+  const defaultFill = 
+    variant === 'default' || variant === 'destructive' 
+      ? 'bg-background/30' 
+      : 'bg-primary'
+      
+  const computedFillClassName = fillClassName ?? defaultFill
 
   return (
     <Button
       type="button"
       variant={variant}
       className={cn(
-        'relative overflow-hidden select-none touch-none',
+        'relative overflow-hidden select-none touch-none motion-safe:transition-none',
         disabled && 'opacity-50 cursor-not-allowed',
         className
       )}
@@ -127,11 +154,16 @@ export function HoldConfirmButton({
       onMouseLeave={stop}
       onTouchStart={start}
       onTouchEnd={stop}
+      onKeyDown={handleKeyDown}
+      onKeyUp={handleKeyUp}
       onContextMenu={(e) => e.preventDefault()}
     >
-      {/* Fill layer */}
+      {/* Fill layer - accepts custom design tokens via fillClassName */}
       <span
-        className="absolute inset-0 bg-primary origin-left"
+        className={cn(
+          'absolute inset-0 origin-left motion-safe:transition-none',
+          computedFillClassName
+        )}
         style={{ transform: `scaleX(${progress})` }}
       />
       {/* Content */}
@@ -149,8 +181,9 @@ export function HoldConfirmIconButton({
   icon,
   className,
   disabled = false,
-  size = 40,
+  size = 44, // Updated from 40 to 44 for WCAG 2.5.8 touch targets
   variant = 'outline',
+  'aria-label': ariaLabel = 'Confirm action', // Default aria-label
 }: HoldConfirmIconButtonProps) {
   const { progress, start, stop } = useHoldProgress(duration, onConfirm, disabled)
 
@@ -161,6 +194,20 @@ export function HoldConfirmIconButton({
   const circumference = 2 * Math.PI * radius
   const strokeDashoffset = circumference * (1 - progress)
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      start()
+    }
+  }
+
+  const handleKeyUp = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      stop()
+    }
+  }
+
   return (
     <div
       className={cn('relative inline-block', className)}
@@ -170,8 +217,9 @@ export function HoldConfirmIconButton({
         type="button"
         variant={variant}
         size="icon"
+        aria-label={ariaLabel}
         className={cn(
-          'w-full h-full select-none touch-none',
+          'w-full h-full select-none touch-none motion-safe:transition-none',
           disabled && 'opacity-50 cursor-not-allowed'
         )}
         disabled={disabled}
@@ -180,6 +228,8 @@ export function HoldConfirmIconButton({
         onMouseLeave={stop}
         onTouchStart={start}
         onTouchEnd={stop}
+        onKeyDown={handleKeyDown}
+        onKeyUp={handleKeyUp}
         onContextMenu={(e) => e.preventDefault()}
       >
         <span className="relative z-10 flex items-center justify-center">
@@ -188,7 +238,7 @@ export function HoldConfirmIconButton({
       </Button>
 
       <svg
-        className="absolute pointer-events-none"
+        className="absolute pointer-events-none motion-safe:transition-all"
         width={ringSize}
         height={ringSize}
         viewBox={`0 0 ${ringSize} ${ringSize}`}
