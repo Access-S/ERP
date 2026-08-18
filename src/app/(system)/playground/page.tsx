@@ -1,7 +1,7 @@
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client'
 
-import { useState, useCallback } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import { toast } from 'sonner'
 import {
   AlertTriangle,
@@ -104,15 +104,6 @@ import {
   TabsTrigger,
   TabsContent,
 } from '@/components/ui/tabs'
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   DropdownMenu,
@@ -130,6 +121,23 @@ import { StackedDialogContent } from '@/components/shared/StackedDialog'
 import { cn } from '@/lib/utils'
 import { DatePicker } from '@/components/shared/date-picker'
 
+// ─── Table System ───
+import {
+  ColumnDef,
+  SortingState,
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+} from '@tanstack/react-table'
+import {
+  DataTable,
+  DataTableColumnHeader,
+  DataTableToolbar,
+  DataTableViewOptions,
+} from '@/components/shared/data-table'
+import { DataTableRowData } from '@/components/shared/data-table/types'
+
 // ─── Types ───
 import { type CalendarDateRange, type CalendarValue } from '@/types/calendar'
 
@@ -140,6 +148,14 @@ interface ActionLog {
   timestamp: string
 }
 
+// Rule 5: Type safety for our table data
+interface PurchaseOrder extends DataTableRowData {
+  id: string
+  supplier: string
+  total: string
+  status: 'Approved' | 'Pending' | 'Received' | 'Cancelled'
+}
+
 const presets = [
   { label: 'Last 7 days', value: 'last7Days' as const },
   { label: 'Last 14 days', value: 'last14Days' as const },
@@ -147,7 +163,7 @@ const presets = [
   { label: 'This month', value: 'thisMonth' as const },
 ] as const
 
-const tableData = [
+const tableData: PurchaseOrder[] = [
   { id: 'PO-001', supplier: 'Acme Corp', total: '$12,450.00', status: 'Approved' },
   { id: 'PO-002', supplier: 'Global Parts', total: '$8,200.00', status: 'Pending' },
   { id: 'PO-003', supplier: 'SteelWorks', total: '$24,100.00', status: 'Received' },
@@ -184,6 +200,9 @@ export default function PlaygroundPage() {
 
   // ── Loading State ──
   const [isLoading, setIsLoading] = useState(false)
+
+  // ── Table State ──
+  const [sorting, setSorting] = useState<SortingState>([])
 
   const handleLog = useCallback((label: string) => {
     const now = new Date().toLocaleTimeString()
@@ -223,6 +242,59 @@ export default function PlaygroundPage() {
     }
     return 'Unknown'
   }
+
+  // Rule 9: Memoize columns to prevent unnecessary re-renders
+  const columns = useMemo<ColumnDef<PurchaseOrder>[]>(
+    () => [
+      {
+        accessorKey: 'id',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="PO Number" />,
+        cell: ({ row }) => <span className="font-medium text-foreground">{row.getValue('id')}</span>,
+        enableHiding: false,
+      },
+      {
+        accessorKey: 'supplier',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Supplier" />,
+        cell: ({ row }) => <span className="text-muted-foreground">{row.getValue('supplier')}</span>,
+      },
+      {
+        accessorKey: 'total',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Total" />,
+        cell: ({ row }) => <span className="text-foreground tabular-nums">{row.getValue('total')}</span>,
+      },
+      {
+        accessorKey: 'status',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+        cell: ({ row }) => {
+          const status = row.getValue('status') as PurchaseOrder['status']
+          return (
+            <Badge
+              variant={
+                status === 'Approved' ? 'default' :
+                status === 'Pending' ? 'secondary' :
+                status === 'Received' ? 'success' :
+                'destructive'
+              }
+            >
+              {status}
+            </Badge>
+          )
+        },
+      },
+    ],
+    []
+  )
+
+  // Initialize the table instance to pass to both Toolbar and DataTable
+  const table = useReactTable({
+    data: tableData,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(), // Enables global filter (search)
+  })
 
   return (
     <div className="container mx-auto py-10 px-4 max-w-7xl space-y-10">
@@ -450,56 +522,56 @@ export default function PlaygroundPage() {
             </CardContent>
           </Card>
 
-{/* Sonner Toasts */}
-<Card className="md:col-span-2 xl:col-span-3">
-  <CardHeader>
-    <CardTitle>Sonner Toasts</CardTitle>
-    <CardDescription>Notification system tied to your theme tokens.</CardDescription>
-  </CardHeader>
-  <CardContent className="flex flex-wrap gap-3">
-    <Button variant="outline" onClick={() => triggerToast('success')}>
-      <CheckCircle2 className="h-4 w-4 text-success" />
-      Success
-    </Button>
-    <Button variant="outline" onClick={() => triggerToast('error')}>
-      <XCircle className="h-4 w-4 text-destructive" />
-      Error
-    </Button>
-    <Button variant="outline" onClick={() => triggerToast('info')}>
-      <Info className="h-4 w-4 text-info" />
-      Info
-    </Button>
-    <Button variant="outline" onClick={() => triggerToast('warning')}>
-      <AlertTriangle className="h-4 w-4 text-warning" />
-      Warning
-    </Button>
+          {/* Sonner Toasts */}
+          <Card className="md:col-span-2 xl:col-span-3">
+            <CardHeader>
+              <CardTitle>Sonner Toasts</CardTitle>
+              <CardDescription>Notification system tied to your theme tokens.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-3">
+              <Button variant="outline" onClick={() => triggerToast('success')}>
+                <CheckCircle2 className="h-4 w-4 text-success" />
+                Success
+              </Button>
+              <Button variant="outline" onClick={() => triggerToast('error')}>
+                <XCircle className="h-4 w-4 text-destructive" />
+                Error
+              </Button>
+              <Button variant="outline" onClick={() => triggerToast('info')}>
+                <Info className="h-4 w-4 text-info" />
+                Info
+              </Button>
+              <Button variant="outline" onClick={() => triggerToast('warning')}>
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                Warning
+              </Button>
 
-    <Separator orientation="vertical" className="h-9" />
+              <Separator orientation="vertical" className="h-9" />
 
-    <Button
-      variant="outline"
-      onClick={() => {
-        handleLog('Promise toast started')
-        toast.promise(
-          new Promise<void>((resolve) =>
-            setTimeout(() => {
-              resolve()
-              handleLog('Promise toast resolved')
-            }, 2500)
-          ),
-          {
-            loading: 'Saving purchase order...',
-            success: 'Purchase order saved successfully.',
-            error: 'Failed to save purchase order.',
-          }
-        )
-      }}
-    >
-      <Loader2 className="h-4 w-4 animate-spin" />
-      Promise Toast
-    </Button>
-  </CardContent>
-</Card>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  handleLog('Promise toast started')
+                  toast.promise(
+                    new Promise<void>((resolve) =>
+                      setTimeout(() => {
+                        resolve()
+                        handleLog('Promise toast resolved')
+                      }, 2500)
+                    ),
+                    {
+                      loading: 'Saving purchase order...',
+                      success: 'Purchase order saved successfully.',
+                      error: 'Failed to save purchase order.',
+                    }
+                  )
+                }}
+              >
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Promise Toast
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
@@ -522,39 +594,14 @@ export default function PlaygroundPage() {
                 <Button size="sm"><Plus className="h-4 w-4" /> New PO</Button>
               </CardAction>
             </CardHeader>
-            <CardContent>
-              <Table>
-                <TableCaption>A list of recent purchase orders.</TableCaption>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>PO Number</TableHead>
-                    <TableHead>Supplier</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tableData.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell className="font-medium">{row.id}</TableCell>
-                      <TableCell>{row.supplier}</TableCell>
-                      <TableCell>{row.total}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            row.status === 'Approved' ? 'default' :
-                            row.status === 'Pending' ? 'secondary' :
-                            row.status === 'Received' ? 'success' :
-                            'destructive'
-                          }
-                        >
-                          {row.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <CardContent className="space-y-4">
+              {/* Rule 10: High-level wrapper composing the table instance */}
+              <DataTableToolbar 
+                table={table} 
+                searchKey="id" 
+                searchPlaceholder="Search POs..." 
+              />
+              <DataTable table={table} />
             </CardContent>
           </Card>
 
@@ -910,7 +957,7 @@ export default function PlaygroundPage() {
           Shared Components
         </h2>
         <div className="grid gap-6 md:grid-cols-2">
-          {/* HoldConfirm Buttons */}
+                    {/* HoldConfirm Buttons */}
           <Card>
             <CardHeader>
               <CardTitle>HoldConfirmButton</CardTitle>
@@ -921,8 +968,8 @@ export default function PlaygroundPage() {
                 <HoldConfirmButton
                   onConfirm={() => handleLog('Traditional hold confirmed')}
                   duration={1500}
+                  icon={<AlertTriangle className="h-4 w-4" />}
                 >
-                  <AlertTriangle className="h-4 w-4" />
                   Hold to Confirm
                 </HoldConfirmButton>
 
@@ -930,8 +977,8 @@ export default function PlaygroundPage() {
                   onConfirm={() => handleLog('Danger hold confirmed')}
                   duration={2000}
                   variant="destructive"
+                  icon={<Trash2 className="h-4 w-4" />}
                 >
-                  <Trash2 className="h-4 w-4" />
                   Hold to Delete (2s)
                 </HoldConfirmButton>
               </div>
@@ -948,6 +995,7 @@ export default function PlaygroundPage() {
                         onConfirm={() => handleLog(`${v} icon hold confirmed`)}
                         duration={1500}
                         icon={<Trash2 className="h-4 w-4" />}
+                        aria-label={`Hold to confirm ${v} action`}
                       />
                       <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
                         {v}
@@ -964,6 +1012,7 @@ export default function PlaygroundPage() {
                         duration={1500}
                         icon={<Trash2 className={s === 32 ? 'h-3 w-3' : s === 48 ? 'h-5 w-5' : 'h-4 w-4'} />}
                         size={s}
+                        aria-label={`Hold to confirm ${s} pixel action`}
                       />
                       <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
                         {s}px
@@ -1057,6 +1106,5 @@ export default function PlaygroundPage() {
     </div>
   )
 }
-
 
 // ───────────────── BLOCK 4: Exports ────────────────────────────
