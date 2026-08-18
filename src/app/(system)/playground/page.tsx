@@ -20,6 +20,7 @@ import {
   PanelLeft,
   Send,
   CalendarDays,
+  Clock,
   Loader2,
   Copy,
   Pencil,
@@ -113,26 +114,21 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
 
 // ─── Shared Components ───
 import {
   HoldConfirmButton,
   HoldConfirmIconButton,
 } from '@/components/shared/HoldConfirmButton'
-import {
-  Calendar,
-  CalendarMonthSelect,
-  CalendarNextTrigger,
-  CalendarPresetTrigger,
-  CalendarPrevTrigger,
-  CalendarTable,
-  CalendarTableDays,
-  CalendarViewControl,
-  CalendarWeekDays,
-  CalendarYearSelect,
-} from '@/components/shared/calendar'
 import { StackedDialogContent } from '@/components/shared/StackedDialog'
 import { cn } from '@/lib/utils'
+import { DatePicker } from '@/components/shared/date-picker'
 
 // ─── Types ───
 import { type CalendarDateRange, type CalendarValue } from '@/types/calendar'
@@ -906,7 +902,7 @@ export default function PlaygroundPage() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════════ */}
+       {/* ═══════════════════════════════════════════════════════════ */}
       {/* SECTION: Shared Components                                 */}
       {/* ═══════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
@@ -985,44 +981,17 @@ export default function PlaygroundPage() {
               <CardTitle>Calendar</CardTitle>
               <CardDescription>Range and single-date selection with presets.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+                       <CardContent className="space-y-6">
               {/* Range */}
               <div className="space-y-2">
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">Range Selection</Label>
-                <Calendar
+                <DatePicker
                   className="[--cell-size:--spacing(8)]"
                   selectionMode="range"
                   value={dateRange}
                   onChange={setDateRange}
-                >
-                  <div className="border rounded-lg p-4 w-full max-w-xs mx-auto">
-                    <CalendarViewControl>
-                      <CalendarPrevTrigger />
-                      <CalendarMonthSelect />
-                      <CalendarYearSelect />
-                      <CalendarNextTrigger />
-                    </CalendarViewControl>
-                    <CalendarTable>
-                      <CalendarWeekDays />
-                      <CalendarTableDays />
-                    </CalendarTable>
-                    <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
-                      {presets.map((preset) => (
-                        <CalendarPresetTrigger asChild key={preset.value} value={preset.value}>
-                          <Button className="flex-1" size="sm" variant="outline">
-                            {preset.label}
-                          </Button>
-                        </CalendarPresetTrigger>
-                      ))}
-                    </div>
-                  </div>
-                </Calendar>
-                <div className="p-3 rounded-md bg-muted max-w-xs mx-auto">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                    Selected Range
-                  </p>
-                  <p className="text-sm font-mono text-foreground">{formatValue(dateRange)}</p>
-                </div>
+                  placeholder="Select date range"
+                />
               </div>
 
               <Separator />
@@ -1030,31 +999,13 @@ export default function PlaygroundPage() {
               {/* Single */}
               <div className="space-y-2">
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">Single Selection</Label>
-                <Calendar
+                <DatePicker
                   className="[--cell-size:--spacing(7)]"
                   selectionMode="single"
                   value={singleDate}
                   onChange={setSingleDate}
-                >
-                  <div className="border rounded-lg p-4 w-full max-w-[280px] mx-auto">
-                    <CalendarViewControl>
-                      <CalendarPrevTrigger />
-                      <CalendarMonthSelect />
-                      <CalendarYearSelect />
-                      <CalendarNextTrigger />
-                    </CalendarViewControl>
-                    <CalendarTable>
-                      <CalendarWeekDays />
-                      <CalendarTableDays />
-                    </CalendarTable>
-                  </div>
-                </Calendar>
-                <div className="p-3 rounded-md bg-muted max-w-[280px] mx-auto">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                    Selected Date
-                  </p>
-                  <p className="text-sm font-mono text-foreground">{formatValue(singleDate)}</p>
-                </div>
+                  placeholder="Pick a date"
+                />
               </div>
             </CardContent>
           </Card>
@@ -1106,5 +1057,6 @@ export default function PlaygroundPage() {
     </div>
   )
 }
+
 
 // ───────────────── BLOCK 4: Exports ────────────────────────────

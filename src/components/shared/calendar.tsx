@@ -19,6 +19,12 @@ import {
   type CalendarSelectionMode,
   type CalendarValue,
 } from '@/types/calendar'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
 
 // ───────────────── BLOCK 2: Types & Interfaces ─────────────────
 interface CalendarProps {
@@ -32,6 +38,7 @@ interface CalendarProps {
   maxDate?: Date
   disabledDates?: Date[]
   weekStartsOn?: 0 | 1
+  fixedWeeks?: boolean
 }
 
 interface CalendarContextValue {
@@ -39,6 +46,7 @@ interface CalendarContextValue {
   setViewDate: (date: Date) => void
   selected: CalendarValue
   selectDate: (date: Date) => void
+  clearSelection: () => void
   hoverDate?: Date
   setHoverDate: (date?: Date) => void
   selectionMode: CalendarSelectionMode
@@ -46,10 +54,12 @@ interface CalendarContextValue {
   maxDate?: Date
   disabledDates: Date[]
   weekStartsOn: 0 | 1
+  fixedWeeks: boolean
   applyPreset: (preset: CalendarPresetValue) => void
   today?: Date
   focusedDate?: Date
   setFocusedDate: (date: Date) => void
+  slideDir: 'left' | 'right' | null
 }
 
 interface DayCellProps {
@@ -62,6 +72,7 @@ interface DayCellProps {
   isRangeEnd: boolean
   isInRange: boolean
   isFocused: boolean
+  isHoveredEnd: boolean
   selectionMode: CalendarSelectionMode
   onSelect: (date: Date) => void
   onHoverChange: (date: Date | undefined) => void
@@ -95,11 +106,34 @@ function startOfWeek(date: Date, weekStartsOn: 0 | 1 = 0): Date {
   return d
 }
 
-function addMonths(date: Date, amount: number): Date {
+// ── Clamp helpers: prevent JS Date overflow ──
+// Jan 31 + 1 month → Feb 31 → Mar 3 (overflow). These detect
+// the overflow (getDate() < targetDay) and clamp to month end
+// via setDate(0) which means "last day of previous month".
+function setMonthClamped(date: Date, month: number): Date {
   const d = new Date(date)
-  d.setMonth(d.getMonth() + amount)
+  const targetDay = d.getDate()
+  d.setMonth(month)
+  if (d.getDate() < targetDay) {
+    d.setDate(0)
+  }
   d.setHours(0, 0, 0, 0)
   return d
+}
+
+function setFullYearClamped(date: Date, year: number): Date {
+  const d = new Date(date)
+  const targetDay = d.getDate()
+  d.setFullYear(year)
+  if (d.getDate() < targetDay) {
+    d.setDate(0)
+  }
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+function addMonths(date: Date, amount: number): Date {
+  return setMonthClamped(date, date.getMonth() + amount)
 }
 
 function addDays(date: Date, amount: number): Date {
@@ -134,16 +168,33 @@ function isWithinInterval(date: Date, interval: { start: Date; end: Date }): boo
   return t >= interval.start.getTime() && t <= interval.end.getTime()
 }
 
-function getCalendarDays(viewDate: Date, weekStartsOn: 0 | 1 = 0): Date[] {
+// ── fixedWeeks: true → always 42 days (6 rows, stable height) ──
+// ── fixedWeeks: false → 28/35/42 dynamically (compact February) ──
+function getCalendarDays(
+  viewDate: Date,
+  weekStartsOn: 0 | 1 = 0,
+  fixedWeeks = true
+): Date[] {
   const start = startOfMonth(viewDate)
   const end = endOfMonth(viewDate)
   const startWeek = startOfWeek(start, weekStartsOn)
   const days: Date[] = []
   let current = new Date(startWeek)
 
-  while (days.length < 42) {
-    days.push(new Date(current))
-    current = addDays(current, 1)
+  if (fixedWeeks) {
+    while (days.length < 42) {
+      days.push(new Date(current))
+      current = addDays(current, 1)
+    }
+  } else {
+    while (true) {
+      days.push(new Date(current))
+      current = addDays(current, 1)
+      // Stop after passing end of month AND completing a full week
+      if (isAfter(current, end) && days.length % 7 === 0) {
+        break
+      }
+    }
   }
   return days
 }
@@ -181,10 +232,10 @@ function CalendarProvider({
   maxDate,
   disabledDates = [],
   weekStartsOn = 0,
+  fixedWeeks = true,
 }: Omit<CalendarProps, 'className' | 'children'>) {
   const isControlled = controlledValue !== undefined
 
-  // ── Normalize intake boundaries (memoized) ──
   const normalizedMinDate = useMemo(
     () => (minDate ? normalizeDate(minDate) : undefined),
     [minDate]
@@ -197,6 +248,20 @@ function CalendarProvider({
     () => disabledDates.map((d) => normalizeDate(d)),
     [disabledDates]
   )
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      if (
+        normalizedMinDate &&
+        normalizedMaxDate &&
+        isAfter(normalizedMinDate, normalizedMaxDate)
+      ) {
+        console.warn(
+          'Calendar: minDate is after maxDate. All dates will be disabled.'
+        )
+      }
+    }
+  }, [normalizedMinDate, normalizedMaxDate])
 
   const [selected, setSelected] = useState<CalendarValue>(defaultValue)
   const [viewDate, setViewDate] = useState<Date>(() => {
@@ -212,15 +277,30 @@ function CalendarProvider({
   const [today, setToday] = useState<Date | undefined>()
   const [focusedDate, setFocusedDate] = useState<Date | undefined>()
   const [hoverDate, setHoverDate] = useState<Date | undefined>()
+  const [slideDir, setSlideDir] = useState<'left' | 'right' | null>(null)
 
   const onChangeRef = useRef(onChange)
   useEffect(() => {
     onChangeRef.current = onChange
   }, [onChange])
 
+  const currentSelected = isControlled ? controlledValue : selected
+  const currentSelectedRef = useRef(currentSelected)
+  currentSelectedRef.current = currentSelected
+
+  const viewDateRef = useRef(viewDate)
+  viewDateRef.current = viewDate
+
   // ── Defensive setters (stable identity) ──
+  // Only set slideDir when month actually changes — prevents
+  // unnecessary remount/animation when navigating within same month
+  // (e.g. clicking Today while already viewing today's month)
   const handleSetViewDate = useCallback((date: Date) => {
-    setViewDate(normalizeDate(date))
+    const normalized = normalizeDate(date)
+    if (!isSameMonth(normalized, viewDateRef.current)) {
+      setSlideDir(normalized > viewDateRef.current ? 'right' : 'left')
+    }
+    setViewDate(normalized)
   }, [])
 
   const handleSetHoverDate = useCallback((date?: Date) => {
@@ -231,16 +311,14 @@ function CalendarProvider({
     setFocusedDate(normalizeDate(date))
   }, [])
 
-  // ── Current selected value + ref for stable callbacks ──
-  // Declared BEFORE the useEffect that reads from it (code ordering).
-  const currentSelected = isControlled ? controlledValue : selected
-  const currentSelectedRef = useRef(currentSelected)
-  currentSelectedRef.current = currentSelected
+  // ── Clear selection (Today/Clear buttons) ──
+  const clearSelection = useCallback(() => {
+    setSelected(undefined)
+    setHoverDate(undefined)
+    onChangeRef.current?.(undefined)
+  }, [])
 
   // ── SSR-safe today + focusedDate initialization ──
-  // Both are undefined on server + first client render (no hydration mismatch).
-  // After mount, today is set to now, and focusedDate is set to the
-  // selected date or today — giving the roving tabindex a logical home.
   useEffect(() => {
     const now = normalizeDate(new Date())
     setToday(now)
@@ -276,6 +354,9 @@ function CalendarProvider({
 
     if (incomingDate) {
       const normalized = normalizeDate(incomingDate)
+      if (!isSameMonth(viewDateRef.current, normalized)) {
+        setSlideDir(normalized > viewDateRef.current ? 'right' : 'left')
+      }
       setViewDate((prev) =>
         isSameMonth(prev, normalized) ? prev : normalized
       )
@@ -283,7 +364,7 @@ function CalendarProvider({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isControlled, controlledValue])
 
-  // ── Stable selectDate: reads from ref, also syncs focusedDate ──
+  // ── Stable selectDate ──
   const selectDate = useCallback(
     (date: Date) => {
       const normalizedDate = normalizeDate(date)
@@ -369,11 +450,11 @@ function CalendarProvider({
 
       const range: CalendarDateRange = { from, to }
       if (!isControlled) setSelected(range)
-      setViewDate(from)
-      setFocusedDate(from)
+      handleSetViewDate(from)
+      handleSetFocusedDate(from)
       onChangeRef.current?.(range)
     },
-    [isControlled, selectionMode, normalizedMinDate, normalizedMaxDate]
+    [isControlled, selectionMode, normalizedMinDate, normalizedMaxDate, handleSetViewDate, handleSetFocusedDate]
   )
 
   // ── Memoized context value ──
@@ -383,6 +464,7 @@ function CalendarProvider({
       setViewDate: handleSetViewDate,
       selected: currentSelected,
       selectDate,
+      clearSelection,
       hoverDate,
       setHoverDate: handleSetHoverDate,
       selectionMode,
@@ -390,10 +472,12 @@ function CalendarProvider({
       maxDate: normalizedMaxDate,
       disabledDates: normalizedDisabledDates,
       weekStartsOn,
+      fixedWeeks,
       applyPreset,
       today,
       focusedDate,
       setFocusedDate: handleSetFocusedDate,
+      slideDir,
     }),
     [
       viewDate,
@@ -401,7 +485,9 @@ function CalendarProvider({
       hoverDate,
       today,
       focusedDate,
+      slideDir,
       selectDate,
+      clearSelection,
       handleSetViewDate,
       handleSetHoverDate,
       handleSetFocusedDate,
@@ -410,6 +496,7 @@ function CalendarProvider({
       normalizedMaxDate,
       normalizedDisabledDates,
       weekStartsOn,
+      fixedWeeks,
       applyPreset,
     ]
   )
@@ -429,7 +516,9 @@ export function Calendar({
 }: CalendarProps) {
   return (
     <CalendarProvider {...props}>
-      <div className={cn('inline-block', className)}>{children}</div>
+      <div className={cn('inline-block', className)} data-slot="calendar">
+        {children}
+      </div>
     </CalendarProvider>
   )
 }
@@ -443,7 +532,10 @@ export function CalendarViewControl({
   children: React.ReactNode
 }) {
   return (
-    <div className={cn('flex items-center justify-between gap-1 mb-4', className)}>
+    <div
+      className={cn('flex items-center justify-between gap-1 mb-4', className)}
+      data-slot="calendar-view-control"
+    >
       {children}
     </div>
   )
@@ -460,7 +552,8 @@ export function CalendarPrevTrigger({
       variant="outline"
       size="icon"
       aria-label="Previous month"
-      className={cn('h-7 w-7 cursor-pointer', className)}
+      className={cn('h-9 w-9 cursor-pointer', className)}
+      data-slot="calendar-prev-trigger"
       onClick={() => setViewDate(addMonths(viewDate, -1))}
       {...props}
     >
@@ -480,7 +573,8 @@ export function CalendarNextTrigger({
       variant="outline"
       size="icon"
       aria-label="Next month"
-      className={cn('h-7 w-7 cursor-pointer', className)}
+      className={cn('h-9 w-9 cursor-pointer', className)}
+      data-slot="calendar-next-trigger"
       onClick={() => setViewDate(addMonths(viewDate, 1))}
       {...props}
     >
@@ -500,12 +594,13 @@ export function CalendarMonthSelect({ className }: { className?: string }) {
     <Select
       value={String(viewDate.getMonth())}
       onValueChange={(v) => {
-        const d = new Date(viewDate)
-        d.setMonth(parseInt(v))
-        setViewDate(d)
+        setViewDate(setMonthClamped(viewDate, parseInt(v)))
       }}
     >
-      <SelectTrigger className={cn('w-[120px] h-7 text-xs cursor-pointer', className)}>
+      <SelectTrigger
+        className={cn('w-[120px] h-9 text-xs cursor-pointer', className)}
+        data-slot="calendar-month-select"
+      >
         <SelectValue />
       </SelectTrigger>
       <SelectContent position="popper" side="bottom" sideOffset={4}>
@@ -520,20 +615,30 @@ export function CalendarMonthSelect({ className }: { className?: string }) {
 }
 
 export function CalendarYearSelect({ className }: { className?: string }) {
-  const { viewDate, setViewDate } = useCalendar()
+  const { viewDate, setViewDate, today, minDate, maxDate } = useCalendar()
   const currentYear = viewDate.getFullYear()
-  const years = Array.from({ length: 21 }, (_, i) => currentYear - 10 + i)
+
+  const years = useMemo(() => {
+    const baseYear = today?.getFullYear() ?? 2000
+    const minYear = minDate?.getFullYear() ?? baseYear - 50
+    const maxYear = maxDate?.getFullYear() ?? baseYear + 10
+    return Array.from(
+      { length: maxYear - minYear + 1 },
+      (_, i) => minYear + i
+    )
+  }, [today, minDate, maxDate])
 
   return (
     <Select
       value={String(currentYear)}
       onValueChange={(v) => {
-        const d = new Date(viewDate)
-        d.setFullYear(parseInt(v))
-        setViewDate(d)
+        setViewDate(setFullYearClamped(viewDate, parseInt(v)))
       }}
     >
-      <SelectTrigger className={cn('w-[80px] h-7 text-xs cursor-pointer', className)}>
+      <SelectTrigger
+        className={cn('w-[80px] h-9 text-xs cursor-pointer', className)}
+        data-slot="calendar-year-select"
+      >
         <SelectValue />
       </SelectTrigger>
       <SelectContent position="popper" side="bottom" sideOffset={4}>
@@ -547,6 +652,93 @@ export function CalendarYearSelect({ className }: { className?: string }) {
   )
 }
 
+// ── Footer + Today/Clear triggers ──
+
+export function CalendarFooter({
+  className,
+  children,
+}: {
+  className?: string
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      className={cn('flex items-center justify-between gap-2 mt-4', className)}
+      data-slot="calendar-footer"
+    >
+      {children}
+    </div>
+  )
+}
+
+export function CalendarTodayTrigger({
+  className,
+  disabled: disabledProp,
+  ...props
+}: React.ComponentProps<typeof Button>) {
+  const { today, setViewDate, setFocusedDate } = useCalendar()
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      aria-label="Go to today"
+      disabled={!today || disabledProp}
+      className={cn('h-9 text-xs cursor-pointer', className)}
+      data-slot="calendar-today-trigger"
+      {...props}
+      onClick={(e) => {
+        if (today) {
+          setViewDate(today)
+          setFocusedDate(today)
+        }
+        props.onClick?.(e)
+      }}
+    >
+      Today
+    </Button>
+  )
+}
+
+export function CalendarClearTrigger({
+  className,
+  disabled: disabledProp,
+  ...props
+}: React.ComponentProps<typeof Button>) {
+  const { selected, clearSelection } = useCalendar()
+
+  // Check all three selection modes for a non-empty value
+  const hasValue = selected
+    ? selected instanceof Date
+      ? true
+      : Array.isArray(selected)
+        ? selected.length > 0
+        : typeof selected === 'object' && 'from' in selected
+          ? !!selected.from
+          : false
+    : false
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      aria-label="Clear selection"
+      disabled={!hasValue || disabledProp}
+      className={cn('h-9 text-xs cursor-pointer', className)}
+      data-slot="calendar-clear-trigger"
+      {...props}
+      onClick={(e) => {
+        clearSelection()
+        props.onClick?.(e)
+      }}
+    >
+      Clear
+    </Button>
+  )
+}
+
 // ───────────────── BLOCK 7: Table Components ───────────────────
 export function CalendarTable({
   className,
@@ -556,7 +748,12 @@ export function CalendarTable({
   children: React.ReactNode
 }) {
   return (
-    <div className={cn('w-full', className)} role="grid" aria-label="Calendar">
+    <div
+      className={cn('w-full', className)}
+      role="grid"
+      aria-label="Calendar"
+      data-slot="calendar-table"
+    >
       {children}
     </div>
   )
@@ -567,7 +764,14 @@ export function CalendarWeekDays({ className }: { className?: string }) {
   const weekdays = getWeekdays(weekStartsOn)
 
   return (
-    <div className={cn('grid grid-cols-7 mb-1', className)} role="row">
+    <div
+      className={cn(
+        'grid grid-cols-7 mb-1 max-w-[calc(7_*_var(--cell-size,2.75rem))] mx-auto',
+        className
+      )}
+      role="row"
+      data-slot="calendar-week-days"
+    >
       {weekdays.map((day) => (
         <div
           key={day.short}
@@ -623,6 +827,7 @@ function computeDayState(
   let isRangeStart = false
   let isRangeEnd = false
   let isInRange = false
+  let isHoveredEnd = false
 
   if (selectionMode === 'single' && selected instanceof Date) {
     isSelected = isSameDay(date, selected)
@@ -642,12 +847,14 @@ function computeDayState(
         isWithinInterval(date, { start: range.from, end: range.to }) &&
         !isSelected
     } else if (hoverDate && !isSameDay(hoverDate, range.from)) {
-      const start = range.from
-      const end = hoverDate
-      if (isAfter(end, start)) {
-        isInRange =
-          isWithinInterval(date, { start, end }) && !isSameDay(date, start)
-      }
+      const isHoverAfter = isAfter(hoverDate, range.from)
+      const previewStart = isHoverAfter ? range.from : hoverDate
+      const previewEnd = isHoverAfter ? hoverDate : range.from
+      isInRange =
+        isWithinInterval(date, { start: previewStart, end: previewEnd }) &&
+        !isSameDay(date, previewStart) &&
+        !isSameDay(date, previewEnd)
+      isHoveredEnd = isSameDay(date, hoverDate)
     }
   } else if (selectionMode === 'multiple' && Array.isArray(selected)) {
     isSelected = selected.some((d) => isSameDay(d, date))
@@ -662,6 +869,7 @@ function computeDayState(
     isRangeEnd,
     isInRange,
     isFocused,
+    isHoveredEnd,
   }
 }
 
@@ -676,15 +884,13 @@ const DayCell = React.memo(function DayCell({
   isRangeEnd,
   isInRange,
   isFocused,
+  isHoveredEnd,
   selectionMode,
   onSelect,
   onHoverChange,
 }: DayCellProps) {
   const ref = useRef<HTMLButtonElement>(null)
 
-  // Move actual DOM focus when this cell becomes the focused cell.
-  // This fires only when isFocused changes (false→true), thanks to
-  // React.memo — only 2 cells re-render on each arrow key press.
   useEffect(() => {
     if (isFocused) {
       ref.current?.focus()
@@ -700,24 +906,28 @@ const DayCell = React.memo(function DayCell({
       aria-disabled={isDisabled}
       disabled={isDisabled}
       tabIndex={isFocused ? 0 : -1}
+      data-slot="calendar-day"
       onClick={() => !isDisabled && onSelect(date)}
       onMouseEnter={() => selectionMode === 'range' && onHoverChange(date)}
       onMouseLeave={() => selectionMode === 'range' && onHoverChange(undefined)}
       className={cn(
         'relative flex items-center justify-center text-sm transition-colors cursor-pointer',
-        'h-[var(--cell-size,2rem)] w-[var(--cell-size,2rem)]',
-        !isCurrentMonth && 'text-muted-foreground opacity-50',
+        'h-[var(--cell-size,2.75rem)] w-full',
+        !isCurrentMonth && !isInRange && !isHoveredEnd && !isDisabled && 'text-muted-foreground opacity-40',
         isDisabled && 'opacity-50 cursor-not-allowed',
-        isToday && !isSelected && !isInRange && !isDisabled && 'border border-primary',
-        isInRange && 'bg-primary/10 text-primary rounded-none',
+        isInRange && 'bg-primary/10 text-primary',
+        isHoveredEnd && 'bg-primary/10 ring-2 ring-primary ring-inset rounded-md',
         isRangeStart && !isRangeEnd && 'bg-primary text-primary-foreground rounded-md rounded-r-none',
         isRangeEnd && !isRangeStart && 'bg-primary text-primary-foreground rounded-md rounded-l-none',
         isRangeStart && isRangeEnd && 'bg-primary text-primary-foreground rounded-md',
         isSelected && !isRangeStart && !isRangeEnd && 'bg-primary text-primary-foreground rounded-md',
-        !isSelected && !isInRange && !isDisabled && 'hover:bg-accent hover:text-accent-foreground rounded-md'
+        !isSelected && !isInRange && !isHoveredEnd && !isDisabled && 'hover:bg-accent hover:text-accent-foreground rounded-md'
       )}
     >
       {date.getDate()}
+      {isToday && !isSelected && !isInRange && !isDisabled && (
+        <span className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary shadow-[0_0_12px_3px_hsl(var(--primary))]" />
+      )}
     </button>
   )
 })
@@ -726,6 +936,7 @@ export function CalendarTableDays({ className }: { className?: string }) {
   const {
     viewDate,
     weekStartsOn,
+    fixedWeeks,
     selected,
     selectionMode,
     selectDate,
@@ -738,11 +949,12 @@ export function CalendarTableDays({ className }: { className?: string }) {
     focusedDate,
     setFocusedDate,
     setViewDate,
+    slideDir,
   } = useCalendar()
 
   const days = useMemo(
-    () => getCalendarDays(viewDate, weekStartsOn),
-    [viewDate, weekStartsOn]
+    () => getCalendarDays(viewDate, weekStartsOn, fixedWeeks),
+    [viewDate, weekStartsOn, fixedWeeks]
   )
 
   const disabledSet = useMemo(
@@ -750,10 +962,17 @@ export function CalendarTableDays({ className }: { className?: string }) {
     [disabledDates]
   )
 
-  // ── Keyboard navigation handler ──
-  // Arrow keys move focus by day/week, Home/End jump to week start/end,
-  // PageUp/Down navigate months (Shift+PageUp/Down for years),
-  // Enter/Space selects the focused date.
+  // ── Slide animation only when slideDir is set ──
+  // slideDir starts as null (no animation on initial mount / Popover open).
+  // handleSetViewDate sets it to 'left' or 'right' only when the month
+  // actually changes. When the Popover closes and reopens, the CalendarProvider
+  // remounts → slideDir resets to null → no animation on reopen. ✓
+  const slideClass = slideDir
+    ? slideDir === 'left'
+      ? 'motion-safe:animate-in motion-safe:fade-in-50 motion-safe:slide-in-from-left-4 motion-safe:duration-200 motion-safe:ease-out'
+      : 'motion-safe:animate-in motion-safe:fade-in-50 motion-safe:slide-in-from-right-4 motion-safe:duration-200 motion-safe:ease-out'
+    : ''
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!focusedDate) return
 
@@ -786,12 +1005,12 @@ export function CalendarTableDays({ className }: { className?: string }) {
       }
       case 'PageUp':
         newDate = e.shiftKey
-          ? new Date(focusedDate.getFullYear() - 1, focusedDate.getMonth(), focusedDate.getDate())
+          ? setFullYearClamped(focusedDate, focusedDate.getFullYear() - 1)
           : addMonths(focusedDate, -1)
         break
       case 'PageDown':
         newDate = e.shiftKey
-          ? new Date(focusedDate.getFullYear() + 1, focusedDate.getMonth(), focusedDate.getDate())
+          ? setFullYearClamped(focusedDate, focusedDate.getFullYear() + 1)
           : addMonths(focusedDate, 1)
         break
       case 'Enter':
@@ -820,11 +1039,19 @@ export function CalendarTableDays({ className }: { className?: string }) {
     }
   }
 
+  const monthKey = `${viewDate.getFullYear()}-${viewDate.getMonth()}`
+
   return (
     <div
-      className={cn('grid grid-cols-7', className)}
+      key={monthKey}
+      className={cn(
+        'grid grid-cols-7 max-w-[calc(7_*_var(--cell-size,2.75rem))] mx-auto',
+        slideClass,
+        className
+      )}
       role="row"
       onKeyDown={handleKeyDown}
+      data-slot="calendar-table-days"
     >
       {days.map((date) => {
         const state = computeDayState(date, {
@@ -851,6 +1078,7 @@ export function CalendarTableDays({ className }: { className?: string }) {
             isRangeEnd={state.isRangeEnd}
             isInRange={state.isInRange}
             isFocused={state.isFocused}
+            isHoveredEnd={state.isHoveredEnd}
             selectionMode={selectionMode}
             onSelect={selectDate}
             onHoverChange={setHoverDate}
@@ -881,18 +1109,16 @@ export function CalendarPresetTrigger({
 
   return (
     <Comp
-      type="button"
+      {...(asChild ? {} : { type: 'button' as const })}
       className={cn('cursor-pointer', className)}
+      data-slot="calendar-preset-trigger"
       {...props}
       onClick={(e) => {
         applyPreset(value)
-        props.onClick?.(e as React.MouseEvent<HTMLButtonElement>)
+        props.onClick?.(e)
       }}
     >
       {children}
     </Comp>
   )
 }
-
-// ───────────────── BLOCK 9: Exports ────────────────────────────
-export { useCalendar }
