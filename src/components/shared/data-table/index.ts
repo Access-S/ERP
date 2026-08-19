@@ -1,17 +1,49 @@
-// ───────────────── BLOCK 1: Imports ────────────────────────────
-export { DataTable } from './data-table';
-export { DataTableColumnHeader } from './data-table-column-header';
-export { DataTableViewOptions } from './data-table-view-options';
-export { DataTableToolbar } from './data-table-toolbar';
-export { DataTablePagination } from './data-table-pagination';
-export { DataTableFacetedFilter } from './data-table-faceted-filter';
-export { useDataTableState } from './use-data-table-state';
+//src/components/shared/data-table/index.ts
 
-// ───────────────── BLOCK 2: Types & Zod Schemas ────────────────
-// (No logic in this file, purely barrel exports)
+// ───────────────── BLOCK 1: Component Exports ──────────────────
+export { DataTable } from './components/data-table';
+export { DataTableColumnHeader } from './components/data-table-column-header';
+export { DataTableToolbar } from './components/data-table-toolbar';
+export { DataTablePagination } from './components/data-table-pagination';
+export { DataTableFacetedFilter } from './components/data-table-faceted-filter';
+export { DataTableViewOptions } from './components/data-table-view-options';
 
-// ───────────────── BLOCK 3: Component / Service ────────────────
-// (No logic in this file)
+// ───────────────── BLOCK 2: Hook Exports ───────────────────────
+export { useDataTable } from './hooks/use-data-table';
 
-// ───────────────── BLOCK 4: Exports ────────────────────────────
-// (All exports handled in Block 1)
+// ───────────────── BLOCK 3: Type Exports ───────────────────────
+export type {
+  DataTableRowData,
+  FilterOperator,
+  FilterVariant,
+  JoinOperator,
+  SortItem,
+  FilterItem,
+  Option,
+  DataTableRequest,
+  DataTableResponse,
+  DataTableResponseData,
+} from './types';
+
+// ───────────────── BLOCK 4: Schema Exports ─────────────────────
+export {
+  filterOperatorSchema,
+  filterVariantSchema,
+  joinOperatorSchema,
+  sortItemSchema,
+  filterItemSchema,
+  optionSchema,
+  dataTableRequestSchema,
+  dataTableResponseSchema,
+} from './types';
+
+// ───────────────── BLOCK 5: Default Exports ────────────────────
+export { dataTableDefaults } from './defaults';
+
+// ───────────────── BLOCK 6: Utility Exports ────────────────────
+export {
+  getColumnPinningStyle,
+  getFilterOperators,
+  getDefaultFilterOperator,
+  getValidFilters,
+} from './lib/utils';

@@ -1,3 +1,5 @@
+//src/components/shared/data-table/data-table.tsx
+
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client';
 
@@ -11,14 +13,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  ColumnDef,
   Row,
   Table as TanstackTable,
   flexRender,
-  getCoreRowModel,
-  useReactTable,
 } from '@tanstack/react-table';
-import { DataTableRowData } from './types';
+import type { DataTableRowData } from '../types';
 
 // ───────────────── BLOCK 2: Types & Zod Schemas ────────────────
 interface DataTableProps<TData extends DataTableRowData> {

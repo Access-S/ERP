@@ -1,8 +1,9 @@
+//src/components/shared/data-table/data-table-view-options.tsx
+
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client';
 
 import React from 'react';
-import { DropdownMenuTrigger } from '@radix-ui/react-dropdown-menu';
 import { Table } from '@tanstack/react-table';
 import { SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,8 +13,9 @@ import {
   DropdownMenuContent,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { DataTableRowData } from './types';
+import type { DataTableRowData } from '../types';
 
 // ───────────────── BLOCK 2: Types & Zod Schemas ────────────────
 interface DataTableViewOptionsProps<TData extends DataTableRowData> {

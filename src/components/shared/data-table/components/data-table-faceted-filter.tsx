@@ -1,3 +1,5 @@
+//src/components/shared/data-table/data-table-faceted-filter.tsx
+
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client';
 
@@ -22,7 +24,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
-import { DataTableRowData } from './types';
+import type { DataTableRowData } from '../types';
 
 // ───────────────── BLOCK 2: Types & Zod Schemas ────────────────
 interface DataTableFacetedFilterProps<TData extends DataTableRowData, TValue> {

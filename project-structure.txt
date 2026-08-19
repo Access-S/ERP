@@ -3,7 +3,7 @@
 |          NEXT.JS             |
 |          mrp-system                                      |
 |                                                          |
-|          Generated: 2026-08-17 01:27:22                  |
+|          Generated: 2026-08-19 02:46:02                  |
 |                                                          |
 +----------------------------------------------------------+
 
@@ -27,8 +27,20 @@
   │   │   └── [TS]   layout.tsx
   │   ├── components/
   │   │   ├── shared/
+  │   │   │   ├── data-table/
+  │   │   │   │   ├── [TS]   data-table-column-header.tsx
+  │   │   │   │   ├── [TS]   data-table-faceted-filter.tsx
+  │   │   │   │   ├── [TS]   data-table-pagination.tsx
+  │   │   │   │   ├── [TS]   data-table-toolbar.tsx
+  │   │   │   │   ├── [TS]   data-table.tsx
+  │   │   │   │   ├── [TS]   data-table-view-options.tsx
+  │   │   │   │   ├── [TS]   index.ts
+  │   │   │   │   ├── [TS]   types.ts
+  │   │   │   │   ├── [TS]   use-data-table-state.ts
+  │   │   │   │   └── [TS]   use-data-table.ts
   │   │   │   ├── [TS]   app-sidebar.tsx
   │   │   │   ├── [TS]   calendar.tsx
+  │   │   │   ├── [TS]   date-picker.tsx
   │   │   │   ├── [TS]   HoldConfirmButton.tsx
   │   │   │   └── [TS]   StackedDialog.tsx
   │   │   └── ui/
@@ -38,9 +50,13 @@
   │   │       ├── [TS]   button.tsx
   │   │       ├── [TS]   card.tsx
   │   │       ├── [TS]   collapsible.tsx
+  │   │       ├── [TS]   command.tsx
   │   │       ├── [TS]   dialog.tsx
+  │   │       ├── [TS]   dropdown-menu.tsx
+  │   │       ├── [TS]   input-group.tsx
   │   │       ├── [TS]   input.tsx
   │   │       ├── [TS]   label.tsx
+  │   │       ├── [TS]   popover.tsx
   │   │       ├── [TS]   scroll-area.tsx
   │   │       ├── [TS]   select.tsx
   │   │       ├── [TS]   separator.tsx
@@ -52,12 +68,19 @@
   │   │       ├── [TS]   tabs.tsx
   │   │       ├── [TS]   textarea.tsx
   │   │       └── [TS]   tooltip.tsx
+  │   ├── config/
+  │   │   └── [TS]   data-table.ts
   │   ├── hooks/
+  │   │   ├── [TS]   use-callback-ref.ts
+  │   │   ├── [TS]   use-debounced-callback.ts
   │   │   └── [TS]   use-mobile.ts
   │   ├── lib/
+  │   │   ├── [TS]   data-table.ts
+  │   │   ├── [TS]   parsers.ts
   │   │   └── [TS]   utils.ts
   │   └── types/
   │       ├── [TS]   calendar.ts
+  │       ├── [TS]   data-table.ts
   │       └── [TS]   navigation.ts
   ├── [JSON] components.json
   ├──        .cursorrules
@@ -73,5 +96,5 @@
   └── [SH]   update-structure.sh
 
 +----------------------------------------------------------+
-|  SUMMARY:  Folders: 11   | Files: 51   | Total: 62       |
+|  SUMMARY:  Folders: 13   | Files: 72   | Total: 85       |
 +----------------------------------------------------------+

@@ -1,3 +1,5 @@
+//src/components/shared/data-table/data-table-toolbar.tsx
+
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client';
 
@@ -6,7 +8,7 @@ import { Table } from '@tanstack/react-table';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { DataTableViewOptions } from './data-table-view-options';
-import { DataTableRowData } from './types';
+import type { DataTableRowData } from '../types';
 
 // ───────────────── BLOCK 2: Types & Zod Schemas ────────────────
 interface DataTableToolbarProps<TData extends DataTableRowData> {

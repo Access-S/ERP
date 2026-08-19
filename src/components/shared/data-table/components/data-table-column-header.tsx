@@ -1,3 +1,5 @@
+//src/components/shared/data-table/data-table-column-header.tsx
+
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client';
 
@@ -13,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { DataTableRowData } from './types';
+import type { DataTableRowData } from '../types';
 
 // ───────────────── BLOCK 2: Types & Zod Schemas ────────────────
 interface DataTableColumnHeaderProps<TData extends DataTableRowData, TValue> {
