@@ -1,196 +1,263 @@
-//src/components/shared/data-table/use-data-table.ts
-
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client';
 
-import * as React from "react";
+import * as React from 'react';
 import {
   type ColumnDef,
-  type ColumnFiltersState,
   type PaginationState,
   type RowSelectionState,
   type SortingState,
-  type TableOptions,
+  type Table,
   type TableState,
   type Updater,
   type VisibilityState,
   getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFacetedMinMaxValues,
   useReactTable,
-} from "@tanstack/react-table";
-import {
-  parseAsInteger,
-  parseAsString,
-  useQueryState,
-} from "nuqs";
+} from '@tanstack/react-table';
+import { createParser, parseAsInteger, useQueryState } from 'nuqs';
+import { dataTableDefaults } from '../defaults';
+import type {
+  DataTableRequest,
+  DataTableResponseData,
+  DataTableRowData,
+  FilterItem,
+} from '../types';
 
-// ───────────────── BLOCK 2: Types & Zod Schemas ────────────────
-interface UseDataTableProps<TData>
-  extends Omit<
-      TableOptions<TData>,
-      | "state"
-      | "pageCount"
-      | "getCoreRowModel"
-      | "manualFiltering"
-      | "manualPagination"
-      | "manualSorting"
-    >,
-    Required<Pick<TableOptions<TData>, "pageCount">> {
-  initialState?: Omit<Partial<TableState>, "sorting"> & {
-    sorting?: SortingState;
+// ───────────────── BLOCK 2: Custom Nuqs Parser (Multi-Sort) ───
+const sortParser = createParser({
+  parse(value: string): SortingState {
+    if (!value) return [];
+    return value.split(',').map((part) => {
+      const [id, dir] = part.split('.');
+      return { id, desc: dir === 'desc' };
+    });
+  },
+  serialize(value: SortingState): string {
+    if (!value.length) return '';
+    return value
+      .map(({ id, desc }) => `${id}.${desc ? 'desc' : 'asc'}`)
+      .join(',');
+  },
+}).withDefault([]);
+
+// ───────────────── BLOCK 3: Zod Schema for Props ───────────────
+// Rule 5: Zod First for all data shapes.
+// Note: ColumnDef and fetchPage can't be Zod-validated at runtime,
+// but we define the structural shape here for documentation and
+// to keep the pattern consistent.
+interface UseDataTableProps<TData extends DataTableRowData> {
+  columns: ColumnDef<TData>[];
+  fetchPage: (params: DataTableRequest) => Promise<DataTableResponseData<TData>>;
+  initialState?: Partial<
+    Pick<TableState, 'rowSelection' | 'columnVisibility'>
+  > & {
+    columnFilters?: FilterItem[];
   };
-  history?: "push" | "replace";
-  debounceMs?: number;
-  clearOnDefault?: boolean;
-  scroll?: boolean;
-  shallow?: boolean;
-  startTransition?: React.TransitionStartFunction;
 }
 
-// Custom parser to serialize SortingState to URL string (e.g., "supplier.desc")
-const parseSorting = (value: string): SortingState => {
-  if (!value) return [];
-  const [id, dir] = value.split(".");
-  return [{ id, desc: dir === "desc" }];
-};
+// ───────────────── BLOCK 4: Refs for Stable Callbacks ──────────
+// Rule 9: Callbacks that read changing state MUST use refs.
+// We define the ref hook here to keep the main hook clean.
+function useStateRef<T>(value: T): React.MutableRefObject<T> {
+  const ref = React.useRef(value);
+  ref.current = value;
+  return ref;
+}
 
-const serializeSorting = (value: SortingState): string => {
-  if (!value.length) return "";
-  const { id, desc } = value[0];
-  return `${id}.${desc ? "desc" : "asc"}`;
-};
-
-// ───────────────── BLOCK 3: Component / Service ────────────────
-export function useDataTable<TData>(props: UseDataTableProps<TData>) {
-  const {
-    columns,
-    pageCount = -1,
-    initialState,
-    history = "replace",
-    debounceMs = 300,
-    clearOnDefault = true,
-    scroll = false,
-    shallow = true,
-    startTransition,
-    ...tableProps
-  } = props;
-
-  const queryStateOptions = React.useMemo(
+// ───────────────── BLOCK 5: Hook Implementation ────────────────
+export function useDataTable<TData extends DataTableRowData>({
+  columns,
+  fetchPage,
+  initialState,
+}: UseDataTableProps<TData>) {
+  // ── Nuqs options (stable, never changes) ──
+  const nuqsOpts = React.useMemo(
     () => ({
-      history,
-      scroll,
-      shallow,
+      history: dataTableDefaults.nuqsOptions.history,
+      scroll: dataTableDefaults.nuqsOptions.scroll,
+      shallow: dataTableDefaults.nuqsOptions.shallow,
       throttleMs: 50,
-      debounceMs,
-      clearOnDefault,
-      startTransition,
+      debounceMs: dataTableDefaults.nuqsOptions.debounceMs,
+      clearOnDefault: dataTableDefaults.nuqsOptions.clearOnDefault,
     }),
-    [history, scroll, shallow, debounceMs, clearOnDefault, startTransition]
+    []
   );
 
-  // Local States
+  // ── URL state (page, perPage, sort) ──
+  const [page, setPage] = useQueryState(
+    dataTableDefaults.urlKeys.page,
+    parseAsInteger.withOptions(nuqsOpts).withDefault(1)
+  );
+
+  const [perPage, setPerPage] = useQueryState(
+    dataTableDefaults.urlKeys.perPage,
+    parseAsInteger.withOptions(nuqsOpts).withDefault(dataTableDefaults.pageSize)
+  );
+
+  const [sorting, setSorting] = useQueryState(
+    dataTableDefaults.urlKeys.sort,
+    sortParser.withOptions(nuqsOpts)
+  );
+
+  // ── Local state (not URL-synced) ──
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>(
     initialState?.rowSelection ?? {}
   );
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(
-    initialState?.columnVisibility ?? {}
-  );
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>(
+      initialState?.columnVisibility ?? {}
+    );
+
+  const [columnFilters, setColumnFilters] = React.useState<FilterItem[]>(
     initialState?.columnFilters ?? []
   );
 
-  // URL States (nuqs)
-  const [page, setPage] = useQueryState(
-    "page",
-    parseAsInteger.withOptions(queryStateOptions).withDefault(1)
-  );
-  const [perPage, setPerPage] = useQueryState(
-    "perPage",
-    parseAsInteger.withOptions(queryStateOptions).withDefault(10)
-  );
-  const [sorting, setSorting] = useQueryState(
-    "sort",
-    parseAsString.withOptions(queryStateOptions)
-      .withDefault(initialState?.sorting ? serializeSorting(initialState.sorting) : "")
-      .parseSearchAs(parseSorting)
-      .serializeSearch(serializeSorting) as unknown as SortingState // Type cast for nuqs custom parser
-  );
+  // ── Refs for stable callbacks (Rule 9) ──
+  const pageRef = useStateRef(page);
+  const perPageRef = useStateRef(perPage);
+  const sortingRef = useStateRef(sorting);
+  const columnFiltersRef = useStateRef(columnFilters);
+  const fetchPageRef = useStateRef(fetchPage);
 
-  const pagination: PaginationState = React.useMemo(() => {
-    return {
-      pageIndex: page - 1, // zero-based index for TanStack
-      pageSize: perPage,
+  // ── Data fetching state ──
+  const [data, setData] = React.useState<TData[]>([]);
+  const [pageCount, setPageCount] = React.useState(0);
+  const [totalCount, setTotalCount] = React.useState(0);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isError, setIsError] = React.useState(false);
+  const [error, setError] = React.useState<unknown>(null);
+
+  // ── Fetch effect ──
+  // Reads current values from refs to avoid stale closures,
+  // depends only on the URL-synced values that trigger re-fetches.
+  React.useEffect(() => {
+    let cancelled = false;
+
+    setIsLoading(true);
+    setIsError(false);
+    setError(null);
+
+    const params: DataTableRequest = {
+      page: pageRef.current,
+      pageSize: perPageRef.current,
+      sorts: sortingRef.current,
+      filters: columnFiltersRef.current,
+      joinOperator: 'and',
+      search: undefined,
     };
-  }, [page, perPage]);
 
+    fetchPageRef
+      .current(params)
+      .then((response) => {
+        if (!cancelled) {
+          setData(response.data);
+          setPageCount(response.pageCount);
+          setTotalCount(response.totalCount);
+          setIsLoading(false);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setIsError(true);
+          setError(err);
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [page, perPage, sorting, columnFilters]);
+
+  // ── Derived pagination state for TanStack ──
+  const pagination: PaginationState = React.useMemo(
+    () => ({
+      pageIndex: page - 1,
+      pageSize: perPage,
+    }),
+    [page, perPage]
+  );
+
+  // ── Stable callbacks (Rule 9: no changing state in deps) ──
   const onPaginationChange = React.useCallback(
     (updaterOrValue: Updater<PaginationState>) => {
-      if (typeof updaterOrValue === "function") {
-        const newPagination = updaterOrValue(pagination);
-        void setPage(newPagination.pageIndex + 1);
-        void setPerPage(newPagination.pageSize);
-      } else {
-        void setPage(updaterOrValue.pageIndex + 1);
-        void setPerPage(updaterOrValue.pageSize);
-      }
+      const current: PaginationState = {
+        pageIndex: pageRef.current - 1,
+        pageSize: perPageRef.current,
+      };
+      const newPagination =
+        typeof updaterOrValue === 'function'
+          ? updaterOrValue(current)
+          : updaterOrValue;
+      void setPage(newPagination.pageIndex + 1);
+      void setPerPage(newPagination.pageSize);
     },
-    [pagination, setPage, setPerPage]
+    [setPage, setPerPage]
   );
 
   const onSortingChange = React.useCallback(
     (updaterOrValue: Updater<SortingState>) => {
-      if (typeof updaterOrValue === "function") {
-        const newSorting = updaterOrValue(sorting);
-        void setSorting(serializeSorting(newSorting));
-      } else {
-        void setSorting(serializeSorting(updaterOrValue));
-      }
+      const current = sortingRef.current;
+      const newSorting =
+        typeof updaterOrValue === 'function'
+          ? updaterOrValue(current)
+          : updaterOrValue;
+      void setSorting(newSorting);
+      void setPage(1); // Reset to page 1 on sort change
     },
-    [sorting, setSorting]
+    [setSorting, setPage]
   );
 
+  // ── TanStack table instance ──
+  // Only getCoreRowModel — all filtering, sorting, pagination
+  // is handled server-side (Rule 2: Data Flow).
   const table = useReactTable({
-    ...tableProps,
     columns,
-    initialState,
+    data,
     pageCount,
     state: {
       pagination,
       sorting,
       columnVisibility,
       rowSelection,
-      columnFilters,
     },
-    defaultColumn: {
-      ...tableProps.defaultColumn,
-      enableColumnFilter: false, // Disabling default column filter for Phase 1
-    },
-    enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onPaginationChange,
     onSortingChange,
-    onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-    getFacetedMinMaxValues: getFacetedMinMaxValues(),
     manualPagination: true,
     manualSorting: true,
-    manualFiltering: false, // Setting to false for local search filter in Phase 1
+    enableRowSelection: true,
   });
 
-  return React.useMemo(() => ({ table }), [table]);
+  // ── Memoized return (Rule 9: Context Memoization) ──
+  return React.useMemo(
+    () => ({
+      table,
+      data,
+      isLoading,
+      isError,
+      error,
+      pageCount,
+      totalCount,
+      rowSelection,
+      setRowSelection,
+    }),
+    [
+      table,
+      data,
+      isLoading,
+      isError,
+      error,
+      pageCount,
+      totalCount,
+      rowSelection,
+      setRowSelection,
+    ]
+  );
 }
 
-// ───────────────── BLOCK 4: Exports ────────────────────────────
-export { useDataTable };
+// ───────────────── BLOCK 6: Type Exports ───────────────────────
 export type { UseDataTableProps };

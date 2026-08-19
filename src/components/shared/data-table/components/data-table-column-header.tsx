@@ -76,6 +76,3 @@ export function DataTableColumnHeader<TData extends DataTableRowData, TValue>({
     </div>
   );
 }
-
-// ───────────────── BLOCK 4: Exports ────────────────────────────
-export { DataTableColumnHeader };

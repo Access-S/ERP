@@ -62,6 +62,3 @@ export function DataTableToolbar<TData extends DataTableRowData>({
     </div>
   );
 }
-
-// ───────────────── BLOCK 4: Exports ────────────────────────────
-export { DataTableToolbar };

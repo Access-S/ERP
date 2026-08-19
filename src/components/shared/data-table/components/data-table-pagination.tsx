@@ -101,6 +101,3 @@ export function DataTablePagination({
     </div>
   );
 }
-
-// ───────────────── BLOCK 4: Exports ────────────────────────────
-export { DataTablePagination };

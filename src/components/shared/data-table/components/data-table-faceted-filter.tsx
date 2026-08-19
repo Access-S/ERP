@@ -153,6 +153,3 @@ export function DataTableFacetedFilter<TData extends DataTableRowData, TValue>({
     </Popover>
   );
 }
-
-// ───────────────── BLOCK 4: Exports ────────────────────────────
-export { DataTableFacetedFilter };

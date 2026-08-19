@@ -110,6 +110,3 @@ export function DataTable<TData extends DataTableRowData>({
     </div>
   );
 }
-
-// ───────────────── BLOCK 4: Exports ────────────────────────────
-export { DataTable };

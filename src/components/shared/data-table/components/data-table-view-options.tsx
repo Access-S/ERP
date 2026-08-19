@@ -64,6 +64,3 @@ export function DataTableViewOptions<TData extends DataTableRowData>({
     </DropdownMenu>
   );
 }
-
-// ───────────────── BLOCK 4: Exports ────────────────────────────
-export { DataTableViewOptions };

@@ -66,6 +66,3 @@ export function getValidFilters(filters: FilterItem[]): FilterItem[] {
           filter.value !== undefined)
   );
 }
-
-// ───────────────── BLOCK 5: Exports ────────────────────────────
-export { getColumnPinningStyle, getFilterOperators, getDefaultFilterOperator, getValidFilters };
