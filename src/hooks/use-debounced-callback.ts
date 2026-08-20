@@ -1,3 +1,5 @@
+//src/hooks/use-debounced-callback.ts
+
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 import * as React from "react";
 import { useCallbackRef } from "@/hooks/use-callback-ref";
@@ -34,6 +36,3 @@ export function useDebouncedCallback<T extends (...args: never[]) => unknown>(
 
   return setValue;
 }
-
-// ───────────────── BLOCK 4: Exports ────────────────────────────
-export { useDebouncedCallback };

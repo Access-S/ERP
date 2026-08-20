@@ -1,7 +1,10 @@
+//src/components/shared/data-table/components/data-table-toolbar.tsx
+
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client';
 
 import React from 'react';
+import { type Table } from '@tanstack/react-table';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { DataTableViewOptions } from './data-table-view-options';
@@ -26,21 +29,20 @@ export function DataTableToolbar<TData extends DataTableRowData>({
 }: DataTableToolbarProps<TData>) {
   const [searchInput, setSearchInput] = React.useState(search ?? '');
 
-  // Rule 9: Stable callback via ref to avoid stale closure.
-  const searchInputRef = React.useRef(searchInput);
-  searchInputRef.current = searchInput;
-
-  // Debounce search input before calling the hook's onSearchChange
-  // (the hook's onSearchChange is already debounced via nuqs, so we only
-  // debounce the local input to avoid hammering the URL on every keystroke)
+  // Sync local input if the external search state changes (e.g., URL direct load or reset)
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchInput !== searchInputRef.current) {
-        searchInputRef.current = searchInput;
-        onSearchChange(searchInput);
-      }
-      return () => clearTimeout(timer);
-    }, [searchInput, onSearchChange]);
+    setSearchInput(search ?? '');
+  }, [search]);
+
+  // Rule 9: Stable callback. Updates local state immediately for fast UI,
+  // and calls onSearchChange. Nuqs will debounce the URL/network update.
+  const handleSearchChange = React.useCallback(
+    (value: string) => {
+      setSearchInput(value);
+      onSearchChange(value);
+    },
+    [onSearchChange]
+  );
 
   return (
     <div className="flex items-center justify-between gap-2 py-4">
@@ -52,7 +54,7 @@ export function DataTableToolbar<TData extends DataTableRowData>({
           />
           <Input
             value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
             className="h-11 w-[150px] pl-9 lg:w-[300px] focus-visible:ring-1"
             aria-label={searchPlaceholder}

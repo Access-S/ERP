@@ -1,4 +1,4 @@
-//src/components/shared/data-table/data-table-view-options.tsx
+//src/components/shared/data-table/components/data-table-view-options.tsx
 
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client';

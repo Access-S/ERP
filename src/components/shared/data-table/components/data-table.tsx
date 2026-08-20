@@ -1,4 +1,4 @@
-//src/components/shared/data-table/data-table.tsx
+//src/components/shared/data-table/components/data-table.tsx
 
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client';
@@ -55,9 +55,10 @@ function DataTableRowComponent<TData extends DataTableRowData>({
   );
 }
 
+// Removed custom comparator to allow default shallow comparison.
+// This prevents stale UI when sorting/filtering.
 const MemoizedTableRow = React.memo(
-  DataTableRowComponent,
-  (prev, next) => prev.row.original === next.row.original
+  DataTableRowComponent
 ) as <TData extends DataTableRowData>(props: DataTableRowProps<TData>) => React.ReactElement;
 
 // Rule 10: High-level wrapper component composing Shadcn's low-level primitives

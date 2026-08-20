@@ -1,3 +1,5 @@
+//src/hooks/use-callback-ref.ts
+
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 import * as React from "react";
 
@@ -22,6 +24,3 @@ export function useCallbackRef<T extends (...args: never[]) => unknown>(
     []
   );
 }
-
-// ───────────────── BLOCK 4: Exports ────────────────────────────
-export { useCallbackRef };

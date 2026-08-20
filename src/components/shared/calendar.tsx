@@ -233,7 +233,7 @@ function CalendarProvider({
   disabledDates = [],
   weekStartsOn = 0,
   fixedWeeks = true,
-}: Omit<CalendarProps, 'className' | 'children'>) {
+}: Omit<CalendarProps, 'className'>) { // FIX: Removed 'children' from Omit
   const isControlled = controlledValue !== undefined
 
   const normalizedMinDate = useMemo(

@@ -1,3 +1,5 @@
+//src/components/shared/data-table/components/data-table-faceted-filter.tsx
+
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client';
 
@@ -19,6 +21,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import type { DataTableRowData, Option } from '../types';
 
@@ -52,17 +55,17 @@ export function DataTableFacetedFilter<TData extends DataTableRowData>({
         >
           <PlusCircle className="mr-2 h-4 w-4" aria-hidden="true" />
           {title}
-          {selectedValues.size > 0 && (
+          {selectedValues.length > 0 && (
             <>
               <Separator orientation="vertical" className="mx-2 h-4" />
               <div className="hidden space-x-1 lg:flex">
-                {selectedValues.size > 2 ? (
+                {selectedValues.length > 2 ? (
                   <Badge variant="secondary" className="rounded-sm px-1 font-normal">
-                    {selectedValues.size} selected
+                    {selectedValues.length} selected
                   </Badge>
                 ) : (
                   options
-                    .filter((option) => selectedValues.has(option.value))
+                    .filter((option) => selectedSet.has(option.value))
                     .map((option) => (
                       <Badge
                         key={option.value}
@@ -124,6 +127,3 @@ export function DataTableFacetedFilter<TData extends DataTableRowData>({
     </Popover>
   );
 }
-
-// ───────────────── BLOCK 4: Exports ──────────────────────────
-export { DataTableFacetedFilter };

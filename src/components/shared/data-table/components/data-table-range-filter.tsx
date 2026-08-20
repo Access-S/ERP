@@ -1,3 +1,5 @@
+//src/components/shared/data-table/components/data-table-range-filter.tsx
+
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client';
 

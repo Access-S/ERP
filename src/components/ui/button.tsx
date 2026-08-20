@@ -31,6 +31,7 @@ const buttonVariants = cva(
         sm: "h-8 px-3 text-xs gap-1.5",
         lg: "h-10 px-6 gap-2 text-base",
         icon: "size-9",
+        "icon-sm": "size-7", // ADDED: Fix for dialog/sheet/sidebar errors
       },
     },
     defaultVariants: {

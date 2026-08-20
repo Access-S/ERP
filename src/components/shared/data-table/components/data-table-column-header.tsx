@@ -1,4 +1,4 @@
-//src/components/shared/data-table/data-table-column-header.tsx
+//src/components/shared/data-table/components/data-table-column-header.tsx
 
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client';

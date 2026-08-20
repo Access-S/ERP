@@ -1,4 +1,4 @@
-//src/components/shared/data-table/data-table-pagination.tsx
+//src/components/shared/data-table/components/data-table-pagination.tsx
 
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client';

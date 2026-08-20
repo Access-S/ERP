@@ -1,3 +1,5 @@
+//src/components/shared/data-table/components/data-table-filter-list.tsx
+
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client';
 
@@ -82,7 +84,10 @@ export function DataTableFilterList<TData extends DataTableRowData>({
   );
 
   const availableColumns = React.useMemo(
-    () => filterableColumns.filter((col) => !filteredColumnIds.has(col.id)),
+    () =>
+      filterableColumns.filter(
+        (col) => col.id && !filteredColumnIds.has(col.id) // FIX: Added col.id && to prevent passing undefined to .has()
+      ),
     [filterableColumns, filteredColumnIds]
   );
 
@@ -103,7 +108,7 @@ export function DataTableFilterList<TData extends DataTableRowData>({
         return;
       }
       if (
-        REMOVE_FILTER_SHORTCUTS.includes(event.key as typeof REMOVE_FILTER_SHORTCUTS[number]) &&
+        REMOVE_FILTER_SHORTCUTS.includes(event.key as (typeof REMOVE_FILTER_SHORTCUTS)[number]) &&
         filters.length > 0
       ) {
         event.preventDefault();
@@ -116,7 +121,7 @@ export function DataTableFilterList<TData extends DataTableRowData>({
   const onTriggerKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
       if (
-        REMOVE_FILTER_SHORTCUTS.includes(event.key as typeof REMOVE_FILTER_SHORTCUTS[number]) &&
+        REMOVE_FILTER_SHORTCUTS.includes(event.key as (typeof REMOVE_FILTER_SHORTCUTS)[number]) &&
         filters.length > 0
       ) {
         event.preventDefault();
@@ -213,7 +218,11 @@ function FilterRow<TData extends DataTableRowData>({
   onFilterRemove,
 }: FilterRowProps<TData>) {
   const column = columns.find((c) => c.id === filter.id);
-  const meta = column?.meta;
+
+  // FIX: Moved null check to the top so `column.id` is safely narrowed to `string` below
+  if (!column?.id) return null;
+
+  const meta = column.meta;
   const variant: FilterVariant = meta?.variant ?? 'text';
   const operators = getFilterOperators(variant);
 
@@ -234,8 +243,6 @@ function FilterRow<TData extends DataTableRowData>({
     },
     [filter, onFilterChange]
   );
-
-  if (!column?.id) return null;
 
   return (
     <div
@@ -318,6 +325,7 @@ function ColumnSelector<TData extends DataTableRowData>({
     () =>
       columns.filter(
         (col) =>
+          col.id && // FIX: Ensure col.id is a string before using .has()
           col.enableColumnFilter !== false &&
           (!filteredColumnIds.has(col.id) || col.id === currentColumnId)
       ),
@@ -352,7 +360,7 @@ function ColumnSelector<TData extends DataTableRowData>({
                     key={col.id}
                     value={colLabel}
                     onSelect={() => {
-                      onSelect(col.id);
+                      if (col.id) onSelect(col.id); // FIX: Guard against undefined
                       setSelectorOpen(false);
                       setInputValue('');
                     }}
