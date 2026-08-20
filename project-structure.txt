@@ -3,7 +3,7 @@
 |          NEXT.JS             |
 |          mrp-system                                      |
 |                                                          |
-|          Generated: 2026-08-19 02:46:02                  |
+|          Generated: 2026-08-20 03:49:46                  |
 |                                                          |
 +----------------------------------------------------------+
 
@@ -28,16 +28,28 @@
   │   ├── components/
   │   │   ├── shared/
   │   │   │   ├── data-table/
-  │   │   │   │   ├── [TS]   data-table-column-header.tsx
-  │   │   │   │   ├── [TS]   data-table-faceted-filter.tsx
-  │   │   │   │   ├── [TS]   data-table-pagination.tsx
-  │   │   │   │   ├── [TS]   data-table-toolbar.tsx
-  │   │   │   │   ├── [TS]   data-table.tsx
-  │   │   │   │   ├── [TS]   data-table-view-options.tsx
-  │   │   │   │   ├── [TS]   index.ts
-  │   │   │   │   ├── [TS]   types.ts
-  │   │   │   │   ├── [TS]   use-data-table-state.ts
-  │   │   │   │   └── [TS]   use-data-table.ts
+  │   │   │   │   ├── components/
+  │   │   │   │   │   ├── [TS]   data-table-column-header.tsx
+  │   │   │   │   │   ├── [TS]   data-table-faceted-filter.tsx
+  │   │   │   │   │   ├── [TS]   data-table-filter-list.tsx
+  │   │   │   │   │   ├── [TS]   data-table-pagination.tsx
+  │   │   │   │   │   ├── [TS]   data-table-range-filter.tsx
+  │   │   │   │   │   ├── [TS]   data-table-toolbar.tsx
+  │   │   │   │   │   ├── [TS]   data-table.tsx
+  │   │   │   │   │   ├── [TS]   data-table-view-options.tsx
+  │   │   │   │   │   └── [TS]   filter-value-input.tsx
+  │   │   │   │   ├── docs/
+  │   │   │   │   │   └── [MD]   build-report.md
+  │   │   │   │   ├── hooks/
+  │   │   │   │   │   └── [TS]   use-data-table.ts
+  │   │   │   │   ├── lib/
+  │   │   │   │   │   ├── [TS]   filters.ts
+  │   │   │   │   │   └── [TS]   utils.ts
+  │   │   │   │   ├── types/
+  │   │   │   │   │   ├── [TS]   index.ts
+  │   │   │   │   │   └── [TS]   schemas.ts
+  │   │   │   │   ├── [TS]   defaults.ts
+  │   │   │   │   └── [TS]   index.ts
   │   │   │   ├── [TS]   app-sidebar.tsx
   │   │   │   ├── [TS]   calendar.tsx
   │   │   │   ├── [TS]   date-picker.tsx
@@ -49,6 +61,7 @@
   │   │       ├── [TS]   badge.tsx
   │   │       ├── [TS]   button.tsx
   │   │       ├── [TS]   card.tsx
+  │   │       ├── [TS]   checkbox.tsx
   │   │       ├── [TS]   collapsible.tsx
   │   │       ├── [TS]   command.tsx
   │   │       ├── [TS]   dialog.tsx
@@ -63,24 +76,22 @@
   │   │       ├── [TS]   sheet.tsx
   │   │       ├── [TS]   sidebar.tsx
   │   │       ├── [TS]   skeleton.tsx
+  │   │       ├── [TS]   slider.tsx
   │   │       ├── [TS]   sonner.tsx
   │   │       ├── [TS]   table.tsx
   │   │       ├── [TS]   tabs.tsx
   │   │       ├── [TS]   textarea.tsx
+  │   │       ├── [TS]   toggle-group.tsx
+  │   │       ├── [TS]   toggle.tsx
   │   │       └── [TS]   tooltip.tsx
-  │   ├── config/
-  │   │   └── [TS]   data-table.ts
   │   ├── hooks/
   │   │   ├── [TS]   use-callback-ref.ts
   │   │   ├── [TS]   use-debounced-callback.ts
   │   │   └── [TS]   use-mobile.ts
   │   ├── lib/
-  │   │   ├── [TS]   data-table.ts
-  │   │   ├── [TS]   parsers.ts
   │   │   └── [TS]   utils.ts
   │   └── types/
   │       ├── [TS]   calendar.ts
-  │       ├── [TS]   data-table.ts
   │       └── [TS]   navigation.ts
   ├── [JSON] components.json
   ├──        .cursorrules
@@ -96,5 +107,5 @@
   └── [SH]   update-structure.sh
 
 +----------------------------------------------------------+
-|  SUMMARY:  Folders: 13   | Files: 72   | Total: 85       |
+|  SUMMARY:  Folders: 17   | Files: 79   | Total: 96       |
 +----------------------------------------------------------+

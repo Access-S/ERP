@@ -1,12 +1,9 @@
-//src/components/shared/data-table/data-table-faceted-filter.tsx
-
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client';
 
-import React from 'react';
-import { Column } from '@tanstack/react-table';
+import * as React from 'react';
+import type { Column } from '@tanstack/react-table';
 import { Check, PlusCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,35 +13,33 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
 } from '@/components/ui/command';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Separator } from '@/components/ui/separator';
-import type { DataTableRowData } from '../types';
+import { cn } from '@/lib/utils';
+import type { DataTableRowData, Option } from '../types';
 
-// ───────────────── BLOCK 2: Types & Zod Schemas ────────────────
-interface DataTableFacetedFilterProps<TData extends DataTableRowData, TValue> {
-  column?: Column<TData, TValue>;
+// ───────────────── BLOCK 2: Types ──────────────────────────
+interface DataTableFacetedFilterProps<TData extends DataTableRowData> {
+  column?: Column<TData, unknown>;
   title?: string;
-  options: {
-    label: string;
-    value: string;
-    icon?: React.ComponentType<{ className?: string }>;
-  }[];
+  options: Option[];
+  selectedValues: string[];
+  onValueChange: (values: string[]) => void;
 }
 
-// ───────────────── BLOCK 3: Component / Service ────────────────
-export function DataTableFacetedFilter<TData extends DataTableRowData, TValue>({
+// ───────────────── BLOCK 3: Component ──────────────────────────
+export function DataTableFacetedFilter<TData extends DataTableRowData>({
   column,
   title,
   options,
-}: DataTableFacetedFilterProps<TData, TValue>) {
-  const facets = column?.getFacetedUniqueValues();
-  const selectedValues = new Set(column?.getFilterValue() as string[]);
+  selectedValues,
+  onValueChange,
+}: DataTableFacetedFilterProps<TData>) {
+  const selectedSet = React.useMemo(() => new Set(selectedValues), [selectedValues]);
 
   return (
     <Popover>
@@ -52,20 +47,14 @@ export function DataTableFacetedFilter<TData extends DataTableRowData, TValue>({
         <Button
           variant="outline"
           size="sm"
-          className="h-10 border-dashed"
-          // Rule 4: Touch targets MUST be minimum 44×44px. h-10 + py = 2.75rem
+          className="h-11 border-dashed"
+          aria-label={title ? `Filter by ${title}` : 'Filter'}
         >
           <PlusCircle className="mr-2 h-4 w-4" aria-hidden="true" />
           {title}
-          {selectedValues?.size > 0 && (
+          {selectedValues.size > 0 && (
             <>
               <Separator orientation="vertical" className="mx-2 h-4" />
-              <Badge
-                variant="secondary"
-                className="rounded-sm px-1 font-normal lg:hidden"
-              >
-                {selectedValues.size}
-              </Badge>
               <div className="hidden space-x-1 lg:flex">
                 {selectedValues.size > 2 ? (
                   <Badge variant="secondary" className="rounded-sm px-1 font-normal">
@@ -90,62 +79,44 @@ export function DataTableFacetedFilter<TData extends DataTableRowData, TValue>({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0" align="start">
-        {/* Rule 4: Command handles roving tabindex natively for lists > 5 items */}
         <Command>
-          <CommandInput placeholder={title} aria-label={`Search ${title}`} />
+          <CommandInput
+            placeholder={title}
+            aria-label={`Search ${title}`}
+            value={selectedValues.join(', ')}
+            onValueChange={(value) => onValueChange(value.split(', ').filter(Boolean))}
+          />
           <CommandList>
-            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandEmpty>No options found.</CommandEmpty>
             <CommandGroup>
               {options.map((option) => {
-                const isSelected = selectedValues.has(option.value);
+                const isSelected = selectedSet.has(option.value);
                 return (
                   <CommandItem
                     key={option.value}
+                    value={option.value}
                     onSelect={() => {
-                      if (isSelected) {
-                        selectedValues.delete(option.value);
-                      } else {
-                        selectedValues.add(option.value);
-                      }
-                      const filterValues = Array.from(selectedValues);
-                      column?.setFilterValue(
-                        filterValues.length ? filterValues : undefined
-                      );
+                      const next = isSelected
+                        ? selectedValues.filter((v) => v !== option.value)
+                        : [...selectedValues, option.value];
+                      onValueChange(next);
                     }}
                   >
-                    <div
-                      className={cn(
-                        'mr-2 flex h-4 w-4 items-center justify-center border border-primary',
-                        isSelected ? 'bg-primary text-primary-foreground' : 'opacity-50'
-                      )}
-                    >
-                      {isSelected && <Check className="h-3 w-3" aria-hidden="true" />}
-                    </div>
                     {option.icon && (
                       <option.icon className="mr-2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                     )}
-                    <span className="flex-1 text-sm text-foreground">{option.label}</span>
-                    {facets?.get(option.value) && (
-                      <span className="ml-auto h-4 w-4 text-xs font-normal text-muted-foreground">
-                        {facets.get(option.value)}
+                    <span className="flex-1 text-foreground">{option.label}</span>
+                    {option.count && (
+                      <span className="ml-auto font-mono text-xs text-muted-foreground">
+                        {option.count}
                       </span>
+                    )}
+                    {isSelected && (
+                      <Check className="ml-auto h-4 w-4" aria-hidden="true" />
                     )}
                   </CommandItem>
                 );
               })}
-              {selectedValues.size > 0 && (
-                <>
-                  <CommandSeparator />
-                  <CommandGroup>
-                    <CommandItem
-                      onSelect={() => column?.setFilterValue(undefined)}
-                      className="justify-center text-center"
-                    >
-                      Clear filters
-                    </CommandItem>
-                  </CommandGroup>
-                </>
-              )}
             </CommandGroup>
           </CommandList>
         </Command>
@@ -153,3 +124,6 @@ export function DataTableFacetedFilter<TData extends DataTableRowData, TValue>({
     </Popover>
   );
 }
+
+// ───────────────── BLOCK 4: Exports ──────────────────────────
+export { DataTableFacetedFilter };

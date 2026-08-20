@@ -18,6 +18,9 @@ export const dataTableDefaults = {
     page: 'page',
     perPage: 'perPage',
     sort: 'sort',
+    filters: 'filters',
+    joinOperator: 'joinOperator',
+    search: 'search',
   } as const,
 
   operatorsByVariant: {

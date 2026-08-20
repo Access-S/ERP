@@ -7,23 +7,24 @@ import {
   type PaginationState,
   type RowSelectionState,
   type SortingState,
-  type Table,
   type TableState,
   type Updater,
   type VisibilityState,
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { createParser, parseAsInteger, useQueryState } from 'nuqs';
+import { createParser, parseAsInteger, parseAsString, useQueryState } from 'nuqs';
 import { dataTableDefaults } from '../defaults';
+import { upsertFilter, removeFilter } from '../lib/filters';
 import type {
   DataTableRequest,
   DataTableResponseData,
   DataTableRowData,
   FilterItem,
+  JoinOperator,
 } from '../types';
 
-// ───────────────── BLOCK 2: Custom Nuqs Parser (Multi-Sort) ───
+// ───────────────── BLOCK 2: Custom Nuqs Parsers ───────────────
 const sortParser = createParser({
   parse(value: string): SortingState {
     if (!value) return [];
@@ -40,24 +41,43 @@ const sortParser = createParser({
   },
 }).withDefault([]);
 
-// ───────────────── BLOCK 3: Zod Schema for Props ───────────────
-// Rule 5: Zod First for all data shapes.
-// Note: ColumnDef and fetchPage can't be Zod-validated at runtime,
-// but we define the structural shape here for documentation and
-// to keep the pattern consistent.
+const filterParser = createParser({
+  parse(value: string): FilterItem[] {
+    if (!value) return [];
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed;
+      return [];
+    } catch {
+      return [];
+    }
+  },
+  serialize(value: FilterItem[]): string {
+    if (!value.length) return '';
+    return JSON.stringify(value);
+  },
+}).withDefault([]);
+
+const joinOperatorParser = createParser({
+  parse(value: string): JoinOperator {
+    if (value === 'or') return 'or';
+    return 'and';
+  },
+  serialize(value: JoinOperator): string {
+    return value;
+  },
+}).withDefault('and');
+
+// ───────────────── BLOCK 3: Props ────────────────────────────
 interface UseDataTableProps<TData extends DataTableRowData> {
   columns: ColumnDef<TData>[];
   fetchPage: (params: DataTableRequest) => Promise<DataTableResponseData<TData>>;
-  initialState?: Partial<
-    Pick<TableState, 'rowSelection' | 'columnVisibility'>
-  > & {
+  initialState?: Partial<Pick<TableState, 'rowSelection' | 'columnVisibility'>> & {
     columnFilters?: FilterItem[];
   };
 }
 
-// ───────────────── BLOCK 4: Refs for Stable Callbacks ──────────
-// Rule 9: Callbacks that read changing state MUST use refs.
-// We define the ref hook here to keep the main hook clean.
+// ───────────────── BLOCK 4: Ref Helper ────────────────────────
 function useStateRef<T>(value: T): React.MutableRefObject<T> {
   const ref = React.useRef(value);
   ref.current = value;
@@ -83,7 +103,7 @@ export function useDataTable<TData extends DataTableRowData>({
     []
   );
 
-  // ── URL state (page, perPage, sort) ──
+  // ── URL state ──
   const [page, setPage] = useQueryState(
     dataTableDefaults.urlKeys.page,
     parseAsInteger.withOptions(nuqsOpts).withDefault(1)
@@ -99,6 +119,21 @@ export function useDataTable<TData extends DataTableRowData>({
     sortParser.withOptions(nuqsOpts)
   );
 
+  const [filters, setFilters] = useQueryState(
+    dataTableDefaults.urlKeys.filters,
+    filterParser.withOptions(nuqsOpts)
+  );
+
+  const [joinOperator, setJoinOperator] = useQueryState(
+    dataTableDefaults.urlKeys.joinOperator,
+    joinOperatorParser.withOptions(nuqsOpts)
+  );
+
+  const [search, setSearch] = useQueryState(
+    dataTableDefaults.urlKeys.search,
+    parseAsString.withOptions(nuqsOpts).withDefault('')
+  );
+
   // ── Local state (not URL-synced) ──
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>(
     initialState?.rowSelection ?? {}
@@ -109,15 +144,13 @@ export function useDataTable<TData extends DataTableRowData>({
       initialState?.columnVisibility ?? {}
     );
 
-  const [columnFilters, setColumnFilters] = React.useState<FilterItem[]>(
-    initialState?.columnFilters ?? []
-  );
-
   // ── Refs for stable callbacks (Rule 9) ──
   const pageRef = useStateRef(page);
   const perPageRef = useStateRef(perPage);
   const sortingRef = useStateRef(sorting);
-  const columnFiltersRef = useStateRef(columnFilters);
+  const filtersRef = useStateRef(filters);
+  const searchRef = useStateRef(search);
+  const joinOperatorRef = useStateRef(joinOperator);
   const fetchPageRef = useStateRef(fetchPage);
 
   // ── Data fetching state ──
@@ -129,8 +162,9 @@ export function useDataTable<TData extends DataTableRowData>({
   const [error, setError] = React.useState<unknown>(null);
 
   // ── Fetch effect ──
-  // Reads current values from refs to avoid stale closures,
-  // depends only on the URL-synced values that trigger re-fetches.
+  // Reads current values from refs to avoid stale closures.
+  // Depends on URL-synced values — nuqs ensures these are
+  // referentially stable when unchanged, preventing extra fetches.
   React.useEffect(() => {
     let cancelled = false;
 
@@ -142,9 +176,9 @@ export function useDataTable<TData extends DataTableRowData>({
       page: pageRef.current,
       pageSize: perPageRef.current,
       sorts: sortingRef.current,
-      filters: columnFiltersRef.current,
-      joinOperator: 'and',
-      search: undefined,
+      filters: filtersRef.current,
+      joinOperator: joinOperatorRef.current,
+      search: searchRef.current || undefined,
     };
 
     fetchPageRef
@@ -168,9 +202,9 @@ export function useDataTable<TData extends DataTableRowData>({
     return () => {
       cancelled = true;
     };
-  }, [page, perPage, sorting, columnFilters]);
+  }, [page, perPage, sorting, filters, joinOperator, search]);
 
-  // ── Derived pagination state for TanStack ──
+  // ── Derived pagination state for TanStack (0-based) ──
   const pagination: PaginationState = React.useMemo(
     () => ({
       pageIndex: page - 1,
@@ -204,9 +238,43 @@ export function useDataTable<TData extends DataTableRowData>({
           ? updaterOrValue(current)
           : updaterOrValue;
       void setSorting(newSorting);
-      void setPage(1); // Reset to page 1 on sort change
+      void setPage(1);
     },
     [setSorting, setPage]
+  );
+
+  const onFilterChange = React.useCallback(
+    (filter: FilterItem) => {
+      void setFilters((prev) => upsertFilter(prev, filter));
+      void setPage(1);
+    },
+    [setFilters, setPage]
+  );
+
+  const onFilterRemove = React.useCallback(
+    (columnId: string) => {
+      void setFilters((prev) => removeFilter(prev, columnId));
+    },
+    [setFilters]
+  );
+
+  const onFiltersClear = React.useCallback(() => {
+    void setFilters([]);
+  }, [setFilters]);
+
+  const onSearchChange = React.useCallback(
+    (value: string) => {
+      void setSearch(value || null);
+      void setPage(1);
+    },
+    [setSearch, setPage]
+  );
+
+  const onJoinOperatorChange = React.useCallback(
+    (value: JoinOperator) => {
+      void setJoinOperator(value);
+    },
+    [setJoinOperator]
   );
 
   // ── TanStack table instance ──
@@ -244,6 +312,14 @@ export function useDataTable<TData extends DataTableRowData>({
       totalCount,
       rowSelection,
       setRowSelection,
+      filters,
+      search,
+      joinOperator,
+      onFilterChange,
+      onFilterRemove,
+      onFiltersClear,
+      onSearchChange,
+      onJoinOperatorChange,
     }),
     [
       table,
@@ -255,9 +331,17 @@ export function useDataTable<TData extends DataTableRowData>({
       totalCount,
       rowSelection,
       setRowSelection,
+      filters,
+      search,
+      joinOperator,
+      onFilterChange,
+      onFilterRemove,
+      onFiltersClear,
+      onSearchChange,
+      onJoinOperatorChange,
     ]
   );
 }
 
-// ───────────────── BLOCK 6: Type Exports ───────────────────────
+// ───────────────── BLOCK 6: Type Exports ────────────────────
 export type { UseDataTableProps };
