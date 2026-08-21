@@ -1,5 +1,3 @@
-//src/components/shared/data-table/components/data-table.tsx
-
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client';
 
@@ -17,6 +15,7 @@ import {
   Table as TanstackTable,
   flexRender,
 } from '@tanstack/react-table';
+import { cn } from '@/lib/utils';
 import type { DataTableRowData } from '../types';
 
 // ───────────────── BLOCK 2: Types & Zod Schemas ────────────────
@@ -39,7 +38,11 @@ function DataTableRowComponent<TData extends DataTableRowData>({
   return (
     <TableRow
       role="row"
-      className="hover:bg-muted/50 motion-safe:transition-colors motion-safe:duration-150"
+      // FIX: Added conditional highlight when row is selected
+      className={cn(
+        "hover:bg-muted/50 motion-safe:transition-colors motion-safe:duration-150",
+        row.getIsSelected() && "bg-muted"
+      )}
     >
       {row.getVisibleCells().map((cell) => (
         <TableCell
@@ -54,12 +57,6 @@ function DataTableRowComponent<TData extends DataTableRowData>({
     </TableRow>
   );
 }
-
-// Removed custom comparator to allow default shallow comparison.
-// This prevents stale UI when sorting/filtering.
-const MemoizedTableRow = React.memo(
-  DataTableRowComponent
-) as <TData extends DataTableRowData>(props: DataTableRowProps<TData>) => React.ReactElement;
 
 // Rule 10: High-level wrapper component composing Shadcn's low-level primitives
 export function DataTable<TData extends DataTableRowData>({
@@ -93,7 +90,7 @@ export function DataTable<TData extends DataTableRowData>({
         <TableBody role="rowgroup">
           {table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
-              <MemoizedTableRow key={row.id} row={row} />
+              <DataTableRowComponent key={row.id} row={row} />
             ))
           ) : (
             <TableRow role="row" className="hover:bg-transparent">
@@ -111,3 +108,6 @@ export function DataTable<TData extends DataTableRowData>({
     </div>
   );
 }
+
+// ───────────────── BLOCK 4: Exports ────────────────────────────
+// DataTable is exported inline.

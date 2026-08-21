@@ -1,6 +1,7 @@
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 import type { Metadata } from "next"
 import { Toaster } from "sonner"
+import { NuqsAdapter } from "nuqs/adapters/next/app" // ADDED: nuqs adapter
 import "./globals.css"
 
 import { Work_Sans, Chakra_Petch, JetBrains_Mono } from "next/font/google"
@@ -39,7 +40,9 @@ export default function RootLayout({
       className={`dark ${fontBody.variable} ${fontMono.variable} ${fontHeading.variable}`}
     >
       <body className="antialiased">
-        {children}
+        <NuqsAdapter> {/* ADDED: Wrap app with NuqsAdapter */}
+          {children}
+        </NuqsAdapter>
         <Toaster richColors position="top-right" />
       </body>
     </html>

@@ -149,7 +149,8 @@ interface ActionLog {
 }
 
 // Rule 5: Type safety for our table data
-interface PurchaseOrder extends DataTableRowData {
+// FIX: Changed from 'interface extends' to 'type' intersection
+type PurchaseOrder = DataTableRowData & {
   id: string
   supplier: string
   total: string
@@ -262,7 +263,7 @@ export default function PlaygroundPage() {
         header: ({ column }) => <DataTableColumnHeader column={column} title="Total" />,
         cell: ({ row }) => <span className="text-foreground tabular-nums">{row.getValue('total')}</span>,
       },
-      {
+            {
         accessorKey: 'status',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
         cell: ({ row }) => {
@@ -272,7 +273,7 @@ export default function PlaygroundPage() {
               variant={
                 status === 'Approved' ? 'default' :
                 status === 'Pending' ? 'secondary' :
-                status === 'Received' ? 'success' :
+                status === 'Received' ? 'secondary' : // FIX: Changed 'success' to 'secondary'
                 'destructive'
               }
             >
@@ -583,7 +584,7 @@ export default function PlaygroundPage() {
           Data Display
         </h2>
         <div className="grid gap-6 md:grid-cols-2">
-          {/* Table */}
+                    {/* Table */}
           <Card className="md:col-span-2">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
@@ -596,12 +597,15 @@ export default function PlaygroundPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Rule 10: High-level wrapper composing the table instance */}
-              <DataTableToolbar 
+              {/* FIX: Added explicit generic <PurchaseOrder> and correct props */}
+              <DataTableToolbar<PurchaseOrder> 
                 table={table} 
-                searchKey="id" 
+                search=""
                 searchPlaceholder="Search POs..." 
+                onSearchChange={() => {}}
               />
-              <DataTable table={table} />
+              {/* FIX: Added explicit generic <PurchaseOrder> */}
+              <DataTable<PurchaseOrder> table={table} />
             </CardContent>
           </Card>
 
@@ -635,7 +639,8 @@ export default function PlaygroundPage() {
 
               <Separator className="my-6" />
 
-              <Tabs defaultValue="line1" variant="line">
+              {/* FIX: Removed variant="line" */}
+              <Tabs defaultValue="line1">
                 <TabsList>
                   <TabsTrigger value="line1">Details</TabsTrigger>
                   <TabsTrigger value="line2">History</TabsTrigger>

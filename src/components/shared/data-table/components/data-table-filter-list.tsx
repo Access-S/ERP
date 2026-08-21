@@ -1,5 +1,3 @@
-//src/components/shared/data-table/components/data-table-filter-list.tsx
-
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client';
 
@@ -32,15 +30,22 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { FilterValueInput } from './filter-value-input';
 import { getFilterOperators, getDefaultFilterOperator } from '../lib/utils';
-import type { DataTableRowData, FilterItem, FilterOperator, FilterVariant } from '../types';
+import type { DataTableRowData, FilterItem, FilterOperator, FilterVariant, JoinOperator } from '../types';
+
+// Helper to safely get column ID
+function getColumnId(col: ColumnDef<any>): string | undefined {
+  return col.id ?? (typeof col.accessorKey === 'string' ? col.accessorKey : undefined);
+}
 
 // ───────────────── BLOCK 2: Types ────────────────────────────
 interface DataTableFilterListProps<TData extends DataTableRowData> {
   columns: ColumnDef<TData>[];
   filters: FilterItem[];
+  joinOperator: JoinOperator;
   onFilterChange: (filter: FilterItem) => void;
   onFilterRemove: (columnId: string) => void;
   onFiltersClear: () => void;
+  onJoinOperatorChange: (value: JoinOperator) => void;
 }
 
 interface FilterRowProps<TData extends DataTableRowData> {
@@ -65,9 +70,11 @@ const REMOVE_FILTER_SHORTCUTS = ['backspace', 'delete'] as const;
 export function DataTableFilterList<TData extends DataTableRowData>({
   columns,
   filters,
+  joinOperator,
   onFilterChange,
   onFilterRemove,
   onFiltersClear,
+  onJoinOperatorChange,
 }: DataTableFilterListProps<TData>) {
   const [open, setOpen] = React.useState(false);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
@@ -86,17 +93,18 @@ export function DataTableFilterList<TData extends DataTableRowData>({
   const availableColumns = React.useMemo(
     () =>
       filterableColumns.filter(
-        (col) => col.id && !filteredColumnIds.has(col.id) // FIX: Added col.id && to prevent passing undefined to .has()
+        (col) => getColumnId(col) && !filteredColumnIds.has(getColumnId(col)!)
       ),
     [filterableColumns, filteredColumnIds]
   );
 
   const onAddFilter = React.useCallback(() => {
     const column = availableColumns[0];
-    if (!column?.id) return;
+    const colId = getColumnId(column);
+    if (!colId) return;
     const variant: FilterVariant = column.meta?.variant ?? 'text';
     const operator: FilterOperator = getDefaultFilterOperator(variant);
-    onFilterChange({ id: column.id, operator, value: undefined });
+    onFilterChange({ id: colId, operator, value: undefined });
   }, [availableColumns, onFilterChange]);
 
   const onListKeyDown = React.useCallback(
@@ -164,6 +172,25 @@ export function DataTableFilterList<TData extends DataTableRowData>({
         </div>
 
         {filters.length > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Match</span>
+            <Select
+              value={joinOperator}
+              onValueChange={(v) => onJoinOperatorChange(v as JoinOperator)}
+            >
+              <SelectTrigger className="h-8 w-[80px] lowercase">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="and">And</SelectItem>
+                <SelectItem value="or">Or</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-xs text-muted-foreground">conditions</span>
+          </div>
+        )}
+
+        {filters.length > 0 && (
           <div
             ref={listRef}
             role="list"
@@ -217,10 +244,12 @@ function FilterRow<TData extends DataTableRowData>({
   onFilterChange,
   onFilterRemove,
 }: FilterRowProps<TData>) {
-  const column = columns.find((c) => c.id === filter.id);
+  const column = columns.find((c) => getColumnId(c) === filter.id);
 
-  // FIX: Moved null check to the top so `column.id` is safely narrowed to `string` below
-  if (!column?.id) return null;
+  if (!column) return null;
+
+  const colId = getColumnId(column);
+  if (!colId) return null;
 
   const meta = column.meta;
   const variant: FilterVariant = meta?.variant ?? 'text';
@@ -250,17 +279,18 @@ function FilterRow<TData extends DataTableRowData>({
       className="flex items-center gap-2"
     >
       <ColumnSelector
-        currentColumnId={column.id}
+        currentColumnId={colId}
         columns={columns}
         filteredColumnIds={filteredColumnIds}
         onSelect={(newColumnId) => {
-          if (newColumnId === column.id) return;
-          const newColumn = columns.find((c) => c.id === newColumnId);
-          if (!newColumn?.id) return;
+          if (newColumnId === colId) return;
+          const newColumn = columns.find((c) => getColumnId(c) === newColumnId);
+          const newColId = newColumn ? getColumnId(newColumn) : undefined;
+          if (!newColId) return;
           const newVariant: FilterVariant = newColumn.meta?.variant ?? 'text';
           const newOperator: FilterOperator = getDefaultFilterOperator(newVariant);
           onFilterChange({
-            id: newColumnId,
+            id: newColId,
             operator: newOperator,
             value: undefined,
           });
@@ -271,7 +301,7 @@ function FilterRow<TData extends DataTableRowData>({
         onValueChange={onOperatorChange}
       >
         <SelectTrigger
-          aria-label={`${meta?.label ?? column.id} filter operator`}
+          aria-label={`${meta?.label ?? colId} filter operator`}
           className="h-11 w-[130px] lowercase"
         >
           <SelectValue placeholder="Operator" />
@@ -299,7 +329,7 @@ function FilterRow<TData extends DataTableRowData>({
         variant="outline"
         size="icon"
         className="h-11 w-11 shrink-0"
-        aria-label={`Remove ${meta?.label ?? column.id} filter`}
+        aria-label={`Remove ${meta?.label ?? colId} filter`}
         onClick={() => onFilterRemove(filter.id)}
       >
         <X className="h-4 w-4" aria-hidden="true" />
@@ -318,16 +348,18 @@ function ColumnSelector<TData extends DataTableRowData>({
   const [selectorOpen, setSelectorOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState('');
 
-  const column = columns.find((c) => c.id === currentColumnId);
+  const column = columns.find((c) => getColumnId(c) === currentColumnId);
   const label = column?.meta?.label ?? currentColumnId;
 
   const selectableColumns = React.useMemo(
     () =>
       columns.filter(
-        (col) =>
-          col.id && // FIX: Ensure col.id is a string before using .has()
-          col.enableColumnFilter !== false &&
-          (!filteredColumnIds.has(col.id) || col.id === currentColumnId)
+        (col) => {
+          const id = getColumnId(col);
+          return id && 
+                 col.enableColumnFilter !== false &&
+                 (!filteredColumnIds.has(id) || id === currentColumnId);
+        }
       ),
     [columns, filteredColumnIds, currentColumnId]
   );
@@ -354,13 +386,15 @@ function ColumnSelector<TData extends DataTableRowData>({
             <CommandEmpty>No columns found.</CommandEmpty>
             <CommandGroup>
               {selectableColumns.map((col) => {
-                const colLabel = col.meta?.label ?? col.id;
+                const colId = getColumnId(col);
+                if (!colId) return null;
+                const colLabel = col.meta?.label ?? colId;
                 return (
                   <CommandItem
-                    key={col.id}
+                    key={colId}
                     value={colLabel}
                     onSelect={() => {
-                      if (col.id) onSelect(col.id); // FIX: Guard against undefined
+                      onSelect(colId);
                       setSelectorOpen(false);
                       setInputValue('');
                     }}
@@ -378,4 +412,4 @@ function ColumnSelector<TData extends DataTableRowData>({
 }
 
 // ───────────────── BLOCK 7: Exports ──────────────────────────
-// DataTableFilterList is the only export.
+// DataTableFilterList is exported inline.

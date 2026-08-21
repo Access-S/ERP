@@ -1,3 +1,4 @@
+// ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client'
 
 import Link from "next/link"
@@ -12,6 +13,7 @@ import {
   TrendingUp,
   Cpu,
   ChevronDown,
+  Table, // ADDED: Icon for Table Test
 } from "lucide-react"
 // Import from our new global types folder
 import type { NavItem, NavGroup } from "@/types/navigation"
@@ -30,12 +32,14 @@ import {
 } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 
+// ───────────────── BLOCK 2: Nav Groups Definition ────────────────
 const navGroups: NavGroup[] = [
   {
     label: "Overview",
     items: [
       { title: "Dashboard", url: "/", icon: LayoutDashboard },
       { title: "UI Playground", url: "/playground", icon: LayoutDashboard },
+      { title: "Table Test", url: "/table-test", icon: Table }, // ADDED: Table Test Link
     ],
   },
   {
