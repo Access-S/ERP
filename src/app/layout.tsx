@@ -1,3 +1,5 @@
+//src/app/layout.tsx
+
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 import type { Metadata } from "next"
 import { Toaster } from "sonner"

@@ -1,3 +1,5 @@
+//src/app/(system)/layout.tsx
+
 // ─── BLOCK 1: Imports ────────────────────────────
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/shared/app-sidebar"
