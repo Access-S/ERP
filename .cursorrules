@@ -22,9 +22,6 @@ No Hardcoded Colors: NEVER use hardcoded hex codes (e.g., #FF0000, bg-blue-500).
 No External UI Libraries: Do NOT install or use Material Tailwind, DaisyUI, or MUI. Shadcn + Tailwind is the exclusive styling system.
 Accessibility is Not Optional: All interactive components must meet WCAG 2.1 AA:
 Icon-only buttons MUST have aria-label.
-Grid/list components MUST have proper ARIA roles (e.g., role="grid", role="row", role="gridcell") with aria-selected only on truly selected items, not visually-highlighted ones.
-Components with more than 5 focusable elements in a group MUST use roving tabindex (one tabIndex={0}, rest tabIndex={-1}) plus arrow-key navigation.
-Abbreviated text MUST use <abbr title="..."> or aria-label so screen readers announce the full word.
 Touch targets MUST be minimum 44×44px (2.75rem) per WCAG 2.5.8.
 Animations MUST be gated with motion-safe: to respect prefers-reduced-motion: reduce.
 🛡️ 5. Type Safety & Validation
