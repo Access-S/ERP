@@ -1,7 +1,7 @@
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 'use client'
 
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback, useRef } from 'react' // ADDED useRef
 import { toast } from 'sonner'
 import {
   AlertTriangle,
@@ -27,6 +27,7 @@ import {
   Eye,
   MoreHorizontal,
 } from 'lucide-react'
+
 
 // ─── UI Primitives ───
 import { Button } from '@/components/ui/button'
@@ -175,9 +176,6 @@ const scrollTags = Array.from({ length: 50 }, (_, i) => `v1.0.0-beta.${i}`)
 
 // ───────────────── BLOCK 3: Page Component ───────────────────
 export default function PlaygroundPage() {
-  const [logs, setLogs] = useState<ActionLog[]>([])
-  const [nextId, setNextId] = useState(1)
-
   // ── Form States ──
   const [inputValue, setInputValue] = useState('')
   const [textareaValue, setTextareaValue] = useState('')
@@ -205,15 +203,22 @@ export default function PlaygroundPage() {
   // ── Table State ──
   const [sorting, setSorting] = useState<SortingState>([])
 
+  // ── Event Log State ──
+  const [logs, setLogs] = useState<ActionLog[]>([])
+  // FIX: Changed from useState to useRef to prevent duplicate key generation
+  const nextIdRef = useRef(1)
+
+  // FIX: Removed nextId from useCallback dependencies
   const handleLog = useCallback((label: string) => {
+    const id = nextIdRef.current
+    nextIdRef.current += 1
     const now = new Date().toLocaleTimeString()
-    setLogs((prev) => [{ id: nextId, label, timestamp: now }, ...prev])
-    setNextId((id) => id + 1)
-  }, [nextId])
+    setLogs((prev) => [{ id, label, timestamp: now }, ...prev])
+  }, [])
 
   const clearLogs = () => {
     setLogs([])
-    setNextId(1)
+    nextIdRef.current = 1 // Reset the ref
   }
 
   const triggerLoading = () => {
