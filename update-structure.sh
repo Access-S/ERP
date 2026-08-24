@@ -24,9 +24,11 @@ print_tree() {
         [ -z "$name" ] && continue
         local path="$dir/$name"
 
-        # Ignore Next.js/Node specific build and system folders
+        # Ignore Next.js/Node specific build, system folders, and AI agent folders
         case "$name" in
-            node_modules|.git|.next|dist|build|coverage|.DS_Store|.vscode|.idea) continue ;;
+            node_modules|.git|.next|dist|build|coverage|.DS_Store|.vscode|.idea|.turbo) continue ;;
+            .agents|.claude|.windsurf) continue ;; # ADDED: AI skill folders
+            skills-lock.json|project-structure.txt) continue ;; # ADDED: AI lock & output file
         esac
 
         if [ -d "$path" ]; then

@@ -3,33 +3,47 @@
 |          NEXT.JS             |
 |          mrp-system                                      |
 |                                                          |
-|          Generated: 2026-08-23 10:31:45                  |
+|          Generated: 2026-08-24 04:34:26                  |
 |                                                          |
 +----------------------------------------------------------+
 
   mrp-system/
   |
+  ├── prisma/
+  │   └── [PRISMA]schema.prisma
   ├── public/
   │   ├── [IMG]  file.svg
   │   ├── [IMG]  globe.svg
   │   ├── [IMG]  next.svg
   │   ├── [IMG]  vercel.svg
   │   └── [IMG]  window.svg
+  ├── scripts/
+  │   └── [TS]   create-admin.ts
   ├── src/
   │   ├── app/
-  │   │   ├── (system)/
+  │   │   ├── api/
+  │   │   │   └── [...nextauth]/
+  │   │   │       └── [TS]   route.ts
+  │   │   ├── (auth)/
+  │   │   │   ├── login/
+  │   │   │   │   └── [TS]   page.tsx
+  │   │   │   └── [TS]   layout.tsx
+  │   │   ├── (dev)/
   │   │   │   ├── playground/
   │   │   │   │   └── [TS]   page.tsx
-  │   │   │   ├── table-test/
-  │   │   │   │   ├── components/
-  │   │   │   │   │   └── [TS]   test-table.tsx
-  │   │   │   │   └── [TS]   page.tsx
+  │   │   │   └── table-test/
+  │   │   │       ├── components/
+  │   │   │       │   └── [TS]   test-table.tsx
+  │   │   │       └── [TS]   page.tsx
+  │   │   ├── (system)/
   │   │   │   ├── [TS]   layout.tsx
   │   │   │   └── [TS]   page.tsx
   │   │   ├──        favicon.ico
   │   │   ├── [CSS]  globals.css
   │   │   └── [TS]   layout.tsx
   │   ├── components/
+  │   │   ├── providers/
+  │   │   │   └── [TS]   session-provider.tsx
   │   │   ├── shared/
   │   │   │   ├── data-table/
   │   │   │   │   ├── components/
@@ -93,12 +107,17 @@
   │   │   ├── [TS]   use-debounced-callback.ts
   │   │   └── [TS]   use-mobile.ts
   │   ├── lib/
+  │   │   ├── [TS]   db.ts
   │   │   └── [TS]   utils.ts
-  │   └── types/
-  │       ├── [TS]   calendar.ts
-  │       └── [TS]   navigation.ts
+  │   ├── types/
+  │   │   ├── [TS]   calendar.ts
+  │   │   ├── [TS]   navigation.ts
+  │   │   └── [TS]   next-auth.d.ts
+  │   ├── [TS]   auth.ts
+  │   └── [TS]   proxy.ts
   ├── [JSON] components.json
   ├──        .cursorrules
+  ├── [ENV]  .env
   ├──        eslint.config.mjs
   ├──        .gitignore
   ├── [TS]   next.config.ts
@@ -106,10 +125,9 @@
   ├── [JSON] package.json
   ├── [JSON] package-lock.json
   ├──        postcss.config.mjs
-  ├── [TXT]  project-structure.txt
   ├── [JSON] tsconfig.json
   └── [SH]   update-structure.sh
 
 +----------------------------------------------------------+
-|  SUMMARY:  Folders: 19   | Files: 81   | Total: 100      |
+|  SUMMARY:  Folders: 27   | Files: 91   | Total: 118      |
 +----------------------------------------------------------+
