@@ -1,13 +1,121 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model bom_components {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id       String?   @db.Uuid
+  part_code        String
+  part_description String?
+  part_type        String?
+  per_shipper      Decimal?  @db.Decimal
+  products         products? @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([product_id], map: "idx_bom_components_product_id")
+}
+
+model forecasts {
+  id            BigInt   @id @default(autoincrement())
+  forecast_date DateTime @db.Date
+  quantity      Int
+  product_code  String?
+  description   String?
+}
+
+model po_counters {
+  customer_name String @id
+  last_sequence Int    @default(0)
+}
+
+model po_status_history {
+  id              BigInt          @id @default(autoincrement())
+  po_id           String          @db.Uuid
+  status          String
+  created_at      DateTime        @default(now()) @db.Timestamptz(6)
+  purchase_orders purchase_orders @relation(fields: [po_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model products {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_code      String            @unique
+  description       String?
+  units_per_shipper Int?
+  daily_run_rate    Decimal?          @db.Decimal
+  hourly_run_rate   Decimal?          @db.Decimal
+  mins_per_shipper  Decimal?          @db.Decimal
+  price_per_shipper Decimal?          @db.Decimal
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime          @default(now()) @db.Timestamptz(6)
+  bom_components    bom_components[]
+  purchase_orders   purchase_orders[]
+
+  @@index([product_code(ops: raw("gin_trgm_ops")), description(ops: raw("gin_trgm_ops"))], map: "idx_product_search", type: Gin)
+}
+
+model purchase_orders {
+  id                      String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  po_number               String              @unique
+  sequence                Int
+  product_id              String?             @db.Uuid
+  customer_name           String
+  po_created_date         DateTime?           @db.Date
+  po_received_date        DateTime?           @db.Date
+  requested_delivery_date DateTime?           @db.Date
+  ordered_qty_pieces      Int
+  ordered_qty_shippers    Decimal             @db.Decimal
+  customer_amount         Decimal             @db.Decimal
+  system_amount           Decimal             @db.Decimal
+  current_status          String              @default("Open")
+  delivery_date           DateTime?           @db.Date
+  delivery_docket_number  String?
+  created_at              DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime            @default(now()) @db.Timestamptz(6)
+  description             String?
+  hourly_run_rate         Decimal?            @db.Decimal
+  mins_per_shipper        Decimal?            @db.Decimal
+  po_status_history       po_status_history[]
+  products                products?           @relation(fields: [product_id], references: [id], onUpdate: NoAction)
+
+  @@index([product_id], map: "idx_po_product_id")
+  @@index([po_number(ops: raw("gin_trgm_ops"))], map: "idx_po_search", type: Gin)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model soh {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id      String?
+  created_at      DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime? @default(now()) @db.Timestamptz(6)
+  import_batch_id String?   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  import_source   String?   @default("manual_upload")
+  description     String?
+  stock_on_hand   Decimal?  @db.Decimal
+  default_uom     String?
+  locations       String?
+  ean             String?
+  weight_kg       Decimal?  @db.Decimal
+  volume_m3       Decimal?  @db.Decimal
+
+  @@index([created_at], map: "idx_soh_created_at")
+  @@index([ean], map: "idx_soh_ean")
+  @@index([import_batch_id], map: "idx_soh_import_batch_id")
+  @@index([product_id], map: "idx_soh_product_id")
+  @@index([product_id], map: "idx_soh_product_id_text")
+  @@index([stock_on_hand], map: "idx_soh_stock_on_hand")
+}
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("WAREHOUSE") // PLANNER, ADMIN, QA, etc.
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users") // Maps to a table named 'users' in Supabase
 }

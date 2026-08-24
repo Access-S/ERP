@@ -4,14 +4,14 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Tabs as TabsPrimitive } from "radix-ui"
-import { motion, useReducedMotion } from "framer-motion" // ADDED: For animations
+import { motion, useReducedMotion, type Transition } from "framer-motion" // ADDED: Transition type
 
 import { cn } from "@/lib/utils"
 
 // Context to track active state and variant for animations
 interface TabsContextValue {
   value: string | undefined
-  variant: string | undefined
+  variant: "default" | "line" | "underline" | null // FIX: Strict union type instead of string
 }
 const TabsContext = React.createContext<TabsContextValue | null>(null)
 
@@ -23,7 +23,7 @@ const tabsListVariants = cva(
       variant: {
         default: "bg-muted",
         line: "gap-1 bg-transparent",
-        underline: "gap-1 bg-transparent w-full", // ADDED: underline variant
+        underline: "gap-1 bg-transparent w-full",
       },
     },
     defaultVariants: {
@@ -53,7 +53,7 @@ function Tabs({
   }
 
   return (
-    <TabsContext.Provider value={{ value: activeValue, variant }}>
+    <TabsContext.Provider value={{ value: activeValue, variant: variant ?? null }}>
       <TabsPrimitive.Root
         data-slot="tabs"
         data-orientation={orientation}
@@ -101,7 +101,8 @@ function TabsTrigger({
   const variant = ctx?.variant ?? 'default'
   const shouldReduceMotion = useReducedMotion()
   
-  const transition = shouldReduceMotion 
+  // FIX: Cast to Transition to satisfy framer-motion strict types
+  const transition: Transition = shouldReduceMotion 
     ? { duration: 0 } 
     : { type: "spring", stiffness: 400, damping: 35 }
 
@@ -112,7 +113,6 @@ function TabsTrigger({
       className={cn(
         "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap transition-colors group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 has-data-[icon=inline-end]:pr-1 has-data-[icon=inline-start]:pl-1 dark:text-muted-foreground dark:hover:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         "text-foreground/60 data-active:text-foreground",
-        // FIX: Removed data-active:bg-background so the sliding blob can show through
         variant === 'default' && "group-data-[variant=default]/tabs-list:data-active:shadow-sm",
         className
       )}

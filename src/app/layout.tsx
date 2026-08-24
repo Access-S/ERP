@@ -7,6 +7,7 @@ import { NuqsAdapter } from "nuqs/adapters/next/app" // ADDED: nuqs adapter
 import "./globals.css"
 
 import { Work_Sans, Chakra_Petch, JetBrains_Mono } from "next/font/google"
+import { SessionProviderWrapper } from "@/components/providers/session-provider" // ADDED: Session Provider
 
 const fontBody = Work_Sans({
   variable: "--font-body",
@@ -43,7 +44,9 @@ export default function RootLayout({
     >
       <body className="antialiased">
         <NuqsAdapter> {/* ADDED: Wrap app with NuqsAdapter */}
-          {children}
+          <SessionProviderWrapper> {/* ADDED: Wrap app with SessionProvider */}
+            {children}
+          </SessionProviderWrapper>
         </NuqsAdapter>
         <Toaster richColors position="top-right" />
       </body>

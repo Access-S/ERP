@@ -32,9 +32,13 @@ import { FilterValueInput } from './filter-value-input';
 import { getFilterOperators, getDefaultFilterOperator } from '../lib/utils';
 import type { DataTableRowData, FilterItem, FilterOperator, FilterVariant, JoinOperator } from '../types';
 
-// Helper to safely get column ID
-function getColumnId(col: ColumnDef<any>): string | undefined {
-  return col.id ?? (typeof col.accessorKey === 'string' ? col.accessorKey : undefined);
+// FIX: Safely check for accessorKey without violating TS union rules
+function getColumnId<TData>(col: ColumnDef<TData>): string | undefined {
+  if (col.id) return col.id;
+  if ('accessorKey' in col && typeof col.accessorKey === 'string') {
+    return col.accessorKey;
+  }
+  return undefined;
 }
 
 // ───────────────── BLOCK 2: Types ────────────────────────────
@@ -100,7 +104,7 @@ export function DataTableFilterList<TData extends DataTableRowData>({
 
   const onAddFilter = React.useCallback(() => {
     const column = availableColumns[0];
-    const colId = getColumnId(column);
+    const colId = column ? getColumnId(column) : undefined;
     if (!colId) return;
     const variant: FilterVariant = column.meta?.variant ?? 'text';
     const operator: FilterOperator = getDefaultFilterOperator(variant);
@@ -284,11 +288,17 @@ function FilterRow<TData extends DataTableRowData>({
         filteredColumnIds={filteredColumnIds}
         onSelect={(newColumnId) => {
           if (newColumnId === colId) return;
+          
+          // FIX: Handle undefined newColumn explicitly
           const newColumn = columns.find((c) => getColumnId(c) === newColumnId);
-          const newColId = newColumn ? getColumnId(newColumn) : undefined;
+          if (!newColumn) return;
+          
+          const newColId = getColumnId(newColumn);
           if (!newColId) return;
+          
           const newVariant: FilterVariant = newColumn.meta?.variant ?? 'text';
           const newOperator: FilterOperator = getDefaultFilterOperator(newVariant);
+          
           onFilterChange({
             id: newColId,
             operator: newOperator,

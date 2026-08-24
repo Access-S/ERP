@@ -5,6 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
+import { useSession, signOut } from "next-auth/react"
 import {
   LayoutDashboard,
   Package,
@@ -13,7 +14,8 @@ import {
   TrendingUp,
   Cpu,
   ChevronDown,
-  Table, // ADDED: Icon for Table Test
+  Table,
+  LogOut, // ADDED: Icon for Sign Out
 } from "lucide-react"
 // Import from our new global types folder
 import type { NavItem, NavGroup } from "@/types/navigation"
@@ -30,6 +32,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar"
+import { Button } from "@/components/ui/button" // ADDED: Button component
 import { cn } from "@/lib/utils"
 
 // ───────────────── BLOCK 2: Nav Groups Definition ────────────────
@@ -39,7 +42,7 @@ const navGroups: NavGroup[] = [
     items: [
       { title: "Dashboard", url: "/", icon: LayoutDashboard },
       { title: "UI Playground", url: "/playground", icon: LayoutDashboard },
-      { title: "Table Test", url: "/table-test", icon: Table }, // ADDED: Table Test Link
+      { title: "Table Test", url: "/table-test", icon: Table },
     ],
   },
   {
@@ -64,8 +67,10 @@ const navGroups: NavGroup[] = [
   },
 ]
 
+// ───────────────── BLOCK 3: Component ─────────────────────────
 export function AppSidebar() {
   const pathname = usePathname()
+  const { data: session } = useSession()
   
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
     navGroups.reduce((acc, group) => ({ ...acc, [group.label]: true }), {})
@@ -75,7 +80,6 @@ export function AppSidebar() {
     setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }))
   }
 
-  // FIX: Active Link Logic for sub-pages
   const isActive = useCallback((url: string) => {
     if (url === "/" && pathname !== "/") return false
     return pathname === url || pathname.startsWith(`${url}/`)
@@ -92,7 +96,6 @@ export function AppSidebar() {
         {navGroups.map((group) => (
           <SidebarGroup key={group.label} className="-mt-3">
             
-            {/* FIX: Accessibility. Changed to a button-based trigger */}
             <SidebarGroupLabel 
               asChild
               className="group/label w-full"
@@ -127,7 +130,7 @@ export function AppSidebar() {
                         <SidebarMenuItem key={item.title}>
                           <SidebarMenuButton 
                             asChild 
-                            isActive={isActive(item.url)} // Uses improved logic
+                            isActive={isActive(item.url)}
                             className="text-sm font-sans leading-relaxed"
                           >
                             <Link href={item.url}>
@@ -147,16 +150,41 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-border/50">
-        <div className="flex items-center justify-between opacity-70">
-          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">
-            v0.1.0 - Alpha
-          </p>
-          <div className="flex gap-1">
-            <div className="h-1 w-1 rounded-full bg-primary animate-ping" />
-            <div className="h-1 w-1 rounded-full bg-primary" />
+        {session?.user ? (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-3 px-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-bold">
+                {session.user.name?.charAt(0) || "U"}
+              </div>
+              <div className="flex flex-col overflow-hidden">
+                <span className="text-sm font-medium truncate text-foreground">{session.user.name}</span>
+                <span className="text-xs text-muted-foreground truncate">{session.user.role}</span>
+              </div>
+            </div>
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start h-11 motion-safe:transition-colors text-muted-foreground hover:text-foreground" 
+              onClick={() => signOut({ callbackUrl: "/login" })}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign Out
+            </Button>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center justify-between opacity-70">
+            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">
+              v0.1.0 - Alpha
+            </p>
+            <div className="flex gap-1">
+              <div className="h-1 w-1 rounded-full bg-primary animate-ping" />
+              <div className="h-1 w-1 rounded-full bg-primary" />
+            </div>
+          </div>
+        )}
       </SidebarFooter>
     </Sidebar>
   )
 }
+
+// ───────────────── BLOCK 4: Exports ────────────────────────────
+// (Default export handled in Block 3)
