@@ -5,6 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
+import { Separator } from "@/components/ui/separator"
 import { useSession, signOut } from "next-auth/react"
 import {
   LayoutDashboard,
@@ -92,9 +93,9 @@ export function AppSidebar() {
         <p className="text-sm text-muted-foreground mt-1 font-sans italic">Manufacturing Resource Planner</p>
       </SidebarHeader>
       
-      <SidebarContent>
-        {navGroups.map((group) => (
-          <SidebarGroup key={group.label} className="-mt-3">
+      <SidebarContent className="gap-1">
+        {navGroups.map((group, index) => (
+          <SidebarGroup key={group.label} className="p-0 px-2">
             
             <SidebarGroupLabel 
               asChild
@@ -103,12 +104,12 @@ export function AppSidebar() {
               <button 
                 onClick={() => toggleGroup(group.label)}
                 onKeyDown={(e) => e.key === 'Enter' && toggleGroup(group.label)}
-                className="flex items-center justify-between w-full cursor-pointer !text-sm font-heading tracking-[0.2em] text-foreground/50 hover:text-foreground transition-colors duration-200 mb-2 uppercase text-left"
+                className="flex items-center justify-between w-full cursor-pointer !text-xs font-heading tracking-[0.15em] text-muted-foreground/70 hover:text-foreground transition-colors duration-200 mb-1 uppercase text-left"
               >
                 <span>{group.label}</span>
                 <ChevronDown 
                   className={cn(
-                    "h-3.5 w-3.5 transition-transform duration-300",
+                    "h-3 w-3 transition-transform duration-300",
                     openGroups[group.label] ? "rotate-180" : "rotate-0"
                   )} 
                 />
