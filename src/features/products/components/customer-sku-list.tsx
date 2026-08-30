@@ -1,8 +1,7 @@
 "use client"
 
 // ───────────────── BLOCK 1: Imports ────────────────────────────
-import { ScrollArea } from "@/components/ui/separator" // Ensure you have ScrollArea from Shadcn
-import { ScrollArea as ShadcnScrollArea } from "@/components/ui/scroll-area" // Adjust import based on your setup
+import { ScrollArea as ShadcnScrollArea } from "@/components/ui/scroll-area"
 
 // ───────────────── BLOCK 2: Types ────────────────────────────
 interface CustomerSkuListProps {

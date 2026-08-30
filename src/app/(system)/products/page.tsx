@@ -4,7 +4,7 @@ import { CustomerSkuList } from "@/features/products/components/customer-sku-lis
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import Link from "next/link"
-import { PackageSearch, Boxes, ArrowUpRight, Plus, AlertTriangle, Activity } from "lucide-react"
+import { PackageSearch, Building2, ArrowUpRight, Plus, AlertTriangle, Activity } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default async function ProductsPage() {
@@ -41,39 +41,39 @@ export default async function ProductsPage() {
         </Link>
       </div>
 
-      {/* Top KPI Row (4 blocks) - KEPT AS REQUESTED */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Products</CardDescription>
-            <CardTitle className="text-3xl">{totalProducts}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Active</CardDescription>
-            <CardTitle className="text-3xl">{activeProducts}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Has BOM</CardDescription>
-            <CardTitle className="text-3xl">{mockCompleteBoms}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>BOM Attention</CardDescription>
-            <CardTitle className="text-3xl text-destructive">{mockMissingBoms}</CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
-
       {/* Main Dashboard Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         
         {/* Left Column */}
         <div className="lg:col-span-2 flex flex-col gap-6">
+
+          {/* Top KPI Row (4 blocks) - compact, spans same width as BOM Health below */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Total Products</CardDescription>
+                <CardTitle className="text-3xl">{totalProducts}</CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Active</CardDescription>
+                <CardTitle className="text-3xl">{activeProducts}</CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Has BOM</CardDescription>
+                <CardTitle className="text-3xl">{mockCompleteBoms}</CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>BOM Attention</CardDescription>
+                <CardTitle className="text-3xl text-destructive">{mockMissingBoms}</CardTitle>
+              </CardHeader>
+            </Card>
+          </div>
           
           {/* BOM Health & Progress Bar */}
           <Card>
@@ -154,9 +154,9 @@ export default async function ProductsPage() {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-2">
-              <Link href="/products/list" className={cn(buttonVariants({ variant: "outline" }), "h-10")}>
-                <Boxes className="h-4 w-4 mr-1" />
-                All Products
+              <Link href="/customers" className={cn(buttonVariants({ variant: "outline" }), "h-10")}>
+                <Building2 className="h-4 w-4 mr-1" />
+                All Customers
               </Link>
               <Link href="/parts/list" className={cn(buttonVariants({ variant: "outline" }), "h-10")}>
                 <PackageSearch className="h-4 w-4 mr-1" />
