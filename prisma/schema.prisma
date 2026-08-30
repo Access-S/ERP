@@ -51,15 +51,12 @@ model products {
   price_per_shipper Decimal?          @db.Decimal
   created_at        DateTime          @default(now()) @db.Timestamptz(6)
   updated_at        DateTime          @default(now()) @db.Timestamptz(6)
-  is_active         Boolean           @default(true)
-  
-  // NEW ERP FIELDS
-  customer_id       String?           @db.Uuid
-  customer          Customer?         @relation(fields: [customer_id], references: [id])
   category          String?
+  customer_id       String?           @db.Uuid
   uom               String            @default("Each")
-
+  is_active         Boolean           @default(true)
   bom_components    bom_components[]
+  customer          Customer?         @relation(fields: [customer_id], references: [id])
   purchase_orders   purchase_orders[]
 
   @@index([product_code(ops: raw("gin_trgm_ops")), description(ops: raw("gin_trgm_ops"))], map: "idx_product_search", type: Gin)
@@ -70,9 +67,7 @@ model purchase_orders {
   po_number               String              @unique
   sequence                Int
   product_id              String?             @db.Uuid
-  customer_name           String              // Kept for legacy/historical purposes
-  customer_id             String?             @db.Uuid // NEW: Links to Customer table
-  customer                Customer?           @relation(fields: [customer_id], references: [id])
+  customer_name           String
   po_created_date         DateTime?           @db.Date
   po_received_date        DateTime?           @db.Date
   requested_delivery_date DateTime?           @db.Date
@@ -88,7 +83,9 @@ model purchase_orders {
   description             String?
   hourly_run_rate         Decimal?            @db.Decimal
   mins_per_shipper        Decimal?            @db.Decimal
+  customer_id             String?             @db.Uuid
   po_status_history       po_status_history[]
+  customer                Customer?           @relation(fields: [customer_id], references: [id])
   products                products?           @relation(fields: [product_id], references: [id], onUpdate: NoAction)
 
   @@index([product_id], map: "idx_po_product_id")
@@ -121,118 +118,94 @@ model soh {
 }
 
 model User {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email     String   @unique
   password  String
   name      String
-  role      String   @default("WAREHOUSE") // PLANNER, ADMIN, QA, etc.
+  role      String   @default("WAREHOUSE")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
-  @@map("users") // Maps to a table named 'users' in Supabase
+  @@map("users")
 }
 
-// NEW: Dedicated Address Model for Autocomplete & Geolocation
 model Address {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  unit_number    String?  // Unit or Building Number
-  street_address String?  // Street name and number (e.g., "123 Main St")
-  city           String?
-  state          String?  // State or Province
-  postal_code    String?
-  country        String?  // Country (e.g., "Australia")
-  country_code   String?  // ISO Code (e.g., "AU")
-  latitude       Decimal? @db.Decimal // Geolocation coordinate
-  longitude      Decimal? @db.Decimal // Geolocation coordinate
-
-  // Relations (A customer can have multiple addresses)
-  customer_shipping AddressCustomerShipping[]
+  unit_number       String?
+  street_address    String?
+  city              String?
+  state             String?
+  postal_code       String?
+  country           String?
+  country_code      String?
+  latitude          Decimal?                  @db.Decimal
+  longitude         Decimal?                  @db.Decimal
+  created_at        DateTime                  @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime                  @default(now()) @db.Timestamptz(6)
+  id                String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   customer_billing  AddressCustomerBilling[]
-
-  created_at     DateTime @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime @default(now()) @db.Timestamptz(6)
+  customer_shipping AddressCustomerShipping[]
 
   @@map("addresses")
 }
 
 model Customer {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  customer_code String   @unique
-  legal_name    String
-  trading_name  String?
-  tax_id        String?
-  
-  // Categorization & Status
-  status        String   @default("ACTIVE")
-  customer_type String   @default("STANDARD")
-  industry      String?
-  
-  // Financial & Credit
-  payment_terms               String?
-  credit_limit                Decimal  @default(0) @db.Decimal
-  credit_rating               String?
-  last_credit_review_date     DateTime? @db.Timestamptz(6)
-  default_currency            String  @default("USD")
-  default_discount_percentage Decimal  @default(0) @db.Decimal
-  accounts_receivable_code   String?
-  minimum_order_value         Decimal  @default(0) @db.Decimal
-  is_tax_exempt               Boolean @default(false)
+  customer_code                 String                    @unique
+  legal_name                    String
+  trading_name                  String?
+  tax_id                        String?
+  status                        String                    @default("ACTIVE")
+  customer_type                 String                    @default("STANDARD")
+  industry                      String?
+  payment_terms                 String?
+  credit_limit                  Decimal                   @default(0) @db.Decimal
+  credit_rating                 String?
+  last_credit_review_date       DateTime?                 @db.Timestamptz(6)
+  default_currency              String                    @default("AUD")
+  default_discount_percentage   Decimal                   @default(0) @db.Decimal
+  accounts_receivable_code      String?
+  is_tax_exempt                 Boolean                   @default(false)
   tax_exempt_certificate_number String?
-  
-  // Logistics
-  sales_territory           String?
-  default_shipping_method   String?
-  shipping_carrier_account String?
-  lead_time_days            Int?
-  delivery_window_start     String?
-  delivery_window_end       String?
-  
-  // Pallet Preferences
-  pallet_preference       String?
-  pallet_account_number   String?
-  
-  // Contact Info
-  primary_contact_name    String?
-  primary_contact_email   String?
-  primary_contact_phone   String?
-  accounts_payables_email String?
-  delivery_contact_phone  String?
-  
-  // System & Audit
-  notes        String?
-  is_active    Boolean  @default(true)
-  created_at   DateTime @default(now()) @db.Timestamptz(6)
-  updated_at   DateTime @default(now()) @db.Timestamptz(6)
-
-  // Relations to Address Table
-  shipping_addresses AddressCustomerShipping[]
-  billing_addresses  AddressCustomerBilling[]
-
-  // Relations to Products and POs
-  products       products[]
-  purchase_orders purchase_orders[]
+  sales_territory               String?
+  default_shipping_method       String?
+  shipping_carrier_account      String?
+  lead_time_days                Int?
+  delivery_window_start         String?
+  delivery_window_end           String?
+  pallet_preference             String?
+  pallet_account_number         String?
+  primary_contact_name          String?
+  primary_contact_email         String?
+  primary_contact_phone         String?
+  accounts_payables_email       String?
+  delivery_contact_phone        String?
+  notes                         String?
+  is_active                     Boolean                   @default(true)
+  created_at                    DateTime                  @default(now()) @db.Timestamptz(6)
+  updated_at                    DateTime                  @default(now()) @db.Timestamptz(6)
+  id                            String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  billing_addresses             AddressCustomerBilling[]
+  shipping_addresses            AddressCustomerShipping[]
+  products                      products[]
+  purchase_orders               purchase_orders[]
 
   @@map("customers")
 }
 
-// Join tables to allow a customer to have multiple shipping and billing addresses
 model AddressCustomerShipping {
-  customer_id String @db.Uuid
-  address_id  String @db.Uuid
-  
-  customer Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
-  address  Address  @relation(fields: [address_id], references: [id], onDelete: Cascade)
+  customer_id String   @db.Uuid
+  address_id  String   @db.Uuid
+  address     Address  @relation(fields: [address_id], references: [id], onDelete: Cascade)
+  customer    Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
 
   @@id([customer_id, address_id])
   @@map("customer_shipping_addresses")
 }
 
 model AddressCustomerBilling {
-  customer_id String @db.Uuid
-  address_id  String @db.Uuid
-  
-  customer Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
-  address  Address  @relation(fields: [address_id], references: [id], onDelete: Cascade)
+  customer_id String   @db.Uuid
+  address_id  String   @db.Uuid
+  address     Address  @relation(fields: [address_id], references: [id], onDelete: Cascade)
+  customer    Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
 
   @@id([customer_id, address_id])
   @@map("customer_billing_addresses")
