@@ -20,7 +20,7 @@ SSR Safety: NEVER call new Date(), Date.now(), Math.random(), or access window/d
 Shadcn Only: Use Shadcn UI components for all base UI elements. Do NOT build raw HTML elements styled with Tailwind from scratch.
 No Hardcoded Colors: NEVER use hardcoded hex codes (e.g., #FF0000, bg-blue-500). ALWAYS use the Tailwind design token classes mapped in tailwind.config.ts (e.g., bg-primary, text-muted-foreground).
 No External UI Libraries: Do NOT install or use Material Tailwind, DaisyUI, or MUI. Shadcn + Tailwind is the exclusive styling system.
-Accessibility is Not Optional: All interactive components must meet WCAG 2.1 AA:
+Accessibility:
 Icon-only buttons MUST have aria-label.
 Touch targets MUST be minimum 44×44px (2.75rem) per WCAG 2.5.8.
 Animations MUST be gated with motion-safe: to respect prefers-reduced-motion: reduce.
