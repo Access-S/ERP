@@ -43,6 +43,8 @@ export function DataTableFacetedFilter<TData extends DataTableRowData>({
   onValueChange,
 }: DataTableFacetedFilterProps<TData>) {
   const selectedSet = React.useMemo(() => new Set(selectedValues), [selectedValues]);
+  // Local search state — narrows the option list as the user types.
+  const [search, setSearch] = React.useState('');
 
   return (
     <Popover>
@@ -84,15 +86,19 @@ export function DataTableFacetedFilter<TData extends DataTableRowData>({
       <PopoverContent className="w-[200px] p-0" align="start">
         <Command>
           <CommandInput
-            placeholder={title}
-            aria-label={`Search ${title}`}
-            value={selectedValues.join(', ')}
-            onValueChange={(value) => onValueChange(value.split(', ').filter(Boolean))}
+            placeholder={title ? `Search ${title}` : 'Search'}
+            aria-label={`Search ${title ?? 'options'}`}
+            value={search}
+            onValueChange={setSearch}
           />
           <CommandList>
             <CommandEmpty>No options found.</CommandEmpty>
             <CommandGroup>
-              {options.map((option) => {
+              {options
+                .filter((option) =>
+                  option.label.toLowerCase().includes(search.toLowerCase())
+                )
+                .map((option) => {
                 const isSelected = selectedSet.has(option.value);
                 return (
                   <CommandItem

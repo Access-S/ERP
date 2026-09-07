@@ -6,6 +6,7 @@ export { DataTableColumnHeader } from './components/data-table-column-header';
 export { DataTableToolbar } from './components/data-table-toolbar';
 export { DataTablePagination } from './components/data-table-pagination';
 export { DataTableFacetedFilter } from './components/data-table-faceted-filter';
+export { DataTableFilterList } from './components/data-table-filter-list';
 export { DataTableViewOptions } from './components/data-table-view-options';
 
 // ───────────────── BLOCK 2: Hook Exports ───────────────────────
