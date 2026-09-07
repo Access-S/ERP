@@ -31,14 +31,7 @@ export default async function ProductsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Products & BOM</h1>
-          <p className="text-muted-foreground">
-            Monitor product health, manage Bill of Materials, and resolve exceptions.
-          </p>
         </div>
-        <Link href="/products/list" className={cn(buttonVariants())}>
-          <PackageSearch className="mr-2 h-4 w-4" />
-          View List
-        </Link>
       </div>
 
       {/* Main Dashboard Grid */}
@@ -154,11 +147,11 @@ export default async function ProductsPage() {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-2">
-              <Link href="/customers" className={cn(buttonVariants({ variant: "outline" }), "h-10")}>
+              <Link href="/products/customers" className={cn(buttonVariants({ variant: "outline" }), "h-10")}>
                 <Building2 className="h-4 w-4 mr-1" />
                 All Customers
               </Link>
-              <Link href="/parts/list" className={cn(buttonVariants({ variant: "outline" }), "h-10")}>
+              <Link href="/products/parts" className={cn(buttonVariants({ variant: "outline" }), "h-10")}>
                 <PackageSearch className="h-4 w-4 mr-1" />
                 All Parts
               </Link>
