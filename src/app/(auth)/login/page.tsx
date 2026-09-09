@@ -14,7 +14,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 // ───────────────── BLOCK 2: Types & Zod Schemas ────────────────
 // Note: In a larger feature, this would live in src/features/auth/types/
@@ -53,7 +53,7 @@ export default function LoginPage() {
         router.push("/")
         router.refresh()
       }
-    } catch (error) {
+    } catch {
       toast.error("Something went wrong. Please try again.")
     } finally {
       setIsLoading(false)
@@ -77,7 +77,7 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@mrp.com"
+                placeholder="name@company.com"
                 {...register("email")}
                 disabled={isLoading}
                 className="h-11" // Ensures 44px min touch target (WCAG 2.5.8)
@@ -112,10 +112,6 @@ export default function LoginPage() {
 
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col items-center text-xs text-muted-foreground">
-          <p>Test User: admin@mrp.com</p>
-          <p>Test Pass: password123</p>
-        </CardFooter>
       </Card>
     </div>
   )

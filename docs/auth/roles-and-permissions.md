@@ -2,8 +2,12 @@
 
 Status: Draft for business confirmation
 Owner: Product owner / Operations
-Last updated: 2026-09-09
+Last updated: 2026-09-10
 Applies to: General production and manufacturing companies
+
+Related documents: [Auth documentation index](README.md),
+[architecture](authentication-and-authorization-architecture.md),
+[audit events](audit-events.md), and [implementation plan](implementation-plan.md)
 
 ## 1. Purpose
 
@@ -465,8 +469,10 @@ features should reuse or deliberately extend this catalogue.
 Current mutation entry points verify authentication but generally allow any
 signed-in user to perform the action. The role matrix is not yet enforced.
 
-The current `User` model stores one free-text role. The target model should
-support:
+The normalized `Role`, `Permission`, `UserRole`, and `RolePermission` tables now
+exist and are seeded from the typed authorization registry. The legacy
+`User.role` string remains temporarily because Auth.js still copies it into the
+JWT/session. The implemented database model supports:
 
 ```text
 User ──< UserRole >── Role ──< RolePermission >── Permission
@@ -474,13 +480,20 @@ User ──< UserRole >── Role ──< RolePermission >── Permission
 
 Required implementation behavior:
 
+Completed foundation:
+
 1. Seed stable roles and permissions rather than accepting arbitrary strings.
-2. Allow multiple roles per user.
-3. Resolve effective permissions on the server.
-4. Check permissions inside every Server Action and API endpoint.
-5. Use the same permission result to hide or disable unavailable UI actions.
-6. Record sensitive approvals, status changes, and role assignments later.
-7. Keep a recoverable bootstrap administrator procedure.
+2. Allow multiple role assignments per user in the database.
+3. Preserve and explicitly map all known legacy roles.
+
+Remaining enforcement work:
+
+1. Replace authentication-only checks in every Server Action and API endpoint
+   with the implemented central permission guard.
+2. Protect sensitive reads and return only permitted data.
+3. Use the same permission result to hide or disable unavailable UI actions.
+4. Record sensitive approvals, status changes, and role assignments later.
+5. Expose the recoverable bootstrap administrator procedure operationally.
 
 ## 10. Data-scope direction
 

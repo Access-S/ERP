@@ -8,7 +8,13 @@
     "start": "next start",
     "lint": "eslint",
     "audit:bom": "node --env-file=.env scripts/audit-bom-data.mjs",
+    "audit:auth": "node --no-warnings --experimental-strip-types --env-file=.env scripts/audit-auth-foundation.mjs",
+    "seed:auth": "node --no-warnings --experimental-strip-types --env-file=.env scripts/seed-auth-foundation.mjs",
+    "bootstrap:admin": "node --no-warnings --experimental-strip-types --env-file=.env scripts/create-admin.ts",
+    "inspect:user-access": "node --env-file=.env scripts/inspect-user-access.mjs",
     "uat:master-data": "node --no-warnings --experimental-strip-types --env-file=.env scripts/uat-master-data-workflow.mjs",
+    "uat:auth-core": "node --no-warnings --experimental-strip-types scripts/uat-authorization-core.mjs",
+    "uat:auth-database": "node --no-warnings --experimental-strip-types --env-file=.env scripts/uat-authorization-database.mjs",
     "import:bom:dry-run": "node --env-file=.env scripts/dry-run-customer-bom-import.mjs \"Data files/All customer Bom - cleaned.xlsx\"",
     "import:bom:apply": "node --env-file=.env scripts/import-customer-boms.mjs \"Data files/All customer Bom - cleaned.xlsx\""
   },
@@ -24,7 +30,7 @@
     "exceljs": "^4.4.0",
     "framer-motion": "^13.0.0",
     "lucide-react": "^1.30.0",
-    "next": "16.3.0",
+    "next": "16.3.4",
     "next-auth": "^5.0.0-beta.32",
     "next-themes": "^0.4.6",
     "nuqs": "^2.9.6",
@@ -33,6 +39,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-hook-form": "^7.85.0",
+    "server-only": "^0.0.1",
     "shadcn": "^4.16.2",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.6.0",
@@ -48,5 +55,8 @@
     "eslint-config-next": "16.3.0",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "node --no-warnings --experimental-strip-types --env-file=.env scripts/seed-auth-foundation.mjs"
   }
 }

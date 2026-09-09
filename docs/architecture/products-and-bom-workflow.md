@@ -668,7 +668,7 @@ Later validation may include:
 ## 13. Permissions direction
 
 The detailed, maintainable role catalogue and target authorization matrix are
-defined in [`docs/security/roles-and-permissions.md`](../security/roles-and-permissions.md).
+defined in [`docs/auth/roles-and-permissions.md`](../auth/roles-and-permissions.md).
 It records ten agreed business roles plus the technical System Administrator.
 
 This module must distinguish these capabilities:
@@ -858,4 +858,4 @@ Until confirmed, the lowest-risk assumptions are:
 - `scripts/import-customer-boms.mjs` — guarded, backed-up, transactional workbook import.
 - `scripts/uat-master-data-workflow.mjs` — reversible Customer/Product/Part/BOM integration UAT.
 - `docs/testing/master-data-bom-uat.md` — automated coverage and manual browser checklist.
-- `docs/security/roles-and-permissions.md` — role definitions, ownership boundaries, target permission matrix, and implementation sequence.
+- `docs/auth/roles-and-permissions.md` — role definitions, ownership boundaries, target permission matrix, and implementation sequence.

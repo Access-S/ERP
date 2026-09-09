@@ -1,45 +1,88 @@
-// scripts/create-admin.ts
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import { PrismaClient, UserStatus } from "@prisma/client"
+import bcrypt from "bcryptjs"
 
-// Initialize a standalone Prisma Client for the script
-const prisma = new PrismaClient();
+const prisma = new PrismaClient()
+
+function requireEnvironmentValue(name: string): string {
+  const value = process.env[name]?.trim()
+  if (!value) throw new Error(`${name} is required`)
+  return value
+}
 
 async function main() {
-  const email = 'admin@mrp.com';
-  const password = 'password123'; // You can change this
-  const name = 'Admin User';
-  const role = 'ADMIN'; // This gives full access to everything
+  const email = requireEnvironmentValue("BOOTSTRAP_ADMIN_EMAIL").toLowerCase()
+  const password = requireEnvironmentValue("BOOTSTRAP_ADMIN_PASSWORD")
+  const name = requireEnvironmentValue("BOOTSTRAP_ADMIN_NAME")
 
-  // Hash the password securely
-  const hashedPassword = await bcrypt.hash(password, 10);
+  if (!email.includes("@")) {
+    throw new Error("BOOTSTRAP_ADMIN_EMAIL must be a valid email address")
+  }
+  if (password.length < 12) {
+    throw new Error(
+      "BOOTSTRAP_ADMIN_PASSWORD must be at least 12 characters"
+    )
+  }
 
-  // Create or update the user in your Supabase database
-  const user = await prisma.user.upsert({
-    where: { email },
-    update: {
-      password: hashedPassword,
-      role: role,
-      name: name
-    },
-    create: {
-      email,
-      password: hashedPassword,
-      name,
-      role,
-    },
-  });
+  const result = await prisma.$transaction(async (tx) => {
+    const systemAdminRole = await tx.role.findUnique({
+      where: { key: "SYSTEM_ADMIN" },
+      select: { id: true },
+    })
+    if (!systemAdminRole) {
+      throw new Error("SYSTEM_ADMIN is not seeded. Run npm run seed:auth first.")
+    }
 
-  console.log('✅ Test Admin User created successfully!');
-  console.log('Email:', user.email);
-  console.log('Role:', user.role);
+    const existingUser = await tx.user.findUnique({
+      where: { normalizedEmail: email },
+      select: {
+        id: true,
+        roleAssignments: {
+          where: { roleId: systemAdminRole.id },
+          select: { roleId: true },
+        },
+      },
+    })
+
+    if (existingUser) {
+      if (existingUser.roleAssignments.length === 0) {
+        throw new Error(
+          "An existing non-administrator uses this email; refusing to elevate it"
+        )
+      }
+      return { id: existingUser.id, created: false }
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12)
+    const user = await tx.user.create({
+      data: {
+        email,
+        normalizedEmail: email,
+        password: passwordHash,
+        name,
+        role: "ADMIN",
+        status: UserStatus.ACTIVE,
+        roleAssignments: {
+          create: { roleId: systemAdminRole.id },
+        },
+      },
+      select: { id: true },
+    })
+
+    return { id: user.id, created: true }
+  })
+
+  console.log(
+    result.created
+      ? `Bootstrap administrator created: ${result.id}`
+      : `Bootstrap administrator already exists: ${result.id}`
+  )
 }
 
 main()
-  .catch((e) => {
-    console.error('Error creating user:', e);
-    process.exit(1);
+  .catch((error) => {
+    console.error("Bootstrap administrator failed.", error)
+    process.exitCode = 1
   })
   .finally(async () => {
-    await prisma.$disconnect();
-  });
+    await prisma.$disconnect()
+  })

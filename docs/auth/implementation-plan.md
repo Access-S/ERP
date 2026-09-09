@@ -1,0 +1,175 @@
+# Authentication and Authorization Implementation Plan
+
+Status: Ready to begin
+Owner: Product owner / Engineering
+Last updated: 2026-09-10
+
+## 1. Objective
+
+Replace the current prototype's single free-text role and authentication-only
+mutation checks with a maintainable, server-enforced, tested authorization
+system without breaking existing users or master-data workflows.
+
+This is a progress tracker, not a replacement for the architecture or role
+matrix. Update it in the same commit as implementation work.
+
+## 2. Current baseline
+
+| Capability | Status | Evidence or gap |
+| --- | --- | --- |
+| Email/password login | Prototype complete | Auth.js Credentials provider and Prisma User lookup |
+| Password hashing | Prototype complete | Existing bcrypt hashes; production parameters still open |
+| JWT session | Freshness foundation complete | User ID, compatibility role, and `authVersion` are copied into the session |
+| Page redirect | Prototype complete | Next.js Proxy redirects unauthenticated requests |
+| Mutation authentication | Partial | Customer, Product, Part, and BOM writes require a session |
+| Normalized roles and permissions | Foundation complete | 11 system roles, 72 permissions, 188 grants, and existing-user mapping are seeded |
+| Server-side permission enforcement | Guard complete; module rollout pending | Central typed guard resolves current database permissions; Phase 3 must adopt it in module boundaries |
+| Account administration | Foundation only | Account states and safe bootstrap script exist; no management UI or invitation flow |
+| Session invalidation after access change | Guard complete; lifecycle UI pending | `authVersion` mismatch is rejected as stale; role-management flows must increment it |
+| Auth security audit log | Not started | Event catalogue exists; persistence does not |
+| Authorization tests | Core complete | Pure policy and live database UAT cover unauthenticated, stale, inactive, multi-role, allowed, denied, and System Administrator separation paths |
+
+## 3. Delivery sequence
+
+### Phase 0: Confirm implementation choices
+
+- [ ] Confirm password hashing choice for new passwords.
+- [ ] Confirm initial session idle and absolute lifetime.
+- [ ] Confirm who may assign roles.
+- [ ] Confirm whether version 1 is organization-wide or needs site/warehouse
+  scope.
+- [ ] Confirm the safest defaults for the open role-matrix decisions.
+
+Exit gate: decisions needed for the first migration are recorded in an ADR or
+the appropriate source document.
+
+### Phase 1: Normalize the authorization schema
+
+- [x] Add account status and `authVersion` to `User`.
+- [x] Add `Role`, `Permission`, `UserRole`, and `RolePermission` models.
+- [x] Add immutable identifiers, uniqueness constraints, and indexes.
+- [x] Create a forward migration that preserves all existing users.
+- [x] Seed stable role and permission keys idempotently.
+- [x] Map every known legacy role string or explicitly report it for review.
+- [x] Document retry and recovery procedures for the development database.
+
+Exit gate: migration succeeds on a representative copy, seed re-runs safely,
+and every existing user has a deliberate role mapping.
+
+### Phase 2: Centralize server identity and permission checks
+
+- [x] Create a server-only current-principal loader.
+- [x] Create typed `requireUser` and `requirePermission` helpers.
+- [x] Resolve the union of permissions for multiple roles.
+- [x] Deny disabled, suspended, deleted, or stale-version sessions.
+- [x] Distinguish unauthenticated and forbidden results safely.
+- [x] Add unit/integration tests for the helpers.
+
+Exit gate: the guard tests prove unauthenticated, allowed, denied, multi-role,
+and stale-session paths.
+
+### Phase 3: Protect completed master-data modules
+
+Implement one module at a time in this order so the pattern is proven before
+wide adoption:
+
+1. Parts.
+2. Products.
+3. BOM revisions and activation.
+4. Customers.
+
+For each module:
+
+- [ ] Protect list/detail reads where required.
+- [ ] Protect every Server Action independently.
+- [ ] Apply the stable permission key from the role matrix.
+- [ ] Add allowed and denied direct-invocation tests.
+- [ ] Update navigation and buttons using the same effective permission result.
+- [ ] Verify that hidden controls are not the only protection.
+
+Exit gate: all completed master-data modules enforce the documented matrix on
+the server and pass deny-path tests.
+
+### Phase 4: User lifecycle and administration
+
+- [x] Remove prototype credentials from the login screen and bootstrap script.
+- [ ] Add an environment-safe bootstrap administrator procedure.
+- [ ] Add user creation/invitation.
+- [ ] Add activation/password setup.
+- [ ] Add suspend, reactivate, and disable operations.
+- [ ] Add multiple-role assignment and removal.
+- [ ] Prevent accidental removal of the last recoverable administrator.
+- [ ] Require reasons for sensitive access changes where defined.
+
+Exit gate: an authorized administrator can manage accounts without direct
+database editing, and an unauthorized user cannot invoke those operations.
+
+### Phase 5: Session and login hardening
+
+- [ ] Normalize login identifiers.
+- [ ] Add server-side credential validation and maximum lengths.
+- [ ] Configure explicit session lifetimes.
+- [ ] Add session invalidation after password, status, and role changes.
+- [ ] Add rate limiting for authentication attempts.
+- [ ] Add secure invitation and password-reset tokens if email delivery is ready.
+- [ ] Confirm production TLS, cookie, and secret configuration.
+- [ ] Decide MFA requirements for privileged users.
+
+Exit gate: shared/staging deployment contains no default credentials and passes
+the login/session security scenarios.
+
+### Phase 6: Security audit trail
+
+- [ ] Add append-only security audit storage.
+- [ ] Add a server-only event writer with allowlisted metadata.
+- [ ] Record login, account-state, password, role, and access-denied events.
+- [ ] Protect audit viewing with `admin.audit.view`.
+- [ ] Add audit integrity and secret-exclusion tests.
+- [ ] Decide retention and alerting before production.
+
+Exit gate: the required events in [audit-events.md](audit-events.md) are either
+implemented and tested or explicitly deferred from the release.
+
+### Phase 7: Production readiness review
+
+- [ ] Run the complete allow/deny authorization test suite.
+- [ ] Run the existing master-data/BOM UAT suite under representative roles.
+- [ ] Review environment variables and remove all test credentials.
+- [ ] Confirm backup, recovery, and last-administrator procedures.
+- [ ] Review dependency versions and security advisories.
+- [ ] Complete a focused security review.
+- [ ] Update all auth documents from target to implemented state.
+
+Exit gate: no known critical auth gap is described as complete, and every
+accepted deferral has an owner and release boundary.
+
+## 4. Definition of done for an authorization change
+
+An authorization task is complete only when:
+
+1. The permission key exists in the catalogue.
+2. The role matrix identifies intended access.
+3. The server enforces the permission.
+4. The UI reflects the permission without being the sole control.
+5. Allowed and denied paths are tested.
+6. Audit behaviour is implemented or explicitly marked not required.
+7. Relevant documentation and this tracker are updated.
+
+## 5. First implementation goal
+
+The recommended first coding goal is **Phase 1: normalize the authorization
+schema and seed stable roles/permissions**. It creates the foundation used by
+all later guards and avoids building page-specific role checks that would need
+to be replaced.
+
+The migration must be additive first: create the new tables, map existing users,
+verify the mapping, then remove the legacy free-text role in a later migration.
+
+## 6. Change log
+
+| Date | Change |
+| --- | --- |
+| 2026-09-09 | Created the phased implementation and verification plan from the current prototype baseline. |
+| 2026-09-09 | Completed Phase 1 schema, migration, seed, legacy ADMIN mapping, authorization registry, compatibility audit, and bootstrap-script hardening. |
+| 2026-09-10 | Completed Phase 2 central policy/service, normalized login, authVersion session claim, minimal access query, and core/live-database authorization UAT. |
+| 2026-09-10 | Upgraded vulnerable Next.js 16.3.0 to patched 16.3.4 and applied compatible transitive dependency fixes discovered during the auth review. |

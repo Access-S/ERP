@@ -13,6 +13,13 @@ enum BomStatus {
   ARCHIVED
 }
 
+enum UserStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  DISABLED
+}
+
 model bom_components {
   id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   product_id       String?   @db.Uuid
@@ -178,15 +185,78 @@ model soh {
 }
 
 model User {
-  email     String   @unique
-  password  String
-  name      String
-  role      String   @default("WAREHOUSE")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                   String     @unique
+  normalizedEmail         String     @unique @map("normalized_email")
+  password                String
+  name                    String
+  role                    String     @default("WAREHOUSE")
+  status                  UserStatus @default(ACTIVE)
+  authVersion             Int        @default(1) @map("auth_version")
+  lastLoginAt             DateTime?  @map("last_login_at") @db.Timestamptz(6)
+  createdAt               DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime   @default(now()) @map("updated_at") @db.Timestamptz(6)
+  id                      String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roleAssignments         UserRole[] @relation("UserRoleAssignments")
+  assignedRoleAssignments UserRole[] @relation("UserRoleAssignedBy")
 
   @@map("users")
+}
+
+model Role {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key             String           @unique
+  name            String
+  description     String?
+  isSystem        Boolean          @default(true) @map("is_system")
+  isActive        Boolean          @default(true) @map("is_active")
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+
+  @@index([isActive])
+  @@map("roles")
+}
+
+model Permission {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key             String           @unique
+  module          String
+  description     String
+  isActive        Boolean          @default(true) @map("is_active")
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
+  rolePermissions RolePermission[]
+
+  @@index([module])
+  @@index([isActive])
+  @@map("permissions")
+}
+
+model UserRole {
+  userId       String   @map("user_id") @db.Uuid
+  roleId       String   @map("role_id") @db.Uuid
+  assignedById String?  @map("assigned_by_id") @db.Uuid
+  assignedAt   DateTime @default(now()) @map("assigned_at") @db.Timestamptz(6)
+  user         User     @relation("UserRoleAssignments", fields: [userId], references: [id], onDelete: Cascade)
+  role         Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  assignedBy   User?    @relation("UserRoleAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+  @@index([assignedById])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  roleId       String     @map("role_id") @db.Uuid
+  permissionId String     @map("permission_id") @db.Uuid
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
 }
 
 model Address {
