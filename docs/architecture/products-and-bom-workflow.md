@@ -2,7 +2,7 @@
 
 **Status:** Living design reference  
 **Project phase:** Early implementation  
-**Last updated:** 2026-09-08  
+**Last updated:** 2026-09-09
 **Primary purpose:** Preserve the intended Products & BOM structure, the reasoning behind it, and the implementation sequence so development can continue across separate work sessions.
 
 ## 1. How to use this document
@@ -39,16 +39,77 @@ It does not own:
 
 ## 3. Current project state
 
-The project currently has:
+As of 2026-09-09, the normalized Product/BOM/Part navigation and the guarded BOM revision workflow are implemented:
 
-- A Products & BOM overview page at `src/app/(system)/products/page.tsx`.
-- A completed first-layer Customers list page, with create/edit/deactivate operations still to be implemented.
-- A first-layer Parts page backed by `bom_components`.
-- A Prisma schema where BOM component rows attach directly to a product.
-- No separate BOM header/revision model.
-- No canonical reusable Part master model.
+- The Products & BOM overview uses real BOM health aggregates instead of mock figures.
+- `/products/catalog` provides a server-backed Product Catalog with Product status and active-BOM filters.
+- `/products/catalog/[productId]` provides Product Details, production fields, customer context, and BOM revision history.
+- `/products/boms` lists one record per BOM.
+- `/products/boms/[bomId]` provides a read-only BOM Workspace and component health.
+- `/products/parts` is a canonical reusable Parts Library.
+- `/products/parts/[partId]` provides Part Details and Where Used.
+- `/products/customers` provides Customer list, create, detail, edit, and lifecycle workflows at its current route.
+- The Prisma schema has separate `Bom`, `BomLine`, and `Part` models.
+- The original `bom_components` table remains intact as a traceable legacy source.
+- Prisma Migrate now has a baseline plus an additive normalization migration.
+- Users can clone an active or archived BOM into one draft revision per Product.
+- Draft BOM lines can be added from the active Parts Library, edited, and removed.
+- Activation validates quantities, UOMs, duplicate Parts, active Parts, and Product state before atomically archiving the previous active revision.
+- BOM mutations require an authenticated session; role-specific authorization remains future work.
+- Products and Parts support authenticated create, edit, deactivate, and reactivate workflows.
+- Creating a Product also creates its empty revision-1 draft BOM.
+- `npm run uat:master-data` provides a repeatable transaction-rollback acceptance check for the core master-data and BOM relationship.
+- Formal approval, role-specific permissions, and audit-history workflows remain future work.
 
-The important discovery is that the current Parts page is not yet a true Parts Library. It is closer to a list of component lines taken from product BOM data. Therefore, the current page should evolve into **All BOMs**, while a separate **Parts Library** should be introduced.
+### 3.1 Source-data audit and backfill result
+
+The repeatable audit is available through `npm run audit:bom`.
+
+| Measure | Result |
+| --- | ---: |
+| Products | 65 |
+| Products with legacy component rows | 65 |
+| Legacy component rows | 338 |
+| Unique normalized Part codes | 240 |
+| Unlinked component rows | 0 |
+| Missing quantities | 0 |
+| Non-positive quantities | 2 |
+| Part codes with conflicting descriptions | 3 |
+| Duplicate Part-within-Product groups | 5 |
+| Normalized Parts after backfill | 240 |
+| Normalized BOMs after backfill | 65 |
+| Normalized BOM Lines after backfill | 338 |
+
+The backfill deliberately retained the two zero quantities and five duplicate groups. They now appear as health issues rather than being silently corrected. For the three conflicting descriptions, the most frequently used description/type combination becomes the canonical Part value; ties prefer the longer description. Every original value remains in `bom_components` and every migrated BOM Line retains its `legacy_component_id`.
+
+### 3.2 Cleaned customer BOM import result
+
+On 2026-09-08, `Data files/All customer Bom - cleaned.xlsx` was validated, compared with Supabase, backed up, and imported in one serializable transaction.
+
+The workbook is now the active normalized Product/BOM dataset:
+
+| Measure | Active result |
+| --- | ---: |
+| Workbook customers matched | 28 |
+| Products | 275 |
+| Parts | 784 |
+| BOMs | 275 |
+| BOM Lines | 1,276 |
+| Validation errors | 0 |
+| Post-import creates, updates, or conflicts remaining | 0 |
+
+Import actions:
+
+- Created 215 Products and linked/updated 60 existing Products to their workbook Customers.
+- Created 568 Parts and normalized five legacy Part codes.
+- Created 216 BOMs with 980 BOM Lines; 59 existing BOMs remained unchanged.
+- Archived six superseded or database-only BOMs and deactivated five database-only Products.
+- Deactivated 24 database-only Parts that were not used by an active BOM.
+- Filled 296 missing legacy BOM-Line UOM values with `Each`.
+- Retained the two database-only Customer records; customer master data was not deleted.
+- Retained all archived and legacy records for traceability.
+
+`npm run import:bom:dry-run` is the repeatable, read-only consistency check. The guarded apply command requires the explicit `IMPORT-CUSTOMER-BOMS` confirmation token. Pre-import snapshots and result reports are written to the git-ignored `Data files/backups/` directory.
 
 ## 4. Core terminology
 
@@ -218,6 +279,17 @@ Suggested filters:
 
 Selecting a row opens Product Details. Creation should begin from a clearly visible "New Product" action.
 
+The current implementation keeps Product codes immutable after creation and
+enforces case- and whitespace-insensitive uniqueness in PostgreSQL. Users can
+maintain the Customer assignment, packaging data, category, pricing, and
+production-planning values.
+
+Product deactivation is a soft lifecycle operation. It is blocked while the
+Product has a purchase order in `Open` or `PO Check`. Otherwise, the same
+serializable transaction deactivates the Product and archives its active and
+draft BOM revisions. Reactivation does not restore an old operational BOM; the
+user prepares and activates a new draft when the Product is ready again.
+
 ### 8.3 Product Details
 
 Recommended sections or tabs:
@@ -328,6 +400,17 @@ Clicking a Part code opens Part Details. The user should be able to return to th
 
 The Parts Library represents unique reusable Parts rather than BOM lines.
 
+The current core workflow supports creating a Part, editing its descriptive
+master data, and deactivating or reactivating it. Part codes are immutable
+after creation because BOM history and integrations use them as stable
+identifiers. A normalized uppercase code prevents duplicates caused by letter
+case or repeated whitespace.
+
+Deactivation is a soft lifecycle change, not deletion. It is blocked while the
+Part is used in any active BOM. The user must first create and activate revised
+BOMs that no longer use the Part. Inactive Parts remain visible in history and
+Where Used, but are excluded from the active Part picker for draft BOM lines.
+
 Suggested columns:
 
 - Part code.
@@ -386,8 +469,15 @@ Inventory transactions should remain owned by the Inventory module.
 
 Customer Master and Customer SKU mapping are separate concerns:
 
-- `/customers` manages customer accounts and addresses.
+- `/products/customers` currently manages Customer accounts; it can move to `/customers` when the wider ERP navigation is reorganized.
 - `/products/customer-skus` manages how customers identify or use Products.
+
+Customer codes are immutable and normalized for case- and whitespace-insensitive
+uniqueness. Deactivation is blocked while the Customer owns active Products or
+has a purchase order in `Open` or `PO Check`. This avoids silently changing
+downstream Product and order state. Address-book CRUD remains a later,
+independent workflow because each Customer can own multiple shipping and
+billing addresses.
 
 Suggested mapping fields:
 
@@ -577,7 +667,11 @@ Later validation may include:
 
 ## 13. Permissions direction
 
-Detailed permissions will be defined when authentication and mutations are implemented. The module should nevertheless distinguish these capabilities:
+The detailed, maintainable role catalogue and target authorization matrix are
+defined in [`docs/security/roles-and-permissions.md`](../security/roles-and-permissions.md).
+It records ten agreed business roles plus the technical System Administrator.
+
+This module must distinguish these capabilities:
 
 - View Products, BOMs, and Parts.
 - Create/edit Product master data.
@@ -589,16 +683,20 @@ Detailed permissions will be defined when authentication and mutations are imple
 
 Activation/approval should be a separate permission from ordinary editing when formal controls are introduced.
 
+The current application enforces authentication for mutations but does not yet
+enforce the target role-specific permissions. That gap must remain visible
+until the authorization implementation and deny-path tests are complete.
+
 ## 14. Implementation roadmap
 
-### Phase 1 — Confirm structure and preserve existing work
+### Phase 1 — Confirm structure and preserve existing work — Complete
 
 - Rename/reframe the current Parts concept as All BOMs where appropriate.
 - Confirm whether the business initially needs one BOM per Product or multiple revisions.
 - Confirm Part types and units of measure.
 - Confirm whether Products can belong to multiple Customers.
 
-### Phase 2 — Establish the domain model
+### Phase 2 — Establish the domain model — Complete
 
 - Introduce `Part` as a canonical master record.
 - Introduce `Bom` as the BOM header.
@@ -606,7 +704,7 @@ Activation/approval should be a separate permission from ordinary editing when f
 - Plan how existing `bom_components` data will map into the new structure.
 - Create a Prisma migration only after the mapping is understood.
 
-### Phase 3 — All BOMs and BOM Workspace
+### Phase 3 — All BOMs and BOM Workspace — Core workflow complete
 
 - Build the BOM list with real health values.
 - Build BOM Details/Workspace.
@@ -615,24 +713,43 @@ Activation/approval should be a separate permission from ordinary editing when f
 - Set quantity and unit of measure.
 - Add initial validation.
 - Activate a valid BOM.
+- Keep active and archived revisions immutable; changes begin by cloning a draft revision.
+- Enforce one active and one draft revision per Product in both service logic and database indexes.
 
-### Phase 4 — Parts Library
+### Phase 4 — Parts Library — Core workflow complete
 
 - Build the canonical Parts list.
 - Add Part create/edit/deactivate flows.
 - Build Part Details.
 - Add Where Used.
 - Link BOM lines to Part Details.
+- Keep Part codes immutable after creation.
+- Prevent deactivation while a Part is used in an active BOM.
+- Require authentication for every Part mutation.
 
-### Phase 5 — Product integration
+### Phase 5 — Product integration — Core workflow complete
 
-- Build Product Details.
-- Add the BOM summary tab.
-- Link Product Details to the BOM Workspace.
-- Replace mock overview metrics with real aggregate queries.
-- Connect Customer SKU relationships.
+- Build the Product Catalog and Product Details.
+- Show the active BOM summary and revision history on Product Details.
+- Link Product Details and the BOM Workspace in both directions.
+- Replace mock overview metrics with real active-Product and active-BOM aggregates.
+- Expose the current one-Customer-per-Product relationship from the imported data.
+- Add authenticated Product create, edit, deactivate, and reactivate operations.
+- Create an empty revision-1 draft BOM with each new Product.
+- Keep Product codes immutable and enforce normalized uniqueness in the database.
+- Block deactivation for open or pending purchase orders and archive operational BOM revisions otherwise.
+- Add a separate many-to-many Customer SKU mapping later, if the business requires it.
 
-### Phase 6 — Later controls
+### Phase 6 — Customer Master — Core workflow complete
+
+- Build the Customer list and Customer Details view.
+- Add authenticated create, edit, deactivate, and reactivate operations.
+- Keep Customer codes immutable and enforce normalized uniqueness in PostgreSQL.
+- Show assigned Products and live purchase-order counts.
+- Block deactivation while active Products or live purchase orders exist.
+- Add billing and shipping address-book CRUD later.
+
+### Phase 7 — Later controls
 
 - BOM revisions.
 - Approval lifecycle.
@@ -688,14 +805,57 @@ Until confirmed, the lowest-risk assumptions are:
 | 2026-09-08 | Keep Parts Library as a sibling of BOMs, accessible from BOM records. | A Part can be reused by multiple BOMs and needs its own identity and Where Used view. |
 | 2026-09-08 | Keep Customer Master outside Products & BOM. | Customer administration differs from managing customer-to-product SKU relationships. |
 | 2026-09-08 | Prefer a separate BOM header, BOM line, and Part master. | This supports validation, reuse, lifecycle control, Where Used, and later revisions without duplicating data. |
+| 2026-09-08 | Import one revision-1 ACTIVE BOM per Product with legacy component rows. | This preserves current operational availability while health remains a separate calculated concern. |
+| 2026-09-08 | Preserve duplicate lines and non-positive quantities during backfill. | Ambiguous source data must be visible for review rather than changed without a business decision. |
+| 2026-09-08 | Keep `bom_components` during the transition and trace each new BOM Line with `legacy_component_id`. | This makes the additive migration reversible and auditable. |
+| 2026-09-08 | Store a display Part code plus a unique uppercase/trimmed normalized code. | This preserves familiar codes while preventing future case/whitespace duplicates. |
+| 2026-09-08 | Treat each cleaned workbook Product Code, including configuration suffixes, as a separate Product for the initial dummy-data import. | This keeps the early implementation simple while leaving BOM configuration boundaries open for later refinement. |
+| 2026-09-08 | Use the most frequent non-blank description and Part type as the canonical value when a dummy-data Part code has variants. | This produces deterministic master data without deleting valid BOM usage rows. |
+| 2026-09-08 | Archive database-only Products/BOMs and deactivate unused database-only Parts rather than deleting them. | Soft deactivation is reversible and preserves traceability. |
+| 2026-09-09 | Treat active configuration metrics separately from retained history. | Archived BOMs and inactive Parts remain searchable, but overview health and usage KPIs must describe the current active configuration. |
+| 2026-09-09 | Complete Product integration as a read-only vertical slice before adding mutations. | Users can now navigate Product ↔ BOM ↔ Part relationships against real data while create/edit lifecycle rules remain undecided. |
+| 2026-09-09 | Edit BOMs only through a draft revision cloned from an existing revision. | Operational and historical revisions remain immutable while users can safely prepare a replacement. |
+| 2026-09-09 | Permit only one active and one draft BOM per Product. | This keeps the initial lifecycle unambiguous and is enforced by partial unique indexes plus serializable service transactions. |
+| 2026-09-09 | Require authentication for every BOM mutation and defer role-specific permissions. | Server Actions are direct POST entry points; the current authentication model can protect writes before the final permissions matrix is implemented. |
+| 2026-09-09 | Keep Part codes immutable and use soft deactivation instead of deletion. | Stable identifiers protect BOM history, while reversible status changes preserve traceability. |
+| 2026-09-09 | Block Part deactivation while it is used in an active BOM. | An operational BOM must never depend on a component that the Parts Library considers unavailable. |
+| 2026-09-09 | Require authentication for every Part mutation and defer role-specific permissions. | This secures write entry points now without prematurely fixing the final permissions model. |
+| 2026-09-09 | Create a blank revision-1 draft BOM with every new Product. | A newly created Product needs an immediate path into BOM authoring without requiring an existing revision to clone. |
+| 2026-09-09 | Keep Product codes immutable and enforce normalized uniqueness in PostgreSQL. | Product identity must remain stable across BOMs, orders, and future integrations while case or spacing variants must not create duplicates. |
+| 2026-09-09 | Block Product deactivation for `Open` or `PO Check` orders. | Live purchasing work must be resolved before its Product is made unavailable; completed and cancelled history remains non-blocking. |
+| 2026-09-09 | Archive active and draft BOMs atomically when a Product is deactivated. | The database must not represent an inactive Product with an operational BOM, and reactivation should require an intentional new BOM release. |
+| 2026-09-09 | Keep Customer codes immutable and enforce normalized uniqueness in PostgreSQL. | Stable Customer identity protects Product and order relationships while preventing case or spacing variants. |
+| 2026-09-09 | Block Customer deactivation while active Products or `Open`/`PO Check` orders exist. | Customer status changes must not silently cascade into operational Product or purchasing records. |
+| 2026-09-09 | Keep multi-address maintenance outside the first Customer master slice. | Billing and shipping addresses have their own one-to-many lifecycle and need a focused workflow rather than an oversized initial form. |
+| 2026-09-09 | Run automated master-data UAT inside deliberately rolled-back serializable transactions. | The real Supabase constraints and relationships can be tested repeatedly without accumulating test records or changing imported data. |
 
 ## 18. Relevant current files
 
 - `src/app/(system)/products/page.tsx` — Products & BOM overview.
+- `src/app/(system)/products/catalog/page.tsx` — server-backed Product Catalog.
+- `src/app/(system)/products/catalog/new/page.tsx` — create Product and initial draft BOM.
+- `src/app/(system)/products/catalog/[productId]/page.tsx` — Product Details and BOM revision history.
+- `src/app/(system)/products/catalog/[productId]/edit/page.tsx` — edit Product master data.
 - `src/app/(system)/products/customers/page.tsx` — current Customers page location.
+- `src/app/(system)/products/customers/new/page.tsx` — create Customer page.
+- `src/app/(system)/products/customers/[customerId]/page.tsx` — Customer Details and assigned Products.
+- `src/app/(system)/products/customers/[customerId]/edit/page.tsx` — edit Customer master data.
 - `src/app/(system)/products/parts/page.tsx` — current first-layer Parts page.
+- `src/app/(system)/products/parts/new/page.tsx` — create Part page.
+- `src/app/(system)/products/parts/[partId]/page.tsx` — Part Details and Where Used.
+- `src/app/(system)/products/parts/[partId]/edit/page.tsx` — edit Part master data.
 - `src/features/products/` — Product feature implementation.
-- `src/features/parts/` — current Part/BOM component feature implementation.
+- `src/features/parts/` — canonical Parts Library and Where Used implementation.
+- `src/features/boms/` — normalized BOM list, health, and detail implementation.
 - `src/features/customers/` — Customer feature implementation.
 - `prisma/schema.prisma` — current database schema and `bom_components` structure.
-
+- `prisma/migrations/` — existing-database baseline and normalized BOM backfill.
+- `prisma/migrations/20260909000000_enforce_bom_revision_states/` — one-active and one-draft-per-Product database constraints.
+- `prisma/migrations/20260909130000_enforce_normalized_product_code/` — normalized Product-code uniqueness constraint.
+- `prisma/migrations/20260909140000_enforce_normalized_customer_code/` — normalized Customer-code uniqueness constraint.
+- `scripts/audit-bom-data.mjs` — repeatable read-only source/backfill audit.
+- `scripts/dry-run-customer-bom-import.mjs` — workbook validation and read-only Supabase comparison.
+- `scripts/import-customer-boms.mjs` — guarded, backed-up, transactional workbook import.
+- `scripts/uat-master-data-workflow.mjs` — reversible Customer/Product/Part/BOM integration UAT.
+- `docs/testing/master-data-bom-uat.md` — automated coverage and manual browser checklist.
+- `docs/security/roles-and-permissions.md` — role definitions, ownership boundaries, target permission matrix, and implementation sequence.

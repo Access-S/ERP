@@ -51,16 +51,35 @@ export interface ButtonProps
 // ───────────────── BLOCK 3: Component Implementation ──────────
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, loading = false, children, ...props }, ref) => {
-    const Comp = asChild ? Slot.Root : "button"
-    
+    const classes = cn(
+      buttonVariants({ variant, size, className }),
+      "will-change-transform",
+      loading && "opacity-80"
+    )
+
+    // Slot requires exactly one child. Render the slotted branch separately so
+    // the optional loading indicator never creates a second Slot child.
+    if (asChild) {
+      return (
+        <Slot.Root
+          data-slot="button"
+          className={classes}
+          ref={ref}
+          {...props}
+        >
+          {children}
+        </Slot.Root>
+      )
+    }
+
     return (
-      <Comp
+      <button
+        {...props}
         data-slot="button"
         // Force hardware acceleration on the container to sync SVG and Text transforms
-        className={cn(buttonVariants({ variant, size, className }), "will-change-transform", loading && "opacity-80")}
+        className={classes}
         ref={ref}
         disabled={loading || props.disabled}
-        {...props}
       >
         {loading && (
           <svg className="animate-spin h-4 w-4 shrink-0" viewBox="0 0 24 24">
@@ -69,7 +88,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           </svg>
         )}
         {children}
-      </Comp>
+      </button>
     )
   }
 )

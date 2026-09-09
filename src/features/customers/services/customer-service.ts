@@ -1,14 +1,20 @@
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 import { prisma } from "@/lib/db"
-import type { Customer as PrismaCustomer } from "@prisma/client"
-import type { Prisma } from "@prisma/client"
+import { Prisma, type Customer as PrismaCustomer } from "@prisma/client"
 import type {
   DataTableRequest,
   DataTableResponseData,
   FilterItem,
-  FilterOperator,
 } from "@/components/shared/data-table/types"
-import type { Customer } from "../types/customer-schema"
+import type {
+  CreateCustomerInput,
+  Customer,
+  CustomerDetail,
+  SetCustomerActiveInput,
+  UpdateCustomerInput,
+} from "../types/customer-schema"
+
+const BLOCKING_PURCHASE_ORDER_STATUSES = ["Open", "PO Check"]
 
 // ───────────────── BLOCK 2: Constants ──────────────────────────
 // Whitelist of columns allowed through to Prisma for server-side sorting.
@@ -333,4 +339,191 @@ export async function getCustomerStats(): Promise<CustomerStats> {
       ? Number(creditAgg._sum.credit_limit)
       : 0,
   }
+}
+
+// ---------------- BLOCK 8: Detail Service ----------------
+export async function getCustomerById(id: string): Promise<CustomerDetail | null> {
+  const customer = await prisma.customer.findUnique({
+    where: { id },
+    include: {
+      products: {
+        select: {
+          id: true,
+          product_code: true,
+          description: true,
+          is_active: true,
+        },
+        orderBy: { product_code: "asc" },
+      },
+      _count: {
+        select: {
+          purchase_orders: {
+            where: { current_status: { in: BLOCKING_PURCHASE_ORDER_STATUSES } },
+          },
+        },
+      },
+    },
+  })
+  if (!customer) return null
+
+  return {
+    id: customer.id,
+    customer_code: customer.customer_code,
+    legal_name: customer.legal_name,
+    trading_name: customer.trading_name,
+    status: customer.status,
+    customer_type: customer.customer_type,
+    industry: customer.industry,
+    payment_terms: customer.payment_terms,
+    credit_limit: Number(customer.credit_limit),
+    default_currency: customer.default_currency,
+    default_discount_percentage: Number(customer.default_discount_percentage),
+    tax_id: customer.tax_id,
+    is_tax_exempt: customer.is_tax_exempt,
+    primary_contact_name: customer.primary_contact_name,
+    primary_contact_email: customer.primary_contact_email,
+    primary_contact_phone: customer.primary_contact_phone,
+    accounts_payables_email: customer.accounts_payables_email,
+    notes: customer.notes,
+    is_active: customer.is_active,
+    active_product_count: customer.products.filter((product) => product.is_active).length,
+    open_purchase_order_count: customer._count.purchase_orders,
+    products: customer.products,
+    created_at: customer.created_at.toISOString(),
+    updated_at: customer.updated_at.toISOString(),
+  }
+}
+
+// ---------------- BLOCK 9: Mutation Helpers ----------------
+export class CustomerWorkflowError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "CustomerWorkflowError"
+  }
+}
+
+function collapseWhitespace(value: string): string {
+  return value.trim().replace(/\s+/g, " ")
+}
+
+export function normalizeCustomerCode(value: string): string {
+  return collapseWhitespace(value).toUpperCase()
+}
+
+function isPrismaError(error: unknown, code: string): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === code
+}
+
+function customerData(input: CreateCustomerInput | UpdateCustomerInput) {
+  return {
+    legal_name: input.legalName,
+    trading_name: input.tradingName,
+    customer_type: input.customerType,
+    industry: input.industry,
+    payment_terms: input.paymentTerms,
+    credit_limit: input.creditLimit,
+    default_currency: input.defaultCurrency,
+    default_discount_percentage: input.defaultDiscountPercentage,
+    tax_id: input.taxId,
+    is_tax_exempt: input.isTaxExempt,
+    primary_contact_name: input.primaryContactName,
+    primary_contact_email: input.primaryContactEmail,
+    primary_contact_phone: input.primaryContactPhone,
+    accounts_payables_email: input.accountsPayablesEmail,
+    notes: input.notes,
+  }
+}
+
+// ---------------- BLOCK 10: Mutation Services ----------------
+export async function createCustomer(
+  input: CreateCustomerInput
+): Promise<{ customerId: string }> {
+  const customerCode = collapseWhitespace(input.customerCode)
+  try {
+    const customer = await prisma.customer.create({
+      data: {
+        customer_code: customerCode,
+        ...customerData(input),
+        status: "ACTIVE",
+        is_active: true,
+      },
+      select: { id: true },
+    })
+    return { customerId: customer.id }
+  } catch (error) {
+    if (isPrismaError(error, "P2002")) {
+      throw new CustomerWorkflowError(`Customer code ${customerCode} already exists.`)
+    }
+    throw error
+  }
+}
+
+export async function updateCustomer(
+  input: UpdateCustomerInput
+): Promise<{ customerId: string }> {
+  try {
+    const customer = await prisma.customer.update({
+      where: { id: input.customerId },
+      data: { ...customerData(input), updated_at: new Date() },
+      select: { id: true },
+    })
+    return { customerId: customer.id }
+  } catch (error) {
+    if (isPrismaError(error, "P2025")) {
+      throw new CustomerWorkflowError("This Customer no longer exists.")
+    }
+    throw error
+  }
+}
+
+export async function setCustomerActive(
+  input: SetCustomerActiveInput
+): Promise<{ customerId: string }> {
+  return prisma.$transaction(async (transaction) => {
+    const customer = await transaction.customer.findUnique({
+      where: { id: input.customerId },
+      select: { id: true, is_active: true },
+    })
+    if (!customer) throw new CustomerWorkflowError("This Customer no longer exists.")
+    if (customer.is_active === input.isActive) return { customerId: customer.id }
+
+    if (!input.isActive) {
+      const [activeProducts, openPurchaseOrders] = await Promise.all([
+        transaction.products.count({
+          where: { customer_id: input.customerId, is_active: true },
+        }),
+        transaction.purchase_orders.count({
+          where: {
+            customer_id: input.customerId,
+            current_status: { in: BLOCKING_PURCHASE_ORDER_STATUSES },
+          },
+        }),
+      ])
+      if (activeProducts > 0 || openPurchaseOrders > 0) {
+        const dependencies = [
+          activeProducts > 0
+            ? `${activeProducts} active ${activeProducts === 1 ? "Product" : "Products"}`
+            : null,
+          openPurchaseOrders > 0
+            ? `${openPurchaseOrders} open or pending purchase ${openPurchaseOrders === 1 ? "order" : "orders"}`
+            : null,
+        ].filter((value): value is string => value !== null)
+        throw new CustomerWorkflowError(
+          `This Customer cannot be deactivated while assigned to ${dependencies.join(" and ")}.`
+        )
+      }
+    }
+
+    await transaction.customer.update({
+      where: { id: input.customerId },
+      data: {
+        is_active: input.isActive,
+        status: input.isActive ? "ACTIVE" : "INACTIVE",
+        updated_at: new Date(),
+      },
+    })
+    return { customerId: customer.id }
+  }, {
+    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+  })
 }

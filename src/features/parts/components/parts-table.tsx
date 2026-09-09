@@ -1,8 +1,10 @@
 "use client"
 
-// ───────────────── BLOCK 1: Imports ────────────────────────────
+// ───────────────── BLOCK 1: Imports ──────────────────────────────────────────
 import * as React from "react"
+import Link from "next/link"
 import type { ColumnDef } from "@tanstack/react-table"
+import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   DataTable,
@@ -12,7 +14,6 @@ import {
   DataTableToolbar,
   useDataTable,
 } from "@/components/shared/data-table"
-import { cn } from "@/lib/utils"
 import type {
   DataTableRequest,
   DataTableResponseData,
@@ -21,96 +22,86 @@ import type {
 import { fetchPartsPage } from "../actions/part-actions"
 import type { Part } from "../types/part-schema"
 
-// ───────────────── BLOCK 2: Helpers ────────────────────────────
-const perShipperFormatter = new Intl.NumberFormat("en-US")
-
-/** Caps a cell's width and ellipsizes overflow; hover shows the full value. */
-function TruncatedText({ text, className }: { text: string; className?: string }) {
-  return (
-    <span className={cn("block truncate", className)} title={text}>
-      {text}
-    </span>
-  )
-}
-
-// ───────────────── BLOCK 3: Column Definitions ─────────────────
-// meta.variant drives which operators the FilterList offers per column.
-// Wide text columns are width-capped so the table fits the page width.
-// part_type becomes a searchable multi-select when the server supplies
-// its distinct values; without them it falls back to free text.
-
-interface PartsTableProps {
-  /** Server-fetched distinct part_type values (with row counts). */
-  partTypeOptions?: Option[]
-}
-
+// ───────────────── BLOCK 2: Column Definitions ───────────────────────────────
 function buildPartColumns(partTypeOptions: Option[]): ColumnDef<Part>[] {
-  const hasTypes = partTypeOptions.length > 0
   return [
-  {
-    accessorKey: "part_code",
-    header: "Code",
-    meta: { label: "Part Code", variant: "text" },
-    cell: ({ row }) => (
-      <TruncatedText className="max-w-[140px]" text={row.original.part_code} />
-    ),
-  },
-  {
-    accessorKey: "part_description",
-    header: "Description",
-    meta: { label: "Description", variant: "text" },
-    cell: ({ row }) =>
-      row.original.part_description ? (
-        <TruncatedText className="max-w-[260px]" text={row.original.part_description} />
-      ) : (
-        <span className="text-muted-foreground">—</span>
+    {
+      accessorKey: "part_code",
+      header: "Part",
+      meta: { label: "Part Code", variant: "text" },
+      cell: ({ row }) => (
+        <Link
+          className="font-medium text-foreground underline-offset-4 hover:underline"
+          href={`/products/parts/${row.original.id}`}
+        >
+          {row.original.part_code}
+        </Link>
       ),
-  },
-  {
-    accessorKey: "part_type",
-    header: "Type",
-    meta: {
-      label: "Part Type",
-      variant: hasTypes ? "multiSelect" : "text",
-      ...(hasTypes ? { options: partTypeOptions } : {}),
     },
-    cell: ({ row }) =>
-      row.original.part_type ? (
-        <TruncatedText className="max-w-[120px]" text={row.original.part_type} />
-      ) : (
-        <span className="text-muted-foreground">—</span>
-      ),
-  },
-  {
-    accessorKey: "product_code",
-    header: "Product",
-    meta: { label: "Product", variant: "text" },
-    cell: ({ row }) =>
-      row.original.product_code ? (
-        <TruncatedText className="max-w-[140px]" text={row.original.product_code} />
-      ) : (
-        <span className="text-muted-foreground">Unlinked</span>
-      ),
-  },
-  {
-    accessorKey: "per_shipper",
-    header: "Per Shipper",
-    meta: { label: "Per Shipper", variant: "number" },
-    cell: ({ row }) =>
-      row.original.per_shipper == null ? (
-        <span className="text-muted-foreground">—</span>
-      ) : (
-        <span className="font-medium tabular-nums">
-          {perShipperFormatter.format(row.original.per_shipper)}
+    {
+      accessorKey: "description",
+      header: "Description",
+      meta: { label: "Description", variant: "text" },
+      cell: ({ row }) => (
+        <span className="block max-w-[360px] truncate" title={row.original.description ?? undefined}>
+          {row.original.description ?? "—"}
         </span>
       ),
-  },
+    },
+    {
+      accessorKey: "part_type",
+      header: "Type",
+      meta: {
+        label: "Part Type",
+        variant: partTypeOptions.length > 0 ? "multiSelect" : "text",
+        options: partTypeOptions,
+      },
+      cell: ({ row }) => row.original.part_type ?? <span className="text-muted-foreground">—</span>,
+    },
+    {
+      accessorKey: "default_uom",
+      header: "Default UOM",
+      meta: { label: "Default UOM", variant: "text" },
+      cell: ({ row }) => row.original.default_uom ?? <span className="text-muted-foreground">Not set</span>,
+    },
+    {
+      accessorKey: "bom_count",
+      header: "BOMs",
+      meta: { label: "BOM Count", variant: "number" },
+      cell: ({ row }) => <span className="tabular-nums">{row.original.bom_count}</span>,
+    },
+    {
+      accessorKey: "line_count",
+      header: "Usage Lines",
+      meta: { label: "Usage Line Count", variant: "number" },
+      cell: ({ row }) => <span className="tabular-nums">{row.original.line_count}</span>,
+    },
+    {
+      accessorKey: "is_active",
+      header: "Status",
+      meta: {
+        label: "Status",
+        variant: "multiSelect",
+        options: [
+          { label: "Active", value: "true" },
+          { label: "Inactive", value: "false" },
+        ],
+      },
+      cell: ({ row }) => (
+        <Badge variant={row.original.is_active ? "secondary" : "outline"}>
+          {row.original.is_active ? "Active" : "Inactive"}
+        </Badge>
+      ),
+    },
   ]
 }
 
-// ───────────────── BLOCK 4: Component ──────────────────────────
+// ───────────────── BLOCK 3: Component ────────────────────────────────────────
+interface PartsTableProps {
+  partTypeOptions?: Option[]
+}
+
 export function PartsTable({ partTypeOptions = [] }: PartsTableProps) {
-  // Columns are rebuilt only when the server options change (stable identity).
   const columns = React.useMemo(() => buildPartColumns(partTypeOptions), [partTypeOptions])
   const {
     table,
@@ -127,31 +118,20 @@ export function PartsTable({ partTypeOptions = [] }: PartsTableProps) {
     onJoinOperatorChange,
   } = useDataTable<Part>({
     columns,
-    // Rule 9: stable fetchPage identity — a fresh inline arrow here would
-    // retrigger the hook's fetch effect on every render.
     fetchPage: React.useCallback(
-      (params: DataTableRequest): Promise<DataTableResponseData<Part>> =>
-        fetchPartsPage(params),
+      (params: DataTableRequest): Promise<DataTableResponseData<Part>> => fetchPartsPage(params),
       []
     ),
   })
 
-  // Pagination state lives in the table instance (synced to the URL by the hook).
   const pagination = table.getState().pagination
-
-  // ── Faceted filter helpers (is_linked) ──
   const getFacetedValue = (columnId: string): string[] => {
-    const filter = filters.find((f) => f.id === columnId)
-    if (filter && Array.isArray(filter.value)) return filter.value as string[]
-    return []
+    const filter = filters.find((item) => item.id === columnId)
+    return filter && Array.isArray(filter.value) ? filter.value.map(String) : []
   }
-
   const onFacetedChange = (columnId: string, values: string[]) => {
-    if (values.length === 0) {
-      onFilterRemove(columnId)
-    } else {
-      onFilterChange({ id: columnId, operator: "contains", value: values })
-    }
+    if (values.length === 0) onFilterRemove(columnId)
+    else onFilterChange({ id: columnId, operator: "contains", value: values })
   }
 
   return (
@@ -160,16 +140,16 @@ export function PartsTable({ partTypeOptions = [] }: PartsTableProps) {
         table={table}
         search={search ?? ""}
         onSearchChange={onSearchChange}
-        searchPlaceholder="Search parts..."
+        searchPlaceholder="Search Parts..."
       >
         <DataTableFacetedFilter
-          title="Linked"
+          title="Status"
           options={[
-            { label: "Linked", value: "true" },
-            { label: "Unlinked", value: "false" },
+            { label: "Active", value: "true" },
+            { label: "Inactive", value: "false" },
           ]}
-          selectedValues={getFacetedValue("is_linked")}
-          onValueChange={(values) => onFacetedChange("is_linked", values)}
+          selectedValues={getFacetedValue("is_active")}
+          onValueChange={(values) => onFacetedChange("is_active", values)}
         />
         {partTypeOptions.length > 0 && (
           <DataTableFacetedFilter
@@ -191,16 +171,14 @@ export function PartsTable({ partTypeOptions = [] }: PartsTableProps) {
       </DataTableToolbar>
 
       {isLoading ? (
-        <div className="space-y-2" aria-busy="true" aria-label="Loading parts">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
+        <div className="space-y-2" aria-busy="true" aria-label="Loading Parts">
+          {Array.from({ length: 5 }, (_, index) => (
+            <Skeleton className="h-10 w-full" key={index} />
+          ))}
         </div>
       ) : data.length === 0 ? (
         <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
-          No parts found.
+          No Parts found.
         </div>
       ) : (
         <DataTable table={table} />

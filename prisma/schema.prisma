@@ -7,6 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum BomStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
 model bom_components {
   id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   product_id       String?   @db.Uuid
@@ -56,10 +62,64 @@ model products {
   uom               String            @default("Each")
   is_active         Boolean           @default(true)
   bom_components    bom_components[]
+  boms              Bom[]
   customer          Customer?         @relation(fields: [customer_id], references: [id])
   purchase_orders   purchase_orders[]
 
   @@index([product_code(ops: raw("gin_trgm_ops")), description(ops: raw("gin_trgm_ops"))], map: "idx_product_search", type: Gin)
+}
+
+model Bom {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id     String    @db.Uuid
+  revision       Int       @default(1)
+  status         BomStatus @default(DRAFT)
+  quantity_basis String    @default("PER_SHIPPER")
+  effective_from DateTime? @db.Date
+  effective_to   DateTime? @db.Date
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime  @default(now()) @db.Timestamptz(6)
+  product        products  @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  lines          BomLine[]
+
+  @@unique([product_id, revision])
+  @@index([product_id])
+  @@index([status])
+  @@map("boms")
+}
+
+model Part {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  part_code       String    @unique
+  normalized_code String    @unique
+  description     String?
+  part_type       String?
+  default_uom     String?
+  is_active       Boolean   @default(true)
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime  @default(now()) @db.Timestamptz(6)
+  bom_lines       BomLine[]
+
+  @@index([part_type])
+  @@map("parts")
+}
+
+model BomLine {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bom_id              String   @db.Uuid
+  part_id             String   @db.Uuid
+  quantity            Decimal? @db.Decimal
+  uom                 String?
+  position            Int?
+  legacy_component_id String?  @unique @db.Uuid
+  created_at          DateTime @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime @default(now()) @db.Timestamptz(6)
+  bom                 Bom      @relation(fields: [bom_id], references: [id], onDelete: Cascade)
+  part                Part     @relation(fields: [part_id], references: [id], onDelete: Restrict)
+
+  @@index([bom_id])
+  @@index([part_id])
+  @@map("bom_lines")
 }
 
 model purchase_orders {

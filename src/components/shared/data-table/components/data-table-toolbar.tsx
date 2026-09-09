@@ -27,18 +27,10 @@ export function DataTableToolbar<TData extends DataTableRowData>({
   onSearchChange,
   children,
 }: DataTableToolbarProps<TData>) {
-  const [searchInput, setSearchInput] = React.useState(search ?? '');
-
-  // Sync local input if the external search state changes (e.g., URL direct load or reset)
-  React.useEffect(() => {
-    setSearchInput(search ?? '');
-  }, [search]);
-
-  // Rule 9: Stable callback. Updates local state immediately for fast UI,
-  // and calls onSearchChange. Nuqs will debounce the URL/network update.
+  // Nuqs owns the search value, keeping the input and URL synchronized without
+  // mirroring props into local state through an effect.
   const handleSearchChange = React.useCallback(
     (value: string) => {
-      setSearchInput(value);
       onSearchChange(value);
     },
     [onSearchChange]
@@ -53,7 +45,7 @@ export function DataTableToolbar<TData extends DataTableRowData>({
             aria-hidden="true"
           />
           <Input
-            value={searchInput}
+            value={search ?? ''}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
             className="h-11 w-[150px] pl-9 lg:w-[300px] focus-visible:ring-1"

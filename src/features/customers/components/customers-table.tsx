@@ -2,6 +2,7 @@
 
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 import * as React from "react"
+import Link from "next/link"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -25,9 +26,8 @@ import type { Customer } from "../types/customer-schema"
 // Module-level formatter is deterministic; it renders no rows during SSR
 // (rows only appear after the client-side fetch resolves), so there is no
 // hydration mismatch risk.
-const currencyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
+const numberFormatter = new Intl.NumberFormat("en-AU", {
+  minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 })
 
@@ -60,7 +60,12 @@ export const customerColumns: ColumnDef<Customer>[] = [
     header: "Code",
     meta: { label: "Customer Code", variant: "text" },
     cell: ({ row }) => (
-      <TruncatedText className="max-w-[140px]" text={row.original.customer_code} />
+      <Link
+        className="font-medium text-foreground underline-offset-4 hover:underline"
+        href={`/products/customers/${row.original.id}`}
+      >
+        {row.original.customer_code}
+      </Link>
     ),
   },
   {
@@ -118,7 +123,7 @@ export const customerColumns: ColumnDef<Customer>[] = [
     meta: { label: "Credit Limit", variant: "number" },
     cell: ({ row }) => (
       <span className="font-medium tabular-nums">
-        {currencyFormatter.format(row.original.credit_limit)}
+        {row.original.default_currency} {numberFormatter.format(row.original.credit_limit)}
       </span>
     ),
   },

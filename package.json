@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "audit:bom": "node --env-file=.env scripts/audit-bom-data.mjs",
+    "uat:master-data": "node --no-warnings --experimental-strip-types --env-file=.env scripts/uat-master-data-workflow.mjs",
+    "import:bom:dry-run": "node --env-file=.env scripts/dry-run-customer-bom-import.mjs \"Data files/All customer Bom - cleaned.xlsx\"",
+    "import:bom:apply": "node --env-file=.env scripts/import-customer-boms.mjs \"Data files/All customer Bom - cleaned.xlsx\""
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

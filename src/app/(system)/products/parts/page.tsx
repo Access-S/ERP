@@ -1,12 +1,16 @@
-// ───────────────── BLOCK 1: Imports & Component ────────────────
-import { getPartFilterOptions, getPartStats } from "@/features/parts/services/part-service"
+// ───────────────── BLOCK 1: Imports ──────────────────────────────────────────
+import Link from "next/link"
+import { Suspense } from "react"
+import { ArrowLeft, Plus } from "lucide-react"
 import { PartsTable } from "@/features/parts/components/parts-table"
+import { getPartFilterOptions, getPartStats } from "@/features/parts/services/part-service"
 import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardDescription, CardTitle } from "@/components/ui/card"
-import { Plus } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 
-// ───────────────── BLOCK 2: Page ───────────────────────────────
+export const dynamic = "force-dynamic"
+
+// ───────────────── BLOCK 2: Page ─────────────────────────────────────────────
 export default async function PartsPage() {
   const [stats, filterOptions] = await Promise.all([
     getPartStats(),
@@ -15,20 +19,28 @@ export default async function PartsPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Parts</h1>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/products/boms">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              All BOMs
+            </Link>
+          </Button>
+          <h1 className="mt-2 text-2xl font-bold tracking-tight">Parts Library</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Reusable component master records shared across Product BOMs.
+          </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          New Part
+        <Button asChild>
+          <Link href="/products/parts/new">
+            <Plus className="mr-2 h-4 w-4" />
+            New Part
+          </Link>
         </Button>
       </div>
 
-      {/* KPI Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Parts</CardDescription>
@@ -37,29 +49,37 @@ export default async function PartsPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Linked to Products</CardDescription>
-            <CardTitle className="text-3xl">{stats.linked}</CardTitle>
+            <CardDescription>Active</CardDescription>
+            <CardTitle className="text-3xl">{stats.active}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Unlinked Parts</CardDescription>
-            <CardTitle className="text-3xl">{stats.unlinked}</CardTitle>
+            <CardDescription>Used in Active BOMs</CardDescription>
+            <CardTitle className="text-3xl">{stats.used}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Missing Quantity</CardDescription>
-            <CardTitle className={cn("text-3xl", stats.missingQuantity > 0 && "text-destructive")}>
-              {stats.missingQuantity}
+            <CardDescription>Not in Active BOMs</CardDescription>
+            <CardTitle className={stats.unused > 0 ? "text-3xl text-destructive" : "text-3xl"}>
+              {stats.unused}
             </CardTitle>
           </CardHeader>
         </Card>
       </div>
 
-      {/* Parts List */}
-      <PartsTable partTypeOptions={filterOptions.partTypes} />
-
+      <Suspense
+        fallback={(
+          <div className="space-y-2" aria-label="Loading Parts table">
+            {Array.from({ length: 5 }, (_, index) => (
+              <Skeleton className="h-10 w-full" key={index} />
+            ))}
+          </div>
+        )}
+      >
+        <PartsTable partTypeOptions={filterOptions.partTypes} />
+      </Suspense>
     </div>
   )
 }

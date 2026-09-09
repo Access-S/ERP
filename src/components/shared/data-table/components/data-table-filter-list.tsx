@@ -27,7 +27,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
 import { FilterValueInput } from './filter-value-input';
 import { getFilterOperators, getDefaultFilterOperator } from '../lib/utils';
 import type { DataTableRowData, FilterItem, FilterOperator, FilterVariant, JoinOperator } from '../types';
@@ -248,17 +247,6 @@ function FilterRow<TData extends DataTableRowData>({
   onFilterChange,
   onFilterRemove,
 }: FilterRowProps<TData>) {
-  const column = columns.find((c) => getColumnId(c) === filter.id);
-
-  if (!column) return null;
-
-  const colId = getColumnId(column);
-  if (!colId) return null;
-
-  const meta = column.meta;
-  const variant: FilterVariant = meta?.variant ?? 'text';
-  const operators = getFilterOperators(variant);
-
   const onValueChange = React.useCallback(
     (value: unknown) => {
       onFilterChange({ ...filter, value });
@@ -276,6 +264,17 @@ function FilterRow<TData extends DataTableRowData>({
     },
     [filter, onFilterChange]
   );
+
+  const column = columns.find((c) => getColumnId(c) === filter.id);
+
+  if (!column) return null;
+
+  const colId = getColumnId(column);
+  if (!colId) return null;
+
+  const meta = column.meta;
+  const variant: FilterVariant = meta?.variant ?? 'text';
+  const operators = getFilterOperators(variant);
 
   return (
     <div

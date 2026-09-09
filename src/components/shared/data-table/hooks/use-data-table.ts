@@ -80,7 +80,9 @@ interface UseDataTableProps<TData extends DataTableRowData> {
 // ───────────────── BLOCK 4: Ref Helper ────────────────────────
 function useStateRef<T>(value: T): React.MutableRefObject<T> {
   const ref = React.useRef(value);
-  ref.current = value;
+  React.useEffect(() => {
+    ref.current = value;
+  }, [value]);
   return ref;
 }
 

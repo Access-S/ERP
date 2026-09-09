@@ -1,14 +1,19 @@
 // ───────────────── BLOCK 1: Imports & Component ────────────────
 import { getCustomerStats } from "@/features/customers/services/customer-service"
+import Link from "next/link"
+import { Suspense } from "react"
 import { CustomersTable } from "@/features/customers/components/customers-table"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardDescription, CardTitle } from "@/components/ui/card"
 import { Plus } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
+
+export const dynamic = "force-dynamic"
 
 // Summary numbers render once on the server — no cents on headline KPIs.
 const exposureFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
-  currency: "USD",
+  currency: "AUD",
   maximumFractionDigits: 0,
 })
 
@@ -24,9 +29,11 @@ export default async function CustomersPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Customers</h1>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          New Customer
+        <Button asChild>
+          <Link href="/products/customers/new">
+            <Plus className="mr-2 h-4 w-4" />
+            New Customer
+          </Link>
         </Button>
       </div>
 
@@ -55,7 +62,17 @@ export default async function CustomersPage() {
       </div>
 
       {/* Customer List */}
-      <CustomersTable />
+      <Suspense
+        fallback={(
+          <div className="space-y-2" aria-label="Loading customer table">
+            {Array.from({ length: 5 }, (_, index) => (
+              <Skeleton className="h-10 w-full" key={index} />
+            ))}
+          </div>
+        )}
+      >
+        <CustomersTable />
+      </Suspense>
 
     </div>
   )

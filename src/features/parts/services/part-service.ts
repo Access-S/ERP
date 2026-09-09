@@ -1,369 +1,365 @@
-// ───────────────── BLOCK 1: Imports ────────────────────────────
+// ───────────────── BLOCK 1: Imports ──────────────────────────────────────────
 import { prisma } from "@/lib/db"
-import type { Prisma } from "@prisma/client"
+import { Prisma } from "@prisma/client"
 import type {
   DataTableRequest,
   DataTableResponseData,
   FilterItem,
   Option,
 } from "@/components/shared/data-table/types"
-import type { Part } from "../types/part-schema"
+import type {
+  CreatePartInput,
+  Part,
+  PartDetail,
+  SetPartActiveInput,
+  UpdatePartInput,
+} from "../types/part-schema"
 
-// ───────────────── BLOCK 2: Constants ──────────────────────────
-// Whitelist of columns allowed through to Prisma for server-side sorting.
+// ───────────────── BLOCK 2: Query Shape ──────────────────────────────────────
+const partListQuery = {
+  include: {
+    bom_lines: {
+      select: { bom_id: true },
+    },
+  },
+} satisfies Prisma.PartDefaultArgs
+
+type PartRecord = Prisma.PartGetPayload<typeof partListQuery>
+
 const SORTABLE_COLUMNS = new Set([
   "part_code",
-  "part_description",
+  "description",
   "part_type",
-  "per_shipper",
-  "product_code",
+  "default_uom",
+  "is_active",
+  "bom_count",
+  "line_count",
+  "updated_at",
 ])
 
-/** Columns filterable as free text (string filters). */
-type TextField = "part_code" | "part_description" | "part_type"
-
-const TEXT_FIELDS = new Set<TextField>([
-  "part_code",
-  "part_description",
-  "part_type",
-])
-
-// ───────────────── BLOCK 3: Mapper ─────────────────────────────
-type BomComponentWithProduct = Prisma.bom_componentsGetPayload<{
-  include: { products: { select: { product_code: true } } }
-}>
-
-/**
- * Maps a Prisma bom_components row (with its parent product) to the
- * app-level Part type. Decimal -> number, relation -> flat product_code.
- */
-function mapToPart(p: BomComponentWithProduct): Part {
+// ───────────────── BLOCK 3: Mapping ──────────────────────────────────────────
+function mapToPart(part: PartRecord): Part {
   return {
-    id: p.id,
-    part_code: p.part_code,
-    part_description: p.part_description,
-    part_type: p.part_type,
-    per_shipper: p.per_shipper === null ? null : Number(p.per_shipper),
-    product_id: p.product_id,
-    product_code: p.products?.product_code ?? null,
+    id: part.id,
+    part_code: part.part_code,
+    description: part.description,
+    part_type: part.part_type,
+    default_uom: part.default_uom,
+    is_active: part.is_active,
+    bom_count: new Set(part.bom_lines.map((line) => line.bom_id)).size,
+    line_count: part.bom_lines.length,
+    updated_at: part.updated_at.toISOString(),
   }
 }
 
-// ───────────────── BLOCK 4: Where Builder ──────────────────────
-/**
- * Translates a DataTableRequest into a Prisma where clause.
- * Global search is ANDed with the filter group; filters inside the group
- * are joined by the request's joinOperator (and | or). Search covers the
- * part's own fields AND its parent product code.
- */
-function buildWhere(params: DataTableRequest): Prisma.bom_componentsWhereInput {
-  const where: Prisma.bom_componentsWhereInput = {}
-  const andGroups: Prisma.bom_componentsWhereInput[] = []
-
-  if (params.search) {
-    const term = params.search
-    andGroups.push({
-      OR: [
-        { part_code: { contains: term, mode: "insensitive" } },
-        { part_description: { contains: term, mode: "insensitive" } },
-        { part_type: { contains: term, mode: "insensitive" } },
-        {
-          products: {
-            is: { product_code: { contains: term, mode: "insensitive" } },
-          },
-        },
-      ],
-    })
+export class PartWorkflowError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "PartWorkflowError"
   }
-
-  const conditions = params.filters
-    .map(buildFieldCondition)
-    .filter((c): c is Prisma.bom_componentsWhereInput => c !== null)
-
-  if (conditions.length > 0) {
-    andGroups.push(
-      params.joinOperator === "or" ? { OR: conditions } : { AND: conditions }
-    )
-  }
-
-  if (andGroups.length > 0) where.AND = andGroups
-  return where
 }
 
-// ───────────────── BLOCK 5: Filter Translation ─────────────────
-/**
- * Translates one FilterItem into a where fragment. Returns null for
- * unknown columns / unsupported operator+column combinations, which are
- * ignored rather than throwing (fail-soft, whitelisted columns only).
- */
-function buildFieldCondition(f: FilterItem): Prisma.bom_componentsWhereInput | null {
-  const { id, operator } = f
-  const value = f.value
+function collapseWhitespace(value: string): string {
+  return value.trim().replace(/\s+/g, " ")
+}
 
-  // ── Virtual boolean: is_linked (part belongs to a product) ──
-  if (id === "is_linked") {
-    if (operator === "equals") {
-      return toBoolean(value)
-        ? { product_id: { not: null } }
-        : { product_id: null }
-    }
-    if (operator === "notEquals") {
-      return toBoolean(value)
-        ? { product_id: null }
-        : { product_id: { not: null } }
-    }
-    // Faceted multi-select sends { operator: "contains", value: string[] }
-    if (operator === "contains" && Array.isArray(value)) {
-      const bools = value.map(toBoolean)
-      if (bools.length === 0) return null
-      if (bools.length === 1) {
-        return bools[0] ? { product_id: { not: null } } : { product_id: null }
-      }
-      // Both Linked and Unlinked selected → no constraint
-      return null
-    }
-    return null
-  }
+export function normalizePartCode(value: string): string {
+  return collapseWhitespace(value).toUpperCase()
+}
 
-  // ── Relation text: product_code (parent product's code) ──
-  if (id === "product_code") {
-    const term = value == null ? "" : String(value)
-    switch (operator) {
-      case "iLike":
-        return {
-          products: {
-            is: { product_code: { contains: term, mode: "insensitive" } },
-          },
-        }
-      case "notILike":
-        return {
-          NOT: {
-            products: {
-              is: { product_code: { contains: term, mode: "insensitive" } },
-            },
-          },
-        }
-      case "equals":
-        return {
-          products: {
-            is: { product_code: { equals: term, mode: "insensitive" } },
-          },
-        }
-      case "notEquals":
-        return {
-          NOT: {
-            products: {
-              is: { product_code: { equals: term, mode: "insensitive" } },
-            },
-          },
-        }
-      case "startsWith":
-        return {
-          products: {
-            is: { product_code: { startsWith: term, mode: "insensitive" } },
-          },
-        }
-      case "endsWith":
-        return {
-          products: {
-            is: { product_code: { endsWith: term, mode: "insensitive" } },
-          },
-        }
-      // No parent product linked = "empty" for this column
-      case "isEmpty":
-        return { product_id: null }
-      case "isNotEmpty":
-        return { product_id: { not: null } }
-      default:
-        return null
-    }
-  }
+function isPrismaError(error: unknown, code: string): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === code
+}
 
-  // ── Number column: per_shipper (nullable) ──
-  if (id === "per_shipper") {
-    const n = Number(value)
-    switch (operator) {
-      case "equals":
-        return { per_shipper: { equals: n } }
-      case "notEquals":
-        return { NOT: { per_shipper: { equals: n } } }
-      case "gt":
-        return { per_shipper: { gt: n } }
-      case "gte":
-        return { per_shipper: { gte: n } }
-      case "lt":
-        return { per_shipper: { lt: n } }
-      case "lte":
-        return { per_shipper: { lte: n } }
-      case "isBetween":
-        if (Array.isArray(value) && value.length === 2) {
-          return { per_shipper: { gte: Number(value[0]), lte: Number(value[1]) } }
-        }
-        return null
-      case "isEmpty":
-        return { per_shipper: { equals: null } }
-      case "isNotEmpty":
-        return { NOT: { per_shipper: { equals: null } } }
-      default:
-        return null
-    }
-  }
-
-  // ── Text columns ──
-  if (!TEXT_FIELDS.has(id as TextField)) return null
-  const field = id as TextField
-  const term = value == null ? "" : String(value)
-
+// ───────────────── BLOCK 4: In-Memory Table Operations ───────────────────────
+// Part usage counts are derived from related BOM Lines. The imported catalog is
+// small, so filtering the mapped set keeps those counts correct and transparent.
+function matchesText(
+  source: string | null,
+  operator: FilterItem["operator"],
+  value: unknown
+): boolean {
+  const text = source?.toLocaleLowerCase() ?? ""
+  const term = value == null ? "" : String(value).toLocaleLowerCase()
   switch (operator) {
     case "iLike":
-      return textFieldWhere(field, { contains: term, mode: "insensitive" })
+    case "contains": return text.includes(term)
     case "notILike":
-      return textFieldWhere(field, { contains: term }, true)
-    case "equals":
-      return textFieldWhere(field, { equals: term, mode: "insensitive" })
-    case "notEquals":
-      return textFieldWhere(field, { equals: term }, true)
-    case "startsWith":
-      return textFieldWhere(field, { startsWith: term, mode: "insensitive" })
-    case "endsWith":
-      return textFieldWhere(field, { endsWith: term, mode: "insensitive" })
-    case "contains":
-      // Faceted multi-select sends an array; single values behave like iLike.
-      return Array.isArray(value)
-        ? textFieldWhere(field, { in: value.map(String) })
-        : textFieldWhere(field, { contains: term, mode: "insensitive" })
-    case "notContains":
-      return Array.isArray(value)
-        ? textFieldWhere(field, { in: value.map(String) }, true)
-        : null
-    case "isEmpty":
-      return textEmptyWhere(field, true)
-    case "isNotEmpty":
-      return textEmptyWhere(field, false)
-    default:
-      return null
+    case "notContains": return !text.includes(term)
+    case "equals": return text === term
+    case "notEquals": return text !== term
+    case "startsWith": return text.startsWith(term)
+    case "endsWith": return text.endsWith(term)
+    case "isEmpty": return text.length === 0
+    case "isNotEmpty": return text.length > 0
+    default: return true
   }
 }
 
-function toBoolean(value: unknown): boolean {
-  return value === true || value === "true"
-}
-
-/**
- * Wraps a string filter under its (whitelisted) field name.
- * negate=true inverts it: NOT (field <op> value).
- */
-function textFieldWhere(
-  field: TextField,
-  filter: Prisma.StringFilter,
-  negate = false
-): Prisma.bom_componentsWhereInput {
-  switch (field) {
-    case "part_code": return negate ? { NOT: { part_code: filter } } : { part_code: filter }
-    case "part_description": return negate ? { NOT: { part_description: filter } } : { part_description: filter }
-    case "part_type": return negate ? { NOT: { part_type: filter } } : { part_type: filter }
+function matchesNumber(
+  source: number,
+  operator: FilterItem["operator"],
+  value: unknown
+): boolean {
+  const number = Number(value)
+  switch (operator) {
+    case "equals": return source === number
+    case "notEquals": return source !== number
+    case "gt": return source > number
+    case "gte": return source >= number
+    case "lt": return source < number
+    case "lte": return source <= number
+    case "isBetween":
+      return Array.isArray(value) && value.length === 2
+        ? source >= Number(value[0]) && source <= Number(value[1])
+        : true
+    default: return true
   }
 }
 
-/** Empty = "" or NULL. Not empty = neither. */
-function textEmptyWhere(field: TextField, isEmpty: boolean): Prisma.bom_componentsWhereInput {
-  const blank = { OR: [{ [field]: { equals: "" } }, { [field]: { equals: null } }] } as Prisma.bom_componentsWhereInput
-  return isEmpty ? blank : { NOT: blank }
+function matchesFacet(source: string, filter: FilterItem): boolean {
+  if (filter.operator === "contains" && Array.isArray(filter.value)) {
+    return filter.value.map(String).includes(source)
+  }
+  return matchesText(source, filter.operator, filter.value)
 }
 
-// ───────────────── BLOCK 6: Service Functions ──────────────────
-/**
- * Fetches one page of parts (bom_components) for the shared DataTable.
- * Supports server-side pagination, sorting (whitelisted columns),
- * global search, and column filters.
- */
+function matchesFilter(part: Part, filter: FilterItem): boolean {
+  switch (filter.id) {
+    case "part_code": return matchesText(part.part_code, filter.operator, filter.value)
+    case "description": return matchesText(part.description, filter.operator, filter.value)
+    case "part_type": return matchesFacet(part.part_type ?? "", filter)
+    case "default_uom": return matchesText(part.default_uom, filter.operator, filter.value)
+    case "is_active": return matchesFacet(String(part.is_active), filter)
+    case "bom_count": return matchesNumber(part.bom_count, filter.operator, filter.value)
+    case "line_count": return matchesNumber(part.line_count, filter.operator, filter.value)
+    default: return true
+  }
+}
+
+function compareValues(left: unknown, right: unknown): number {
+  if (left == null && right == null) return 0
+  if (left == null) return 1
+  if (right == null) return -1
+  if (typeof left === "number" && typeof right === "number") return left - right
+  if (typeof left === "boolean" && typeof right === "boolean") return Number(left) - Number(right)
+  return String(left).localeCompare(String(right), undefined, {
+    numeric: true,
+    sensitivity: "base",
+  })
+}
+
+function applyFilters(items: Part[], params: DataTableRequest): Part[] {
+  const search = params.search?.trim().toLocaleLowerCase()
+  return items.filter((part) => {
+    const matchesSearch = !search || [part.part_code, part.description, part.part_type]
+      .some((value) => value?.toLocaleLowerCase().includes(search))
+    if (!matchesSearch || params.filters.length === 0) return matchesSearch
+    const matches = params.filters.map((filter) => matchesFilter(part, filter))
+    return params.joinOperator === "or" ? matches.some(Boolean) : matches.every(Boolean)
+  })
+}
+
+function applySorting(items: Part[], params: DataTableRequest): Part[] {
+  const sorts = params.sorts.filter((sort) => SORTABLE_COLUMNS.has(sort.id))
+  const effectiveSorts = sorts.length > 0 ? sorts : [{ id: "part_code", desc: false }]
+  return [...items].sort((left, right) => {
+    for (const sort of effectiveSorts) {
+      const result = compareValues(
+        left[sort.id as keyof Part],
+        right[sort.id as keyof Part]
+      )
+      if (result !== 0) return sort.desc ? -result : result
+    }
+    return 0
+  })
+}
+
+// ───────────────── BLOCK 5: Service Functions ────────────────────────────────
 export async function getPartsPage(
   params: DataTableRequest
 ): Promise<DataTableResponseData<Part>> {
-  const { page, pageSize, sorts } = params
-
-  // Drop any sort request for columns that are not whitelisted.
-  const safeSorts = sorts.filter((s) => SORTABLE_COLUMNS.has(s.id))
-
-  const orderBy: Prisma.bom_componentsOrderByWithRelationInput[] = safeSorts.length
-    ? safeSorts.map((s) => {
-        // Sorting by the parent product's code goes through the relation.
-        if (s.id === "product_code") {
-          return {
-            products: { product_code: s.desc ? "desc" : "asc" },
-          } as Prisma.bom_componentsOrderByWithRelationInput
-        }
-        return { [s.id]: s.desc ? "desc" : "asc" } as Prisma.bom_componentsOrderByWithRelationInput
-      })
-    : [{ part_code: "asc" }]
-
-  const where = buildWhere(params)
-
-  const [parts, totalCount] = await Promise.all([
-    prisma.bom_components.findMany({
-      where,
-      include: { products: { select: { product_code: true } } },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      orderBy,
-    }),
-    prisma.bom_components.count({ where }),
-  ])
-
+  const records = await prisma.part.findMany(partListQuery)
+  const filtered = applyFilters(records.map(mapToPart), params)
+  const sorted = applySorting(filtered, params)
+  const start = (params.page - 1) * params.pageSize
   return {
-    data: parts.map(mapToPart),
-    pageCount: Math.max(1, Math.ceil(totalCount / pageSize)),
-    totalCount,
+    data: sorted.slice(start, start + params.pageSize),
+    pageCount: Math.max(1, Math.ceil(filtered.length / params.pageSize)),
+    totalCount: filtered.length,
   }
 }
 
-// ───────────────── BLOCK 7: Stats ──────────────────────────────
 export interface PartStats {
   total: number
-  linked: number
-  unlinked: number
-  missingQuantity: number
+  active: number
+  used: number
+  unused: number
 }
 
-/**
- * Header KPIs for the parts page — four parallel aggregate queries,
- * no row fetching. "Unlinked" parts have no parent product; "missing
- * quantity" parts have no per_shipper value (incomplete BOM data).
- */
 export async function getPartStats(): Promise<PartStats> {
-  const [total, linked, unlinked, missingQuantity] = await Promise.all([
-    prisma.bom_components.count(),
-    prisma.bom_components.count({ where: { product_id: { not: null } } }),
-    prisma.bom_components.count({ where: { product_id: null } }),
-    prisma.bom_components.count({ where: { per_shipper: null } }),
+  const [total, active, used, unused] = await Promise.all([
+    prisma.part.count(),
+    prisma.part.count({ where: { is_active: true } }),
+    prisma.part.count({ where: { bom_lines: { some: { bom: { status: "ACTIVE" } } } } }),
+    prisma.part.count({ where: { bom_lines: { none: { bom: { status: "ACTIVE" } } } } }),
   ])
-
-  return { total, linked, unlinked, missingQuantity }
+  return { total, active, used, unused }
 }
 
-// ───────────────── BLOCK 8: Filter Options ─────────────────────
 export interface PartFilterOptions {
   partTypes: Option[]
 }
 
-/**
- * Distinct part_type values with row counts, feeding the searchable
- * select filter on the parts table. NULL part types are excluded —
- * the column's "is empty" operator covers those.
- */
 export async function getPartFilterOptions(): Promise<PartFilterOptions> {
-  const groups = await prisma.bom_components.groupBy({
+  const groups = await prisma.part.groupBy({
     by: ["part_type"],
     where: { part_type: { not: null } },
     _count: { _all: true },
     orderBy: { part_type: "asc" },
   })
-
   return {
-    partTypes: groups.map((g) => ({
-      label: g.part_type as string,
-      value: g.part_type as string,
-      count: g._count._all,
+    partTypes: groups.map((group) => ({
+      label: group.part_type as string,
+      value: group.part_type as string,
+      count: group._count._all,
     })),
   }
+}
+
+export async function getPartById(id: string): Promise<PartDetail | null> {
+  const part = await prisma.part.findUnique({
+    where: { id },
+    include: {
+      bom_lines: {
+        include: {
+          bom: {
+            include: {
+              product: {
+                select: {
+                  id: true,
+                  product_code: true,
+                  description: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: [{ bom: { product: { product_code: "asc" } } }],
+      },
+    },
+  })
+  if (!part) return null
+
+  return {
+    id: part.id,
+    part_code: part.part_code,
+    normalized_code: part.normalized_code,
+    description: part.description,
+    part_type: part.part_type,
+    default_uom: part.default_uom,
+    is_active: part.is_active,
+    bom_count: new Set(part.bom_lines.map((line) => line.bom_id)).size,
+    line_count: part.bom_lines.length,
+    active_bom_count: new Set(
+      part.bom_lines
+        .filter((line) => line.bom.status === "ACTIVE")
+        .map((line) => line.bom_id)
+    ).size,
+    created_at: part.created_at.toISOString(),
+    updated_at: part.updated_at.toISOString(),
+    where_used: part.bom_lines.map((line) => ({
+      bom_id: line.bom.id,
+      product_id: line.bom.product.id,
+      product_code: line.bom.product.product_code,
+      product_description: line.bom.product.description,
+      revision: line.bom.revision,
+      bom_status: line.bom.status,
+      quantity: line.quantity === null ? null : Number(line.quantity),
+      uom: line.uom,
+    })),
+  }
+}
+
+export async function createPart(input: CreatePartInput): Promise<{ partId: string }> {
+  const partCode = collapseWhitespace(input.partCode)
+
+  try {
+    const part = await prisma.part.create({
+      data: {
+        part_code: partCode,
+        normalized_code: normalizePartCode(partCode),
+        description: input.description,
+        part_type: input.partType,
+        default_uom: input.defaultUom,
+        is_active: true,
+      },
+      select: { id: true },
+    })
+    return { partId: part.id }
+  } catch (error) {
+    if (isPrismaError(error, "P2002")) {
+      throw new PartWorkflowError(`Part code ${partCode} already exists.`)
+    }
+    throw error
+  }
+}
+
+export async function updatePart(input: UpdatePartInput): Promise<{ partId: string }> {
+  try {
+    const part = await prisma.part.update({
+      where: { id: input.partId },
+      data: {
+        description: input.description,
+        part_type: input.partType,
+        default_uom: input.defaultUom,
+        updated_at: new Date(),
+      },
+      select: { id: true },
+    })
+    return { partId: part.id }
+  } catch (error) {
+    if (isPrismaError(error, "P2025")) {
+      throw new PartWorkflowError("This Part no longer exists.")
+    }
+    throw error
+  }
+}
+
+export async function setPartActive(
+  input: SetPartActiveInput
+): Promise<{ partId: string }> {
+  return prisma.$transaction(async (transaction) => {
+    const part = await transaction.part.findUnique({
+      where: { id: input.partId },
+      select: { id: true, is_active: true },
+    })
+    if (!part) throw new PartWorkflowError("This Part no longer exists.")
+    if (part.is_active === input.isActive) return { partId: part.id }
+
+    if (!input.isActive) {
+      const activeBomUsage = await transaction.bomLine.count({
+        where: {
+          part_id: input.partId,
+          bom: { status: "ACTIVE" },
+        },
+      })
+      if (activeBomUsage > 0) {
+        throw new PartWorkflowError(
+          "This Part is used by an active BOM and cannot be deactivated. Revise those BOMs first."
+        )
+      }
+    }
+
+    await transaction.part.update({
+      where: { id: input.partId },
+      data: {
+        is_active: input.isActive,
+        updated_at: new Date(),
+      },
+    })
+    return { partId: part.id }
+  }, {
+    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+  })
 }

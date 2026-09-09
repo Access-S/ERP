@@ -15,14 +15,26 @@ import {
 // rendered as a child of their parent path segment.
 const ROUTE_LABELS: Record<string, string> = {
   "/products": "Products & BOM",
+  "/products/catalog": "Product Catalog",
   "/products/customers": "All Customers",
-  "/products/parts": "All Parts",
+  "/products/boms": "All BOMs",
+  "/products/parts": "Parts Library",
   "/inventory": "Inventory (SOH)",
   "/purchase-orders": "Purchase Orders",
   "/forecasts": "Forecasts",
 }
 
 function labelForPath(path: string, segment: string): string {
+  if (path === "/products/customers/new") return "New Customer"
+  if (/^\/products\/customers\/[^/]+\/edit$/.test(path)) return "Edit Customer"
+  if (/^\/products\/customers\/[^/]+$/.test(path)) return "Customer Details"
+  if (path === "/products/catalog/new") return "New Product"
+  if (/^\/products\/catalog\/[^/]+\/edit$/.test(path)) return "Edit Product"
+  if (/^\/products\/catalog\/[^/]+$/.test(path)) return "Product Details"
+  if (/^\/products\/boms\/[^/]+$/.test(path)) return "BOM Workspace"
+  if (path === "/products/parts/new") return "New Part"
+  if (/^\/products\/parts\/[^/]+\/edit$/.test(path)) return "Edit Part"
+  if (/^\/products\/parts\/[^/]+$/.test(path)) return "Part Details"
   return (
     ROUTE_LABELS[path] ??
     segment

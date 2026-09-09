@@ -1,28 +1,26 @@
 // ───────────────── BLOCK 1: Imports & Component ────────────────
-import { getProducts, getCustomerActiveSkus } from "@/features/products/services/product-service"
+import { getCustomerActiveSkus, getProductStats } from "@/features/products/services/product-service"
+import { getBomStats } from "@/features/boms/services/bom-service"
 import { CustomerSkuList } from "@/features/products/components/customer-sku-list"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import Link from "next/link"
-import { PackageSearch, Building2, ArrowUpRight, Plus, AlertTriangle, Activity } from "lucide-react"
+import { PackageSearch, Building2, ArrowUpRight, Plus, AlertTriangle, Library, CheckCircle2, Boxes } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-export default async function ProductsPage() {
-  const products = await getProducts()
-  const customers = await getCustomerActiveSkus()
-  
-  const totalProducts = products.length
-  const activeProducts = products.filter(p => p.is_active).length
-  
-  // MOCK BOM DATA
-  const mockTotalBoms = 1190
-  const mockCompleteBoms = 1102
-  const mockIncompleteBoms = 51
-  const mockMissingBoms = 37
+export const dynamic = "force-dynamic"
 
-  const completePct = (mockCompleteBoms / mockTotalBoms) * 100
-  const incompletePct = (mockIncompleteBoms / mockTotalBoms) * 100
-  const missingPct = (mockMissingBoms / mockTotalBoms) * 100
+export default async function ProductsPage() {
+  const [productStats, customers, bomStats] = await Promise.all([
+    getProductStats(),
+    getCustomerActiveSkus(),
+    getBomStats(),
+  ])
+  
+  const healthDenominator = Math.max(1, productStats.active)
+  const completePct = (bomStats.complete / healthDenominator) * 100
+  const attentionPct = (bomStats.attention / healthDenominator) * 100
+  const missingPct = (productStats.missingActiveBom / healthDenominator) * 100
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -45,25 +43,27 @@ export default async function ProductsPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription>Total Products</CardDescription>
-                <CardTitle className="text-3xl">{totalProducts}</CardTitle>
+                <CardTitle className="text-3xl">{productStats.total}</CardTitle>
               </CardHeader>
             </Card>
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription>Active</CardDescription>
-                <CardTitle className="text-3xl">{activeProducts}</CardTitle>
+                <CardTitle className="text-3xl">{productStats.active}</CardTitle>
               </CardHeader>
             </Card>
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription>Has BOM</CardDescription>
-                <CardTitle className="text-3xl">{mockCompleteBoms}</CardTitle>
+                <CardTitle className="text-3xl">{productStats.withActiveBom}</CardTitle>
               </CardHeader>
             </Card>
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription>BOM Attention</CardDescription>
-                <CardTitle className="text-3xl text-destructive">{mockMissingBoms}</CardTitle>
+                <CardTitle className={bomStats.attention > 0 ? "text-3xl text-destructive" : "text-3xl"}>
+                  {bomStats.attention}
+                </CardTitle>
               </CardHeader>
             </Card>
           </div>
@@ -75,28 +75,28 @@ export default async function ProductsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex w-full h-4 rounded-full overflow-hidden bg-muted">
-                <div className="bg-emerald-500" style={{ width: `${completePct}%` }} />
-                <div className="bg-amber-500" style={{ width: `${incompletePct}%` }} />
-                <div className="bg-rose-500" style={{ width: `${missingPct}%` }} />
+                <div className="bg-primary" style={{ width: `${completePct}%` }} />
+                <div className="bg-destructive" style={{ width: `${attentionPct}%` }} />
+                <div className="bg-muted-foreground" style={{ width: `${missingPct}%` }} />
               </div>
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div className="flex flex-col">
                   <span className="flex items-center gap-1.5 text-muted-foreground">
-                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Complete
+                    <span className="h-2.5 w-2.5 rounded-full bg-primary" /> Complete
                   </span>
-                  <span className="font-bold text-lg ml-4">{mockCompleteBoms}</span>
+                  <span className="font-bold text-lg ml-4">{bomStats.complete}</span>
                 </div>
                 <div className="flex flex-col">
                   <span className="flex items-center gap-1.5 text-muted-foreground">
-                    <span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> Incomplete
+                    <span className="h-2.5 w-2.5 rounded-full bg-destructive" /> Attention
                   </span>
-                  <span className="font-bold text-lg ml-4">{mockIncompleteBoms}</span>
+                  <span className="font-bold text-lg ml-4">{bomStats.attention}</span>
                 </div>
                 <div className="flex flex-col">
                   <span className="flex items-center gap-1.5 text-muted-foreground">
-                    <span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> Missing
+                    <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground" /> Missing
                   </span>
-                  <span className="font-bold text-lg ml-4">{mockMissingBoms}</span>
+                  <span className="font-bold text-lg ml-4">{productStats.missingActiveBom}</span>
                 </div>
               </div>
             </CardContent>
@@ -109,30 +109,54 @@ export default async function ProductsPage() {
               <CardDescription>Products that need immediate attention.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-3 border rounded-md bg-rose-500/5 border-rose-500/20">
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="h-5 w-5 text-rose-500" />
+              {bomStats.attention > 0 && (
+                <div className="flex items-center justify-between rounded-md border border-destructive/20 bg-destructive/5 p-3">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                    <div>
+                      <p className="font-medium">{bomStats.attention} BOMs need attention</p>
+                      <p className="text-xs text-muted-foreground">Review invalid quantities or duplicate component lines.</p>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href="/products/boms">Review</Link>
+                  </Button>
+                </div>
+              )}
+              {productStats.missingActiveBom > 0 && (
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">{productStats.missingActiveBom} Products are missing an active BOM</p>
+                      <p className="text-xs text-muted-foreground">Create a BOM before using these Products in planning.</p>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link
+                      href={{
+                        pathname: "/products/catalog",
+                        query: {
+                          filters: JSON.stringify([
+                            { id: "bom_state", operator: "contains", value: ["MISSING"] },
+                          ]),
+                        },
+                      }}
+                    >
+                      Review
+                    </Link>
+                  </Button>
+                </div>
+              )}
+              {bomStats.attention === 0 && productStats.missingActiveBom === 0 && (
+                <div className="flex items-center gap-3 rounded-md border p-3">
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
                   <div>
-                    <p className="font-medium">SKU 79646376</p>
-                    <p className="text-xs text-muted-foreground">Missing Bill of Materials</p>
+                    <p className="font-medium">No BOM actions required</p>
+                    <p className="text-xs text-muted-foreground">All active Products have complete BOMs.</p>
                   </div>
                 </div>
-                <Button size="sm" variant="outline" className="border-rose-500/30 text-rose-500 hover:bg-rose-500/10">
-                  Resolve
-                </Button>
-              </div>
-              <div className="flex items-center justify-between p-3 border rounded-md bg-amber-500/5 border-amber-500/20">
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="h-5 w-5 text-amber-500" />
-                  <div>
-                    <p className="font-medium">BOX-100-B</p>
-                    <p className="text-xs text-muted-foreground">BOM missing component quantities</p>
-                  </div>
-                </div>
-                <Button size="sm" variant="outline" className="border-amber-500/30 text-amber-500 hover:bg-amber-500/10">
-                  Resolve
-                </Button>
-              </div>
+              )}
             </CardContent>
           </Card>
 
@@ -147,19 +171,27 @@ export default async function ProductsPage() {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-2">
+              <Link href="/products/catalog" className={cn(buttonVariants({ variant: "outline" }), "h-10")}>
+                <Boxes className="h-4 w-4 mr-1" />
+                All Products
+              </Link>
               <Link href="/products/customers" className={cn(buttonVariants({ variant: "outline" }), "h-10")}>
                 <Building2 className="h-4 w-4 mr-1" />
                 All Customers
               </Link>
-              <Link href="/products/parts" className={cn(buttonVariants({ variant: "outline" }), "h-10")}>
+              <Link href="/products/boms" className={cn(buttonVariants({ variant: "outline" }), "h-10")}>
                 <PackageSearch className="h-4 w-4 mr-1" />
-                All Parts
+                All BOMs
               </Link>
-              <Button variant="outline" className="h-10">
+              <Link href="/products/parts" className={cn(buttonVariants({ variant: "outline" }), "h-10")}>
+                <Library className="h-4 w-4 mr-1" />
+                Parts Library
+              </Link>
+              <Button variant="outline" className="h-10" disabled>
                 <ArrowUpRight className="h-4 w-4 mr-1" />
                 Import/Export
               </Button>
-              <Button variant="outline" className="h-10">
+              <Button variant="outline" className="h-10" disabled>
                 <Plus className="h-4 w-4 mr-1" />
                 New Product
               </Button>

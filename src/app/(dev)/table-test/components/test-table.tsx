@@ -12,7 +12,7 @@ import { DataTableFilterList } from '@/components/shared/data-table/components/d
 import { DataTableFacetedFilter } from '@/components/shared/data-table/components/data-table-faceted-filter'
 import { DatePicker } from '@/components/shared/date-picker'
 import { Checkbox } from '@/components/ui/checkbox'
-import type { DataTableRowData, DataTableRequest, DataTableResponseData, FilterItem } from '@/components/shared/data-table/types'
+import type { DataTableRowData, DataTableRequest, DataTableResponseData } from '@/components/shared/data-table/types'
 import type { CalendarValue } from '@/types/calendar'
 
 // ───────────────── BLOCK 2: Types & Zod Schemas ────────────────
@@ -128,11 +128,7 @@ async function fetchPage(params: DataTableRequest): Promise<DataTableResponseDat
 }
 
 // ───────────────── BLOCK 3: Component / Service ────────────────
-interface TestTableProps {
-  initialData: DataTableResponseData<TestItem>
-}
-
-function TestTable({ initialData }: TestTableProps) {
+function TestTable() {
   const columns = useMemo<ColumnDef<TestItem>[]>(
     () => [
       {
@@ -243,7 +239,6 @@ function TestTable({ initialData }: TestTableProps) {
   } = useDataTable<TestItem>({
     columns,
     fetchPage,
-    initialData,
   })
 
   const getFacetedValue = (columnId: string): string[] => {

@@ -54,7 +54,7 @@ Commit Format: git commit -m "type: descriptive message" (Types: feat, fix, refa
 Branch Awareness: Never assume the target branch is main. If branch is unknown, ask the user before providing git push commands. Store the branch name from the user's first response and use it consistently for all subsequent push commands in the conversation.
 ⚡ 9. React Performance Patterns (STRICT)
 Context Memoization: Context values MUST be wrapped in useMemo with exhaustive deps. Without this, every provider render creates a new object identity, causing ALL consumers to re-render.
-Stable Callbacks: Callbacks that read changing state MUST use refs (e.g., stateRef.current = state during render, read in event handlers). Never put frequently-changing state in useCallback deps — it defeats the purpose.
+Stable Callbacks: Callbacks that read changing state MAY use refs, but refs MUST be synchronized in an effect rather than mutated during render. Prefer direct dependencies when callback identity is not performance-critical.
 React.memo for Lists: Components rendered in a .map() with more than 10 items MUST be wrapped in React.memo and receive ONLY the props they need (computed by the parent, not read from context directly).
 O(1) Lookups: When checking membership in a list inside a .map(), convert the list to a Set once (useMemo) and use .has() instead of .some() or .includes().
 🧩 10. Component Composition (STRICT)

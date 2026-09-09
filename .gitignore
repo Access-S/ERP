@@ -41,3 +41,9 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# local database import snapshots
+/Data files/backups/
+
+# original pre-clean import source retained locally
+/Data files/All customer Bom.xlsx
