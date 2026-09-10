@@ -26,12 +26,9 @@ const productColumns: ColumnDef<ProductListItem>[] = [
     header: "Product",
     meta: { label: "Product Code", variant: "text" },
     cell: ({ row }) => (
-      <Link
-        className="font-medium text-foreground underline-offset-4 hover:underline"
-        href={`/products/catalog/${row.original.id}`}
-      >
+      <span className="font-medium text-foreground">
         {row.original.product_code}
-      </Link>
+      </span>
     ),
   },
   {
@@ -185,7 +182,10 @@ export function ProductsTable() {
           No Products found.
         </div>
       ) : (
-        <DataTable table={table} />
+        <DataTable
+          table={table}
+          getRowHref={(product) => `/products/catalog/${product.id}`}
+        />
       )}
 
       <DataTablePagination

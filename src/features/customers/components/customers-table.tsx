@@ -2,7 +2,6 @@
 
 // ───────────────── BLOCK 1: Imports ────────────────────────────
 import * as React from "react"
-import Link from "next/link"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -60,12 +59,9 @@ export const customerColumns: ColumnDef<Customer>[] = [
     header: "Code",
     meta: { label: "Customer Code", variant: "text" },
     cell: ({ row }) => (
-      <Link
-        className="font-medium text-foreground underline-offset-4 hover:underline"
-        href={`/products/customers/${row.original.id}`}
-      >
+      <span className="font-medium text-foreground">
         {row.original.customer_code}
-      </Link>
+      </span>
     ),
   },
   {
@@ -234,7 +230,10 @@ export function CustomersTable() {
           No customers found.
         </div>
       ) : (
-        <DataTable table={table} />
+        <DataTable
+          table={table}
+          getRowHref={(customer) => `/products/customers/${customer.id}`}
+        />
       )}
 
       <DataTablePagination

@@ -2,7 +2,6 @@
 
 // ───────────────── BLOCK 1: Imports ──────────────────────────────────────────
 import * as React from "react"
-import Link from "next/link"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -39,12 +38,9 @@ const columns: ColumnDef<BomListItem>[] = [
     header: "Product",
     meta: { label: "Product Code", variant: "text" },
     cell: ({ row }) => (
-      <Link
-        className="font-medium text-foreground underline-offset-4 hover:underline"
-        href={`/products/boms/${row.original.id}`}
-      >
+      <span className="font-medium text-foreground">
         {row.original.product_code}
-      </Link>
+      </span>
     ),
   },
   {
@@ -211,7 +207,10 @@ export function BomsTable() {
           No BOMs found.
         </div>
       ) : (
-        <DataTable table={table} />
+        <DataTable
+          table={table}
+          getRowHref={(bom) => `/products/boms/${bom.id}`}
+        />
       )}
 
       <DataTablePagination

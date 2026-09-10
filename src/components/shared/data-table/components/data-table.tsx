@@ -2,6 +2,7 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Table,
   TableBody,
@@ -23,10 +24,28 @@ interface DataTableProps<TData extends DataTableRowData> {
   // Rule 10: Receive the table instance instead of raw data/columns.
   // This allows the parent to share state with the Toolbar and Pagination.
   table: TanstackTable<TData>;
+  getRowHref?: (data: TData) => string;
 }
 
 interface DataTableRowProps<TData extends DataTableRowData> {
   row: Row<TData>;
+  href?: string;
+}
+
+const interactiveElementSelector = [
+  'a',
+  'button',
+  'input',
+  'select',
+  'textarea',
+  '[role="button"]',
+  '[role="link"]',
+  '[role="checkbox"]',
+  '[data-row-navigation-ignore]',
+].join(',');
+
+function eventStartedOnInteractiveElement(target: EventTarget | null): boolean {
+  return target instanceof Element && Boolean(target.closest(interactiveElementSelector));
 }
 
 // ───────────────── BLOCK 3: Component / Service ────────────────
@@ -34,13 +53,49 @@ interface DataTableRowProps<TData extends DataTableRowData> {
 // all rows when parent state updates (e.g., opening a dropdown menu in the toolbar).
 function DataTableRowComponent<TData extends DataTableRowData>({
   row,
+  href,
 }: DataTableRowProps<TData>) {
+  const router = useRouter();
+
+  function navigate(event: React.MouseEvent<HTMLTableRowElement>) {
+    if (!href || event.button !== 0 || eventStartedOnInteractiveElement(event.target)) {
+      return;
+    }
+
+    if (event.ctrlKey || event.metaKey) {
+      window.open(href, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    router.push(href);
+  }
+
+  function navigateWithKeyboard(event: React.KeyboardEvent<HTMLTableRowElement>) {
+    if (
+      !href ||
+      event.key !== 'Enter' ||
+      event.target !== event.currentTarget
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    router.push(href);
+  }
+
   return (
     <TableRow
       role="row"
+      tabIndex={href ? 0 : undefined}
+      onClick={navigate}
+      onKeyDown={navigateWithKeyboard}
+      onMouseEnter={() => href && router.prefetch(href)}
+      data-row-href={href}
       // FIX: Added conditional highlight when row is selected
       className={cn(
         "hover:bg-muted/50 motion-safe:transition-colors motion-safe:duration-150",
+        href &&
+          "cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
         row.getIsSelected() && "bg-muted"
       )}
     >
@@ -61,6 +116,7 @@ function DataTableRowComponent<TData extends DataTableRowData>({
 // Rule 10: High-level wrapper component composing Shadcn's low-level primitives
 export function DataTable<TData extends DataTableRowData>({
   table,
+  getRowHref,
 }: DataTableProps<TData>) {
   return (
     <div className="rounded-md border border-border">
@@ -90,7 +146,11 @@ export function DataTable<TData extends DataTableRowData>({
         <TableBody role="rowgroup">
           {table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
-              <DataTableRowComponent key={row.id} row={row} />
+              <DataTableRowComponent
+                key={row.id}
+                row={row}
+                href={getRowHref?.(row.original)}
+              />
             ))
           ) : (
             <TableRow role="row" className="hover:bg-transparent">

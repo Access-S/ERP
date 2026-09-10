@@ -2,7 +2,6 @@
 
 // ───────────────── BLOCK 1: Imports ──────────────────────────────────────────
 import * as React from "react"
-import Link from "next/link"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -30,12 +29,9 @@ function buildPartColumns(partTypeOptions: Option[]): ColumnDef<Part>[] {
       header: "Part",
       meta: { label: "Part Code", variant: "text" },
       cell: ({ row }) => (
-        <Link
-          className="font-medium text-foreground underline-offset-4 hover:underline"
-          href={`/products/parts/${row.original.id}`}
-        >
+        <span className="font-medium text-foreground">
           {row.original.part_code}
-        </Link>
+        </span>
       ),
     },
     {
@@ -181,7 +177,10 @@ export function PartsTable({ partTypeOptions = [] }: PartsTableProps) {
           No Parts found.
         </div>
       ) : (
-        <DataTable table={table} />
+        <DataTable
+          table={table}
+          getRowHref={(part) => `/products/parts/${part.id}`}
+        />
       )}
 
       <DataTablePagination
