@@ -22,6 +22,7 @@
     "uat:auth-products": "node --no-warnings --experimental-strip-types scripts/uat-products-authorization.mjs",
     "uat:auth-boms": "node --no-warnings --experimental-strip-types scripts/uat-boms-authorization.mjs",
     "uat:auth-customers": "node --no-warnings --experimental-strip-types scripts/uat-customers-authorization.mjs",
+    "uat:access-control": "node --no-warnings --experimental-strip-types scripts/uat-access-control-policy.mjs",
     "import:bom:dry-run": "node --env-file=.env scripts/dry-run-customer-bom-import.mjs \"Data files/All customer Bom - cleaned.xlsx\"",
     "import:bom:apply": "node --env-file=.env scripts/import-customer-boms.mjs \"Data files/All customer Bom - cleaned.xlsx\""
   },

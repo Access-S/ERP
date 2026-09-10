@@ -22,6 +22,10 @@ const ROUTE_LABELS: Record<string, string> = {
   "/inventory": "Inventory (SOH)",
   "/purchase-orders": "Purchase Orders",
   "/forecasts": "Forecasts",
+  "/settings": "Settings",
+  "/settings/access": "Access Control",
+  "/settings/access/users": "Users",
+  "/settings/access/roles": "Roles & Permissions",
 }
 
 function labelForPath(path: string, segment: string): string {
@@ -35,6 +39,8 @@ function labelForPath(path: string, segment: string): string {
   if (path === "/products/parts/new") return "New Part"
   if (/^\/products\/parts\/[^/]+\/edit$/.test(path)) return "Edit Part"
   if (/^\/products\/parts\/[^/]+$/.test(path)) return "Part Details"
+  if (/^\/settings\/access\/users\/[^/]+$/.test(path)) return "User Access"
+  if (/^\/settings\/access\/roles\/[^/]+$/.test(path)) return "Role Details"
   return (
     ROUTE_LABELS[path] ??
     segment

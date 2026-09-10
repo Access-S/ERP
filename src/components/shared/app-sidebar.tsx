@@ -5,7 +5,6 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Separator } from "@/components/ui/separator"
 import { useSession, signOut } from "next-auth/react"
 import {
   LayoutDashboard,
@@ -16,10 +15,11 @@ import {
   Cpu,
   ChevronDown,
   Table,
+  ShieldCheck,
   LogOut, // ADDED: Icon for Sign Out
 } from "lucide-react"
 // Import from our new global types folder
-import type { NavItem, NavGroup } from "@/types/navigation"
+import type { NavGroup } from "@/types/navigation"
 
 import {
   Sidebar,
@@ -68,13 +68,27 @@ const navGroups: NavGroup[] = [
   },
 ]
 
+const administrationNavGroup: NavGroup = {
+  label: "Administration",
+  items: [{ title: "Access Control", url: "/settings/access", icon: ShieldCheck }],
+}
+
 // ───────────────── BLOCK 3: Component ─────────────────────────
-export function AppSidebar() {
+export function AppSidebar({
+  canViewAccessControl = false,
+  accessLabel,
+}: {
+  canViewAccessControl?: boolean
+  accessLabel?: string
+}) {
   const pathname = usePathname()
   const { data: session } = useSession()
+  const visibleNavGroups = canViewAccessControl
+    ? [...navGroups, administrationNavGroup]
+    : navGroups
   
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
-    navGroups.reduce((acc, group) => ({ ...acc, [group.label]: true }), {})
+    visibleNavGroups.reduce((acc, group) => ({ ...acc, [group.label]: true }), {})
   )
 
   const toggleGroup = (label: string) => {
@@ -94,7 +108,7 @@ export function AppSidebar() {
       </SidebarHeader>
       
       <SidebarContent className="gap-1">
-        {navGroups.map((group, index) => (
+        {visibleNavGroups.map((group) => (
           <SidebarGroup key={group.label} className="p-0 px-2">
             
             <SidebarGroupLabel 
@@ -159,7 +173,9 @@ export function AppSidebar() {
               </div>
               <div className="flex flex-col overflow-hidden">
                 <span className="text-sm font-medium truncate text-foreground">{session.user.name}</span>
-                <span className="text-xs text-muted-foreground truncate">{session.user.role}</span>
+                <span className="text-xs text-muted-foreground truncate">
+                  {accessLabel ?? session.user.role}
+                </span>
               </div>
             </div>
             <Button 

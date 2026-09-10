@@ -2,7 +2,7 @@
 
 Status: Active documentation set
 Owner: Product owner / Engineering
-Last updated: 2026-09-10
+Last updated: 2026-09-11
 
 ## Purpose
 
@@ -19,6 +19,7 @@ remain separate responsibilities.
 | --- | --- | --- |
 | [Authentication and authorization architecture](authentication-and-authorization-architecture.md) | Current state, target design, trust boundaries, flows, data model, and security rules | The auth design or implementation boundary changes |
 | [Roles and permissions](roles-and-permissions.md) | Business roles, permission catalogue, role matrix, ownership, and open business decisions | A role, module, action, approval, or scope changes |
+| [Access Control administration](access-control-administration.md) | Current user/role administration pages, safety rules, workflow, and custom-role direction | An account lifecycle, role-assignment, or custom-role workflow changes |
 | [Audit events](audit-events.md) | Events that must be recorded, minimum fields, privacy rules, and retention decisions | A security-sensitive event or audit requirement is introduced |
 | [Implementation plan](implementation-plan.md) | Ordered delivery stages, verification gates, and current progress | An auth task starts, completes, changes, or becomes blocked |
 | [Products & BOM role UAT](product-bom-role-uat.md) | Manual role-by-role checks for Customers, Products, Parts, and BOM workflows | A module permission, field scope, role grant, or test outcome changes |
