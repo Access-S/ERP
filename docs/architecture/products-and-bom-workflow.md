@@ -2,7 +2,7 @@
 
 **Status:** Living design reference  
 **Project phase:** Early implementation  
-**Last updated:** 2026-09-09
+**Last updated:** 2026-09-10
 **Primary purpose:** Preserve the intended Products & BOM structure, the reasoning behind it, and the implementation sequence so development can continue across separate work sessions.
 
 ## 1. How to use this document
@@ -33,6 +33,9 @@ It includes:
 It does not own:
 
 - Customer account administration; that belongs in Customer Master.
+- Leads, Prospect Accounts, Opportunities, RFQs, costings, Quotes, and
+  pre-customer onboarding; those belong in the deferred
+  [Sales/CRM module](sales-crm-and-customer-onboarding-workflow.md).
 - Stock transactions and inventory movements; those belong in Inventory.
 - Purchase-order processing; that belongs in Purchase Orders.
 - Forecast calculations and MRP runs; those consume data from this module but belong in their own modules.
@@ -149,6 +152,13 @@ This separation prevents duplicated part descriptions and makes "Where Used" ana
 ### 5.2 Keep application navigation shallow
 
 Only stable, frequently used list or overview pages belong in navigation. Create, edit, and record-detail pages should be reached through buttons, table rows, links, and breadcrumbs.
+
+Record-list tables use the whole row as a pointer and keyboard-accessible link
+to the record details page. The primary code uses normal emphasized cell text
+so every cell communicates the same row-level interaction. Interactive controls
+and alternate-destination links inside the row keep their own behaviour and must
+not trigger row navigation. Editable, selection, and workflow tables opt out
+unless one unambiguous row destination exists.
 
 ### 5.3 Use record pages for deep navigation
 
@@ -828,6 +838,8 @@ Until confirmed, the lowest-risk assumptions are:
 | 2026-09-09 | Block Customer deactivation while active Products or `Open`/`PO Check` orders exist. | Customer status changes must not silently cascade into operational Product or purchasing records. |
 | 2026-09-09 | Keep multi-address maintenance outside the first Customer master slice. | Billing and shipping addresses have their own one-to-many lifecycle and need a focused workflow rather than an oversized initial form. |
 | 2026-09-09 | Run automated master-data UAT inside deliberately rolled-back serializable transactions. | The real Supabase constraints and relationships can be tested repeatedly without accumulating test records or changing imported data. |
+| 2026-09-10 | Make safe record-list rows fully navigable with uniform cell styling. | Users can discover detail pages from any cell, while nested controls and alternate links keep their intended behaviour. |
+| 2026-09-10 | Keep the pre-customer commercial journey in a standalone Sales/CRM module. | Lead qualification, RFQs, Quotes, approvals, and onboarding precede approved Customer and Product master data and have independent lifecycles. |
 
 ## 18. Relevant current files
 

@@ -7,7 +7,8 @@ Applies to: General production and manufacturing companies
 
 Related documents: [Auth documentation index](README.md),
 [architecture](authentication-and-authorization-architecture.md),
-[audit events](audit-events.md), and [implementation plan](implementation-plan.md)
+[audit events](audit-events.md), [implementation plan](implementation-plan.md),
+and [deferred Sales/CRM architecture](../architecture/sales-crm-and-customer-onboarding-workflow.md)
 
 ## 1. Purpose
 
@@ -149,6 +150,9 @@ Purpose: manage Customer relationships, demand, orders, and delivery communicati
 
 Typical work:
 
+- Capture and qualify Leads; manage Prospect Accounts, Opportunities, RFQs,
+  and approved Quote communication when the standalone Sales/CRM module is
+  introduced.
 - Create and maintain Customer identity, contacts, and delivery information.
 - Create and maintain sales orders when that module is introduced.
 - View Products, active BOM availability, inventory availability, and order progress.
