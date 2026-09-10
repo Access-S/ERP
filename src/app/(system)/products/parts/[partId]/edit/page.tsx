@@ -5,6 +5,9 @@ import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PartForm } from "@/features/parts/components/part-form"
 import { getPartById } from "@/features/parts/services/part-service"
+import { PermissionDenied } from "@/features/auth/components/permission-denied"
+import { getCurrentPrincipal } from "@/features/auth/services/authorization-service"
+import { hasPartPermission } from "@/features/parts/services/part-authorization"
 
 // ---------------- BLOCK 2: Page ----------------
 export default async function EditPartPage({
@@ -12,6 +15,17 @@ export default async function EditPartPage({
 }: {
   params: Promise<{ partId: string }>
 }) {
+  const principal = await getCurrentPrincipal()
+  if (!principal || !hasPartPermission(principal, "edit")) {
+    return (
+      <PermissionDenied
+        description="You need permission to edit Parts."
+        backHref="/products/parts"
+        backLabel="Return to Parts Library"
+      />
+    )
+  }
+
   const { partId } = await params
   const part = await getPartById(partId)
   if (!part) notFound()

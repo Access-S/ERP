@@ -4,11 +4,25 @@ import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ProductForm } from "@/features/products/components/product-form"
 import { getProductCustomerOptions } from "@/features/products/services/product-service"
+import { PermissionDenied } from "@/features/auth/components/permission-denied"
+import { getCurrentPrincipal } from "@/features/auth/services/authorization-service"
+import { hasProductPermission } from "@/features/products/services/product-authorization"
 
 export const dynamic = "force-dynamic"
 
 // ---------------- BLOCK 2: Page ----------------
 export default async function NewProductPage() {
+  const principal = await getCurrentPrincipal()
+  if (!principal || !hasProductPermission(principal, "create")) {
+    return (
+      <PermissionDenied
+        description="You need permission to create Products and draft BOMs."
+        backHref="/products/catalog"
+        backLabel="Return to Product Catalog"
+      />
+    )
+  }
+
   const customerOptions = await getProductCustomerOptions()
 
   return (
@@ -26,7 +40,11 @@ export default async function NewProductPage() {
         </p>
       </div>
       <div className="max-w-5xl">
-        <ProductForm mode="create" customerOptions={customerOptions} />
+        <ProductForm
+          mode="create"
+          customerOptions={customerOptions}
+          canEditCommercial={hasProductPermission(principal, "editCommercial")}
+        />
       </div>
     </div>
   )

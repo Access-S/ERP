@@ -14,6 +14,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { PermissionDenied } from "@/features/auth/components/permission-denied"
+import { getCurrentPrincipal } from "@/features/auth/services/authorization-service"
+import { hasProductPermission } from "@/features/products/services/product-authorization"
 
 const numberFormatter = new Intl.NumberFormat("en-AU", {
   maximumFractionDigits: 6,
@@ -43,6 +46,17 @@ export default async function ProductDetailsPage({
 }: {
   params: Promise<{ productId: string }>
 }) {
+  const principal = await getCurrentPrincipal()
+  if (!principal || !hasProductPermission(principal, "view")) {
+    return (
+      <PermissionDenied
+        description="You need permission to view Product and BOM details."
+        backHref="/"
+        backLabel="Return to dashboard"
+      />
+    )
+  }
+
   const { productId } = await params
   const product = await getProductById(productId)
   if (!product) notFound()
@@ -83,6 +97,14 @@ export default async function ProductDetailsPage({
             activeBomCount={product.active_bom_count}
             draftBomCount={product.draft_bom_count}
             openPurchaseOrderCount={product.open_purchase_order_count}
+            canEdit={
+              hasProductPermission(principal, "editMaster") ||
+              hasProductPermission(principal, "editCommercial")
+            }
+            canChangeStatus={hasProductPermission(
+              principal,
+              product.is_active ? "deactivate" : "reactivate"
+            )}
           />
           <div className="flex flex-wrap justify-end gap-2">
             {draftBom && (

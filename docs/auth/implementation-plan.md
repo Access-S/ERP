@@ -78,6 +78,15 @@ wide adoption:
 3. BOM revisions and activation.
 4. Customers.
 
+Module status:
+
+| Module | Status | Enforced boundary |
+| --- | --- | --- |
+| Parts | Complete | List/detail routes, table fetch, create, edit, deactivate, and reactivate |
+| Products | Complete | Dashboard/catalog reads, create, field-scoped edit, deactivate, and reactivate |
+| BOM revisions | Pending | Phase 3 next module |
+| Customers | Pending | Final completed master-data module |
+
 For each module:
 
 - [ ] Protect list/detail reads where required.
@@ -173,3 +182,5 @@ verify the mapping, then remove the legacy free-text role in a later migration.
 | 2026-09-09 | Completed Phase 1 schema, migration, seed, legacy ADMIN mapping, authorization registry, compatibility audit, and bootstrap-script hardening. |
 | 2026-09-10 | Completed Phase 2 central policy/service, normalized login, authVersion session claim, minimal access query, and core/live-database authorization UAT. |
 | 2026-09-10 | Upgraded vulnerable Next.js 16.3.0 to patched 16.3.4 and applied compatible transitive dependency fixes discovered during the auth review. |
+| 2026-09-10 | Completed Phase 3 Parts enforcement across reads, mutations, action visibility, and allowed/denied operation UAT. |
+| 2026-09-10 | Completed Phase 3 Product enforcement, including field-scoped master/commercial edits and compound Product/BOM lifecycle permissions. |

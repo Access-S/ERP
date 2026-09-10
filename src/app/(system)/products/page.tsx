@@ -7,13 +7,30 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import Link from "next/link"
 import { PackageSearch, Building2, ArrowUpRight, Plus, AlertTriangle, Library, CheckCircle2, Boxes } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { getCurrentPrincipal } from "@/features/auth/services/authorization-service"
+import { hasPermission } from "@/features/auth/services/authorization-policy"
+import { hasPartPermission } from "@/features/parts/services/part-authorization"
+import { hasProductPermission } from "@/features/products/services/product-authorization"
+import { PermissionDenied } from "@/features/auth/components/permission-denied"
 
 export const dynamic = "force-dynamic"
 
 export default async function ProductsPage() {
+  const principal = await getCurrentPrincipal()
+  if (!principal || !hasProductPermission(principal, "view")) {
+    return (
+      <PermissionDenied
+        description="You need permission to view Products and BOM information."
+        backHref="/"
+        backLabel="Return to dashboard"
+      />
+    )
+  }
+
+  const canViewCustomers = hasPermission(principal, "customer.view")
   const [productStats, customers, bomStats] = await Promise.all([
     getProductStats(),
-    getCustomerActiveSkus(),
+    canViewCustomers ? getCustomerActiveSkus() : Promise.resolve([]),
     getBomStats(),
   ])
   
@@ -21,6 +38,8 @@ export default async function ProductsPage() {
   const completePct = (bomStats.complete / healthDenominator) * 100
   const attentionPct = (bomStats.attention / healthDenominator) * 100
   const missingPct = (productStats.missingActiveBom / healthDenominator) * 100
+  const canViewParts = hasPartPermission(principal, "view")
+  const canCreateProduct = hasProductPermission(principal, "create")
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -175,39 +194,49 @@ export default async function ProductsPage() {
                 <Boxes className="h-4 w-4 mr-1" />
                 All Products
               </Link>
-              <Link href="/products/customers" className={cn(buttonVariants({ variant: "outline" }), "h-10")}>
-                <Building2 className="h-4 w-4 mr-1" />
-                All Customers
-              </Link>
+              {canViewCustomers && (
+                <Link href="/products/customers" className={cn(buttonVariants({ variant: "outline" }), "h-10")}>
+                  <Building2 className="h-4 w-4 mr-1" />
+                  All Customers
+                </Link>
+              )}
               <Link href="/products/boms" className={cn(buttonVariants({ variant: "outline" }), "h-10")}>
                 <PackageSearch className="h-4 w-4 mr-1" />
                 All BOMs
               </Link>
-              <Link href="/products/parts" className={cn(buttonVariants({ variant: "outline" }), "h-10")}>
-                <Library className="h-4 w-4 mr-1" />
-                Parts Library
-              </Link>
+              {canViewParts && (
+                <Link href="/products/parts" className={cn(buttonVariants({ variant: "outline" }), "h-10")}>
+                  <Library className="h-4 w-4 mr-1" />
+                  Parts Library
+                </Link>
+              )}
               <Button variant="outline" className="h-10" disabled>
                 <ArrowUpRight className="h-4 w-4 mr-1" />
                 Import/Export
               </Button>
-              <Button variant="outline" className="h-10" disabled>
-                <Plus className="h-4 w-4 mr-1" />
-                New Product
-              </Button>
+              {canCreateProduct && (
+                <Button variant="outline" className="h-10" asChild>
+                  <Link href="/products/catalog/new">
+                    <Plus className="h-4 w-4 mr-1" />
+                    New Product
+                  </Link>
+                </Button>
+              )}
             </CardContent>
           </Card>
 
           {/* NEW: Customer SKU Overview List */}
-          <Card className="flex-1">
-            <CardHeader className="pb-2">
-              <CardTitle>Customer Active SKUs</CardTitle>
-              <CardDescription>Sorted by highest product count.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CustomerSkuList customers={customers} />
-            </CardContent>
-          </Card>
+          {canViewCustomers && (
+            <Card className="flex-1">
+              <CardHeader className="pb-2">
+                <CardTitle>Customer Active SKUs</CardTitle>
+                <CardDescription>Sorted by highest product count.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CustomerSkuList customers={customers} />
+              </CardContent>
+            </Card>
+          )}
 
         </div>
 

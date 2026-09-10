@@ -25,6 +25,8 @@ interface PartStatusActionsProps {
   partCode: string
   isActive: boolean
   activeBomCount: number
+  canEdit: boolean
+  canChangeStatus: boolean
 }
 
 export function PartStatusActions({
@@ -32,11 +34,15 @@ export function PartStatusActions({
   partCode,
   isActive,
   activeBomCount,
+  canEdit,
+  canChangeStatus,
 }: PartStatusActionsProps) {
   const router = useRouter()
   const [open, setOpen] = React.useState(false)
   const [isPending, startTransition] = React.useTransition()
   const deactivateBlocked = isActive && activeBomCount > 0
+
+  if (!canEdit && !canChangeStatus) return null
 
   function handleStatusChange() {
     startTransition(async () => {
@@ -54,56 +60,60 @@ export function PartStatusActions({
   return (
     <div className="flex flex-col items-end gap-2">
       <div className="flex flex-wrap justify-end gap-2">
-        <Button variant="outline" asChild>
-          <Link href={`/products/parts/${partId}/edit`}>
-            <Pencil className="mr-2 h-4 w-4" />
-            Edit Part
-          </Link>
-        </Button>
+        {canEdit && (
+          <Button variant="outline" asChild>
+            <Link href={`/products/parts/${partId}/edit`}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit Part
+            </Link>
+          </Button>
+        )}
 
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button
-              variant={isActive ? "destructive" : "default"}
-              disabled={deactivateBlocked}
-              title={deactivateBlocked ? "This Part is used by an active BOM." : undefined}
-            >
-              {isActive ? (
-                <Archive className="mr-2 h-4 w-4" />
-              ) : (
-                <RotateCcw className="mr-2 h-4 w-4" />
-              )}
-              {isActive ? "Deactivate" : "Reactivate"}
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {isActive ? `Deactivate ${partCode}?` : `Reactivate ${partCode}?`}
-              </DialogTitle>
-              <DialogDescription>
-                {isActive
-                  ? "The Part will remain in historical BOMs but will no longer be available for new draft BOM lines."
-                  : "The Part will become available for selection in draft BOMs again."}
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline" disabled={isPending}>Cancel</Button>
-              </DialogClose>
+        {canChangeStatus && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
               <Button
                 variant={isActive ? "destructive" : "default"}
-                onClick={handleStatusChange}
-                loading={isPending}
+                disabled={deactivateBlocked}
+                title={deactivateBlocked ? "This Part is used by an active BOM." : undefined}
               >
-                {isActive ? "Deactivate Part" : "Reactivate Part"}
+                {isActive ? (
+                  <Archive className="mr-2 h-4 w-4" />
+                ) : (
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                )}
+                {isActive ? "Deactivate" : "Reactivate"}
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {isActive ? `Deactivate ${partCode}?` : `Reactivate ${partCode}?`}
+                </DialogTitle>
+                <DialogDescription>
+                  {isActive
+                    ? "The Part will remain in historical BOMs but will no longer be available for new draft BOM lines."
+                    : "The Part will become available for selection in draft BOMs again."}
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline" disabled={isPending}>Cancel</Button>
+                </DialogClose>
+                <Button
+                  variant={isActive ? "destructive" : "default"}
+                  onClick={handleStatusChange}
+                  loading={isPending}
+                >
+                  {isActive ? "Deactivate Part" : "Reactivate Part"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
-      {deactivateBlocked && (
+      {canChangeStatus && deactivateBlocked && (
         <p className="max-w-sm text-right text-xs text-muted-foreground">
           Used by {activeBomCount} active {activeBomCount === 1 ? "BOM" : "BOMs"}. Revise those BOMs before deactivation.
         </p>

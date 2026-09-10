@@ -333,6 +333,14 @@ Implementation status as of 2026-09-10:
 - Unknown, inactive, and inactive-role grants are ignored.
 - Missing, stale, suspended, invited, disabled, and forbidden paths return typed
   errors with distinct `401` or `403` semantics.
+- The Parts module enforces `part.view`, `part.create`, `part.edit`,
+  `part.deactivate`, and `part.reactivate` before protected reads or mutations.
+  Its route controls use the same effective permission result, while the Server
+  Actions remain the mandatory security boundary.
+- The Products module enforces Product and related BOM view permissions before
+  dashboard/catalog reads. Product creation also requires draft-BOM creation;
+  Product deactivation requires BOM archival. Operational master fields and
+  commercial price fields are submitted and authorized independently.
 
 ## 10. Password and recovery controls
 
@@ -455,3 +463,5 @@ them; they do not block initial RBAC schema and centralized guard work.
 | --- | --- |
 | 2026-09-09 | Recorded the current prototype, agreed normalized RBAC direction, session freshness requirement, internal user lifecycle, and enforcement boundaries. |
 | 2026-09-10 | Implemented the central authorization policy/service, normalized login, authVersion session freshness, minimal access query, and core/database UAT. |
+| 2026-09-10 | Applied normalized permissions to the Parts module routes and Server Actions with permission-aware controls and direct-operation UAT. |
+| 2026-09-10 | Protected Product routes and actions, separated operational/commercial editing, and enforced compound BOM permissions for Product lifecycle operations. |

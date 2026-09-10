@@ -575,3 +575,6 @@ For every change:
 | 2026-09-09 | Design for multiple roles per user. | Employees in smaller companies commonly perform more than one business function. |
 | 2026-09-09 | Separate stable permissions from role names. | Server code can enforce actions consistently while role bundles evolve with the business. |
 | 2026-09-09 | Separate BOM preparation from activation. | Independent release reduces accidental or unauthorized production changes. |
+| 2026-09-10 | Enforce all five Parts permissions independently. | Viewing, master-data maintenance, and lifecycle control belong to different operational responsibilities. |
+| 2026-09-10 | Separate Product operational fields from commercial price updates. | Production Planning owns production master data while Finance owns commercial pricing. |
+| 2026-09-10 | Treat Product creation and deactivation as compound BOM operations. | Creating a Product creates a draft BOM, and deactivation archives BOMs, so both permission boundaries must approve the change. |

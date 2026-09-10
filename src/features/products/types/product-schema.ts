@@ -63,7 +63,7 @@ const optionalCustomerId = z.preprocess(
   z.string().uuid("Invalid Customer.").nullable()
 )
 
-export const productMasterFieldsSchema = z.object({
+export const productOperationalFieldsSchema = z.object({
   description: optionalText("Description", 500),
   customerId: optionalCustomerId,
   unitsPerShipper: z.preprocess(
@@ -78,7 +78,14 @@ export const productMasterFieldsSchema = z.object({
   dailyRunRate: optionalNumber("Daily run rate", 1_000_000_000),
   hourlyRunRate: optionalNumber("Hourly run rate", 1_000_000_000),
   minsPerShipper: optionalNumber("Minutes per shipper", 1_000_000),
+})
+
+export const productCommercialFieldsSchema = z.object({
   pricePerShipper: optionalNumber("Price per shipper", 1_000_000_000),
+})
+
+export const productMasterFieldsSchema = productOperationalFieldsSchema.extend({
+  pricePerShipper: productCommercialFieldsSchema.shape.pricePerShipper,
 })
 
 export const createProductInputSchema = productMasterFieldsSchema.extend({
@@ -87,9 +94,14 @@ export const createProductInputSchema = productMasterFieldsSchema.extend({
     .max(64, "Product code must be 64 characters or fewer."),
 })
 
-export const updateProductInputSchema = productMasterFieldsSchema.extend({
+export const updateProductInputSchema = z.object({
   productId: z.string().uuid("Invalid Product."),
-})
+  master: productOperationalFieldsSchema.optional(),
+  commercial: productCommercialFieldsSchema.optional(),
+}).refine(
+  (input) => Boolean(input.master || input.commercial),
+  { message: "No Product changes were submitted." }
+)
 
 export const setProductActiveSchema = z.object({
   productId: z.string().uuid("Invalid Product."),
@@ -108,6 +120,8 @@ export type ProductListItem = z.infer<typeof productListItemSchema>
 export type ProductBomRevision = z.infer<typeof productBomRevisionSchema>
 export type ProductDetail = z.infer<typeof productDetailSchema>
 export type ProductMasterFields = z.infer<typeof productMasterFieldsSchema>
+export type ProductOperationalFields = z.infer<typeof productOperationalFieldsSchema>
+export type ProductCommercialFields = z.infer<typeof productCommercialFieldsSchema>
 export type CreateProductInput = z.infer<typeof createProductInputSchema>
 export type UpdateProductInput = z.infer<typeof updateProductInputSchema>
 export type SetProductActiveInput = z.infer<typeof setProductActiveSchema>

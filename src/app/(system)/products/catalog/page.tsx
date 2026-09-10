@@ -6,10 +6,24 @@ import { getProductStats } from "@/features/products/services/product-service"
 import { Button } from "@/components/ui/button"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { PermissionDenied } from "@/features/auth/components/permission-denied"
+import { getCurrentPrincipal } from "@/features/auth/services/authorization-service"
+import { hasProductPermission } from "@/features/products/services/product-authorization"
 
 export const dynamic = "force-dynamic"
 
 export default async function ProductCatalogPage() {
+  const principal = await getCurrentPrincipal()
+  if (!principal || !hasProductPermission(principal, "view")) {
+    return (
+      <PermissionDenied
+        description="You need permission to view the Product Catalog."
+        backHref="/"
+        backLabel="Return to dashboard"
+      />
+    )
+  }
+
   const stats = await getProductStats()
 
   return (
@@ -34,12 +48,14 @@ export default async function ProductCatalogPage() {
               All BOMs
             </Link>
           </Button>
-          <Button asChild>
-            <Link href="/products/catalog/new">
-              <PackagePlus className="mr-2 h-4 w-4" />
-              New Product
-            </Link>
-          </Button>
+          {hasProductPermission(principal, "create") && (
+            <Button asChild>
+              <Link href="/products/catalog/new">
+                <PackagePlus className="mr-2 h-4 w-4" />
+                New Product
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 

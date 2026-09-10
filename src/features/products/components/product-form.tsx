@@ -39,6 +39,8 @@ interface ProductFormProps {
   customerOptions: ProductCustomerOption[]
   productId?: string
   initialValues?: ProductFormValues
+  canEditMaster?: boolean
+  canEditCommercial?: boolean
 }
 
 const NO_CUSTOMER = "__none__"
@@ -98,11 +100,15 @@ export function ProductForm({
   customerOptions,
   productId,
   initialValues = EMPTY_VALUES,
+  canEditMaster = true,
+  canEditCommercial = true,
 }: ProductFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = React.useTransition()
   const [values, setValues] = React.useState(initialValues)
   const isEdit = mode === "edit"
+  const masterFieldsDisabled = isPending || (isEdit && !canEditMaster)
+  const commercialFieldsDisabled = isPending || !canEditCommercial
 
   const updateField = React.useCallback(
     (field: keyof ProductFormValues, value: string) => {
@@ -113,7 +119,7 @@ export function ProductForm({
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const masterFields = {
+    const operationalFields = {
       description: values.description,
       customerId: values.customerId,
       unitsPerShipper: values.unitsPerShipper,
@@ -122,13 +128,23 @@ export function ProductForm({
       dailyRunRate: values.dailyRunRate,
       hourlyRunRate: values.hourlyRunRate,
       minsPerShipper: values.minsPerShipper,
+    }
+    const commercialFields = {
       pricePerShipper: values.pricePerShipper,
     }
 
     startTransition(async () => {
       const result = isEdit && productId
-        ? await updateProductAction({ productId, ...masterFields })
-        : await createProductAction({ productCode: values.productCode, ...masterFields })
+        ? await updateProductAction({
+            productId,
+            ...(canEditMaster && { master: operationalFields }),
+            ...(canEditCommercial && { commercial: commercialFields }),
+          })
+        : await createProductAction({
+            productCode: values.productCode,
+            ...operationalFields,
+            ...commercialFields,
+          })
 
       if (!result.success || !result.productId) {
         toast.error(result.message)
@@ -178,7 +194,7 @@ export function ProductForm({
             <Select
               value={values.customerId || NO_CUSTOMER}
               onValueChange={(value) => updateField("customerId", value === NO_CUSTOMER ? "" : value)}
-              disabled={isPending}
+              disabled={masterFieldsDisabled}
             >
               <SelectTrigger id="customer" className="w-full">
                 <SelectValue placeholder="Select a Customer" />
@@ -207,7 +223,7 @@ export function ProductForm({
               placeholder="Describe the finished good or Customer SKU."
               maxLength={500}
               rows={3}
-              disabled={isPending}
+              disabled={masterFieldsDisabled}
             />
           </div>
 
@@ -218,7 +234,7 @@ export function ProductForm({
               value={values.category}
               onChange={(event) => updateField("category", event.target.value)}
               maxLength={64}
-              disabled={isPending}
+              disabled={masterFieldsDisabled}
             />
           </div>
 
@@ -230,7 +246,7 @@ export function ProductForm({
               onChange={(event) => updateField("uom", event.target.value)}
               maxLength={32}
               required
-              disabled={isPending}
+              disabled={masterFieldsDisabled}
             />
           </div>
 
@@ -239,7 +255,7 @@ export function ProductForm({
             label="Units per shipper"
             value={values.unitsPerShipper}
             onChange={(value) => updateField("unitsPerShipper", value)}
-            disabled={isPending}
+            disabled={masterFieldsDisabled}
             min={1}
             step={1}
           />
@@ -248,7 +264,7 @@ export function ProductForm({
             label="Price per shipper"
             value={values.pricePerShipper}
             onChange={(value) => updateField("pricePerShipper", value)}
-            disabled={isPending}
+            disabled={commercialFieldsDisabled}
           />
         </CardContent>
       </Card>
@@ -266,21 +282,21 @@ export function ProductForm({
             label="Daily run rate"
             value={values.dailyRunRate}
             onChange={(value) => updateField("dailyRunRate", value)}
-            disabled={isPending}
+            disabled={masterFieldsDisabled}
           />
           <NumberField
             id="hourly-run-rate"
             label="Hourly run rate"
             value={values.hourlyRunRate}
             onChange={(value) => updateField("hourlyRunRate", value)}
-            disabled={isPending}
+            disabled={masterFieldsDisabled}
           />
           <NumberField
             id="mins-per-shipper"
             label="Minutes per shipper"
             value={values.minsPerShipper}
             onChange={(value) => updateField("minsPerShipper", value)}
-            disabled={isPending}
+            disabled={masterFieldsDisabled}
           />
         </CardContent>
       </Card>
@@ -289,7 +305,11 @@ export function ProductForm({
         <Button variant="outline" asChild>
           <Link href={productId ? `/products/catalog/${productId}` : "/products/catalog"}>Cancel</Link>
         </Button>
-        <Button type="submit" loading={isPending}>
+        <Button
+          type="submit"
+          loading={isPending}
+          disabled={isEdit && !canEditMaster && !canEditCommercial}
+        >
           {isEdit ? "Save Changes" : "Create Product"}
         </Button>
       </div>

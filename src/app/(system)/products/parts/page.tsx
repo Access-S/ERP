@@ -7,11 +7,25 @@ import { getPartFilterOptions, getPartStats } from "@/features/parts/services/pa
 import { Button } from "@/components/ui/button"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { PermissionDenied } from "@/features/auth/components/permission-denied"
+import { getCurrentPrincipal } from "@/features/auth/services/authorization-service"
+import { hasPartPermission } from "@/features/parts/services/part-authorization"
 
 export const dynamic = "force-dynamic"
 
 // ───────────────── BLOCK 2: Page ─────────────────────────────────────────────
 export default async function PartsPage() {
+  const principal = await getCurrentPrincipal()
+  if (!principal || !hasPartPermission(principal, "view")) {
+    return (
+      <PermissionDenied
+        description="You need permission to view the Parts Library."
+        backHref="/products"
+        backLabel="Return to Products & BOM"
+      />
+    )
+  }
+
   const [stats, filterOptions] = await Promise.all([
     getPartStats(),
     getPartFilterOptions(),
@@ -32,12 +46,14 @@ export default async function PartsPage() {
             Reusable component master records shared across Product BOMs.
           </p>
         </div>
-        <Button asChild>
-          <Link href="/products/parts/new">
-            <Plus className="mr-2 h-4 w-4" />
-            New Part
-          </Link>
-        </Button>
+        {hasPartPermission(principal, "create") && (
+          <Button asChild>
+            <Link href="/products/parts/new">
+              <Plus className="mr-2 h-4 w-4" />
+              New Part
+            </Link>
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">

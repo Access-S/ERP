@@ -7,6 +7,8 @@ import {
   hasPermission,
   resolvePrincipalFromAccessRecord,
 } from "../src/features/auth/services/authorization-policy.ts"
+import { hasPartPermission } from "../src/features/parts/services/part-authorization.ts"
+import { hasProductPermission } from "../src/features/products/services/product-authorization.ts"
 
 const prisma = new PrismaClient()
 
@@ -53,6 +55,24 @@ async function main() {
     assert.equal(hasPermission(principal, permission), false)
   }
   pass("Technical administration does not imply business approval authority")
+
+  assert.equal(hasPartPermission(principal, "view"), true)
+  for (const operation of ["create", "edit", "deactivate", "reactivate"]) {
+    assert.equal(hasPartPermission(principal, operation), false)
+  }
+  pass("Live SYSTEM_ADMIN is view-only in the protected Parts module")
+
+  assert.equal(hasProductPermission(principal, "view"), true)
+  for (const operation of [
+    "create",
+    "editMaster",
+    "editCommercial",
+    "deactivate",
+    "reactivate",
+  ]) {
+    assert.equal(hasProductPermission(principal, operation), false)
+  }
+  pass("Live SYSTEM_ADMIN is view-only in the protected Products module")
 
   assert.throws(
     () => resolvePrincipalFromAccessRecord(

@@ -15,6 +15,8 @@
     "uat:master-data": "node --no-warnings --experimental-strip-types --env-file=.env scripts/uat-master-data-workflow.mjs",
     "uat:auth-core": "node --no-warnings --experimental-strip-types scripts/uat-authorization-core.mjs",
     "uat:auth-database": "node --no-warnings --experimental-strip-types --env-file=.env scripts/uat-authorization-database.mjs",
+    "uat:auth-parts": "node --no-warnings --experimental-strip-types scripts/uat-parts-authorization.mjs",
+    "uat:auth-products": "node --no-warnings --experimental-strip-types scripts/uat-products-authorization.mjs",
     "import:bom:dry-run": "node --env-file=.env scripts/dry-run-customer-bom-import.mjs \"Data files/All customer Bom - cleaned.xlsx\"",
     "import:bom:apply": "node --env-file=.env scripts/import-customer-boms.mjs \"Data files/All customer Bom - cleaned.xlsx\""
   },

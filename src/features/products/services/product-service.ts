@@ -492,19 +492,25 @@ export async function updateProduct(
 ): Promise<{ productId: string }> {
   try {
     return await prisma.$transaction(async (transaction) => {
-      await assertAssignableCustomer(transaction, input.customerId)
+      if (input.master) {
+        await assertAssignableCustomer(transaction, input.master.customerId)
+      }
       const product = await transaction.products.update({
         where: { id: input.productId },
         data: {
-          description: input.description,
-          customer_id: input.customerId,
-          units_per_shipper: input.unitsPerShipper,
-          uom: input.uom,
-          category: input.category,
-          daily_run_rate: input.dailyRunRate,
-          hourly_run_rate: input.hourlyRunRate,
-          mins_per_shipper: input.minsPerShipper,
-          price_per_shipper: input.pricePerShipper,
+          ...(input.master && {
+            description: input.master.description,
+            customer_id: input.master.customerId,
+            units_per_shipper: input.master.unitsPerShipper,
+            uom: input.master.uom,
+            category: input.master.category,
+            daily_run_rate: input.master.dailyRunRate,
+            hourly_run_rate: input.master.hourlyRunRate,
+            mins_per_shipper: input.master.minsPerShipper,
+          }),
+          ...(input.commercial && {
+            price_per_shipper: input.commercial.pricePerShipper,
+          }),
           updated_at: new Date(),
         },
         select: { id: true },

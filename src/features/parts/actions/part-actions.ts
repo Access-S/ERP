@@ -7,7 +7,8 @@ import {
   type DataTableResponseData,
 } from "@/components/shared/data-table/types"
 import { revalidatePath } from "next/cache"
-import { auth } from "@/auth"
+import { requireUser } from "@/features/auth/services/authorization-service"
+import { isAuthorizationError } from "@/features/auth/services/authorization-policy"
 import {
   createPart,
   getPartsPage,
@@ -22,17 +23,23 @@ import {
   type Part,
   type PartMutationResult,
 } from "../types/part-schema"
-
-async function isAuthenticated(): Promise<boolean> {
-  const session = await auth()
-  return Boolean(session?.user)
-}
+import {
+  getPartStatusOperation,
+  runAuthorizedPartOperation,
+} from "../services/part-authorization"
 
 function failure(message: string): PartMutationResult {
   return { success: false, message }
 }
 
 function mutationFailure(error: unknown): PartMutationResult {
+  if (isAuthorizationError(error)) {
+    return failure(
+      error.status === 401
+        ? "Your session is no longer valid. Please sign in again."
+        : "You do not have permission to perform this Part action."
+    )
+  }
   if (error instanceof PartWorkflowError) return failure(error.message)
   if (
     typeof error === "object" &&
@@ -63,51 +70,70 @@ function revalidatePartPaths(partId: string) {
 export async function fetchPartsPage(
   params: DataTableRequest
 ): Promise<DataTableResponseData<Part>> {
-  const validated = dataTableRequestSchema.parse(params)
-  return getPartsPage(validated)
+  const principal = await requireUser()
+  return runAuthorizedPartOperation(principal, "view", () => {
+    const validated = dataTableRequestSchema.parse(params)
+    return getPartsPage(validated)
+  })
 }
 
 export async function createPartAction(input: unknown): Promise<PartMutationResult> {
-  if (!(await isAuthenticated())) return failure("You must sign in to create Parts.")
-  const parsed = createPartInputSchema.safeParse(input)
-  if (!parsed.success) return failure(parsed.error.issues[0]?.message ?? "Invalid Part.")
-
   try {
-    const result = await createPart(parsed.data)
-    revalidatePartPaths(result.partId)
-    return { success: true, message: "Part created.", partId: result.partId }
+    const principal = await requireUser()
+    return runAuthorizedPartOperation(principal, "create", async () => {
+      const parsed = createPartInputSchema.safeParse(input)
+      if (!parsed.success) {
+        return failure(parsed.error.issues[0]?.message ?? "Invalid Part.")
+      }
+
+      const result = await createPart(parsed.data)
+      revalidatePartPaths(result.partId)
+      return { success: true, message: "Part created.", partId: result.partId }
+    })
   } catch (error) {
     return mutationFailure(error)
   }
 }
 
 export async function updatePartAction(input: unknown): Promise<PartMutationResult> {
-  if (!(await isAuthenticated())) return failure("You must sign in to edit Parts.")
-  const parsed = updatePartInputSchema.safeParse(input)
-  if (!parsed.success) return failure(parsed.error.issues[0]?.message ?? "Invalid Part.")
-
   try {
-    const result = await updatePart(parsed.data)
-    revalidatePartPaths(result.partId)
-    return { success: true, message: "Part updated.", partId: result.partId }
+    const principal = await requireUser()
+    return runAuthorizedPartOperation(principal, "edit", async () => {
+      const parsed = updatePartInputSchema.safeParse(input)
+      if (!parsed.success) {
+        return failure(parsed.error.issues[0]?.message ?? "Invalid Part.")
+      }
+
+      const result = await updatePart(parsed.data)
+      revalidatePartPaths(result.partId)
+      return { success: true, message: "Part updated.", partId: result.partId }
+    })
   } catch (error) {
     return mutationFailure(error)
   }
 }
 
 export async function setPartActiveAction(input: unknown): Promise<PartMutationResult> {
-  if (!(await isAuthenticated())) return failure("You must sign in to change Part status.")
-  const parsed = setPartActiveSchema.safeParse(input)
-  if (!parsed.success) return failure(parsed.error.issues[0]?.message ?? "Invalid Part.")
-
   try {
-    const result = await setPartActive(parsed.data)
-    revalidatePartPaths(result.partId)
-    return {
-      success: true,
-      message: parsed.data.isActive ? "Part reactivated." : "Part deactivated.",
-      partId: result.partId,
+    const principal = await requireUser()
+    const parsed = setPartActiveSchema.safeParse(input)
+    if (!parsed.success) {
+      return failure(parsed.error.issues[0]?.message ?? "Invalid Part.")
     }
+
+    return runAuthorizedPartOperation(
+      principal,
+      getPartStatusOperation(parsed.data.isActive),
+      async () => {
+        const result = await setPartActive(parsed.data)
+        revalidatePartPaths(result.partId)
+        return {
+          success: true,
+          message: parsed.data.isActive ? "Part reactivated." : "Part deactivated.",
+          partId: result.partId,
+        }
+      }
+    )
   } catch (error) {
     return mutationFailure(error)
   }

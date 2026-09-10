@@ -15,6 +15,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { PermissionDenied } from "@/features/auth/components/permission-denied"
+import { getCurrentPrincipal } from "@/features/auth/services/authorization-service"
+import { hasPartPermission } from "@/features/parts/services/part-authorization"
 
 // ───────────────── BLOCK 2: Helpers ──────────────────────────────────────────
 const quantityFormatter = new Intl.NumberFormat("en-AU", {
@@ -31,6 +34,17 @@ export default async function PartDetailsPage({
 }: {
   params: Promise<{ partId: string }>
 }) {
+  const principal = await getCurrentPrincipal()
+  if (!principal || !hasPartPermission(principal, "view")) {
+    return (
+      <PermissionDenied
+        description="You need permission to view Part details."
+        backHref="/products"
+        backLabel="Return to Products & BOM"
+      />
+    )
+  }
+
   const { partId } = await params
   const part = await getPartById(partId)
   if (!part) notFound()
@@ -58,6 +72,11 @@ export default async function PartDetailsPage({
           partCode={part.part_code}
           isActive={part.is_active}
           activeBomCount={part.active_bom_count}
+          canEdit={hasPartPermission(principal, "edit")}
+          canChangeStatus={hasPartPermission(
+            principal,
+            part.is_active ? "deactivate" : "reactivate"
+          )}
         />
       </div>
 

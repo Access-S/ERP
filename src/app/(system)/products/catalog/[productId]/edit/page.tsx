@@ -8,6 +8,9 @@ import {
   getProductById,
   getProductCustomerOptions,
 } from "@/features/products/services/product-service"
+import { PermissionDenied } from "@/features/auth/components/permission-denied"
+import { getCurrentPrincipal } from "@/features/auth/services/authorization-service"
+import { hasProductPermission } from "@/features/products/services/product-authorization"
 
 export const dynamic = "force-dynamic"
 
@@ -22,12 +25,38 @@ export default async function EditProductPage({
 }: {
   params: Promise<{ productId: string }>
 }) {
+  const principal = await getCurrentPrincipal()
+  const canView = principal ? hasProductPermission(principal, "view") : false
+  const canEditMaster = principal
+    ? hasProductPermission(principal, "editMaster")
+    : false
+  const canEditCommercial = principal
+    ? hasProductPermission(principal, "editCommercial")
+    : false
+
+  if (!principal || !canView || (!canEditMaster && !canEditCommercial)) {
+    return (
+      <PermissionDenied
+        description="You need permission to edit Product master or commercial data."
+        backHref="/products/catalog"
+        backLabel="Return to Product Catalog"
+      />
+    )
+  }
+
   const { productId } = await params
-  const [product, customerOptions] = await Promise.all([
-    getProductById(productId),
-    getProductCustomerOptions(),
-  ])
+  const product = await getProductById(productId)
   if (!product) notFound()
+  const customerOptions = canEditMaster
+    ? await getProductCustomerOptions()
+    : product.customer_id
+      ? [{
+          id: product.customer_id,
+          code: product.customer_code ?? "Assigned Customer",
+          name: product.customer_name ?? "Current assignment",
+          isActive: true,
+        }]
+      : []
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -48,6 +77,8 @@ export default async function EditProductPage({
           mode="edit"
           productId={product.id}
           customerOptions={customerOptions}
+          canEditMaster={canEditMaster}
+          canEditCommercial={canEditCommercial}
           initialValues={{
             productCode: product.product_code,
             description: product.description ?? "",

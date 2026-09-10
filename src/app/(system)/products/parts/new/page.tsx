@@ -3,9 +3,23 @@ import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PartForm } from "@/features/parts/components/part-form"
+import { PermissionDenied } from "@/features/auth/components/permission-denied"
+import { getCurrentPrincipal } from "@/features/auth/services/authorization-service"
+import { hasPartPermission } from "@/features/parts/services/part-authorization"
 
 // ---------------- BLOCK 2: Page ----------------
-export default function NewPartPage() {
+export default async function NewPartPage() {
+  const principal = await getCurrentPrincipal()
+  if (!principal || !hasPartPermission(principal, "create")) {
+    return (
+      <PermissionDenied
+        description="You need permission to create Parts."
+        backHref="/products/parts"
+        backLabel="Return to Parts Library"
+      />
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="space-y-2">
