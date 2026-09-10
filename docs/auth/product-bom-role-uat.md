@@ -1,6 +1,6 @@
 # Products & BOM Role UAT
 
-Status: Ready for manual execution after test accounts are created
+Status: Passed in development on 2026-09-10; rerun after material authorization changes
 Owner: Product owner / Operations
 Last updated: 2026-09-10
 
@@ -35,14 +35,27 @@ second business role when an administrator also performs an operational job.
 
 ## 3. Test preparation
 
-- [ ] Create one test user for each role in section 2.
-- [ ] Use a unique password for every test user and keep credentials outside Git.
+- [ ] Confirm `.env` points to the development database, then run
+  `npm run provision:uat-users -- --confirm-development`.
+- [ ] Open `Data files/uat-role-credentials.json` locally for the generated
+  logins. This file is Git-ignored and must never be shared or committed.
+- [ ] Confirm the provisioner created one `[UAT]` test user for each role in
+  section 2. Each user has exactly one role and a unique password.
+- [ ] With the development server running, run `npm run verify:uat-logins` to
+  verify every generated credential through the application's real login and
+  session flow.
 - [ ] Sign out and back in after assigning or changing a role so the new
   `authVersion` is used.
 - [ ] Prepare one dependency-free Customer for lifecycle testing.
 - [ ] Prepare one active Product with an active Part and a complete draft BOM.
 - [ ] Prepare one Product/Customer with dependencies to verify blocked
   deactivation.
+
+The provisioner is safe to rerun: it resets only the reserved `[UAT]` accounts
+and does not create duplicates. To intentionally generate new passwords, use
+`npm run provision:uat-users -- --confirm-development --rotate-passwords`.
+The addresses use the reserved `example.com` domain, so no real email inboxes
+are required.
 
 ## 4. Common checks for every role
 
@@ -116,11 +129,18 @@ Team Leader, and Quality Control:
 
 ### Multiple-role user
 
-- [ ] Assign Sales / Customer Service plus Finance / Accounts to one test user.
+- [ ] Sign in as `uat.sales-finance@example.com` using the local generated
+  credential. Confirm the account has Sales / Customer Service plus Finance /
+  Accounts.
 - [ ] Confirm the user can edit all three Customer field groups and create a
   Customer with financial values.
-- [ ] Remove Finance, sign out/in, and confirm financial editing disappears while
-  Sales access remains.
+- [ ] Run
+  `npm run configure:uat-sales-finance -- --confirm-development --mode=sales-only`
+  to remove Finance and invalidate the current session.
+- [ ] Sign in again and confirm financial editing disappears while Sales access
+  remains.
+- [ ] Restore the reusable combined-role scenario with
+  `npm run configure:uat-sales-finance -- --confirm-development --mode=combined`.
 
 ## 6. Completion record
 
@@ -130,3 +150,7 @@ tokens, or real Customer data in screenshots or issue reports.
 
 Phase 3 is accepted only when every applicable item passes or has an explicitly
 approved deferral in the implementation plan.
+
+| Date | Environment | Tester | Scope | Result | Notes |
+| --- | --- | --- | --- | --- | --- |
+| 2026-09-10 | Local Next.js with development Supabase | Product owner | All isolated roles plus Sales + Finance permission union, Finance removal, and session invalidation | PASS | All applicable page access, field boundaries, action visibility, lifecycle controls, and multi-role behaviour passed manual verification. No credentials or real Customer data were recorded. |
