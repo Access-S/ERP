@@ -28,6 +28,8 @@ interface BomRevisionActionsProps {
   status: BomStatus
   health: BomHealth
   healthIssues: string[]
+  canCreateDraft: boolean
+  canActivate: boolean
 }
 
 // ───────────────── BLOCK 3: Component ─────────────────
@@ -36,12 +38,15 @@ export function BomRevisionActions({
   status,
   health,
   healthIssues,
+  canCreateDraft,
+  canActivate,
 }: BomRevisionActionsProps) {
   const router = useRouter()
   const [open, setOpen] = React.useState(false)
   const [isPending, startTransition] = React.useTransition()
   const isDraft = status === "DRAFT"
-  const canActivate = isDraft && health === "COMPLETE"
+  const isAllowed = isDraft ? canActivate : canCreateDraft
+  const isActivationReady = isDraft && health === "COMPLETE"
 
   const handleConfirm = React.useCallback(() => {
     startTransition(async () => {
@@ -64,11 +69,13 @@ export function BomRevisionActions({
     })
   }, [bomId, isDraft, router])
 
+  if (!isAllowed) return null
+
   return (
     <div className="flex flex-col items-end gap-1">
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button disabled={isDraft && !canActivate}>
+          <Button disabled={isDraft && !isActivationReady}>
             {isDraft ? (
               <CheckCircle2 className="mr-2 h-4 w-4" />
             ) : (

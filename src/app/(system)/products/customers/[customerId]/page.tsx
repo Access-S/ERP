@@ -15,6 +15,10 @@ import {
 } from "@/components/ui/table"
 import { CustomerStatusActions } from "@/features/customers/components/customer-status-actions"
 import { getCustomerById } from "@/features/customers/services/customer-service"
+import { PermissionDenied } from "@/features/auth/components/permission-denied"
+import { getCurrentPrincipal } from "@/features/auth/services/authorization-service"
+import { hasCustomerPermission } from "@/features/customers/services/customer-authorization"
+import { hasProductPermission } from "@/features/products/services/product-authorization"
 
 export const dynamic = "force-dynamic"
 
@@ -35,9 +39,25 @@ export default async function CustomerDetailsPage({
 }: {
   params: Promise<{ customerId: string }>
 }) {
+  const principal = await getCurrentPrincipal()
+  if (!principal || !hasCustomerPermission(principal, "view")) {
+    return (
+      <PermissionDenied
+        description="You need permission to view Customer records."
+        backHref="/products"
+        backLabel="Return to Products & BOM"
+      />
+    )
+  }
+
   const { customerId } = await params
   const customer = await getCustomerById(customerId)
   if (!customer) notFound()
+  const canEdit =
+    hasCustomerPermission(principal, "editIdentity") ||
+    hasCustomerPermission(principal, "editContacts") ||
+    hasCustomerPermission(principal, "editFinancial")
+  const canViewProducts = hasProductPermission(principal, "view")
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -67,6 +87,11 @@ export default async function CustomerDetailsPage({
           isActive={customer.is_active}
           activeProductCount={customer.active_product_count}
           openPurchaseOrderCount={customer.open_purchase_order_count}
+          canEdit={canEdit}
+          canChangeStatus={hasCustomerPermission(
+            principal,
+            customer.is_active ? "deactivate" : "reactivate"
+          )}
         />
       </div>
 
@@ -215,12 +240,18 @@ export default async function CustomerDetailsPage({
                 {customer.products.map((product) => (
                   <TableRow key={product.id}>
                     <TableCell>
-                      <Link
-                        className="font-medium text-foreground underline-offset-4 hover:underline"
-                        href={`/products/catalog/${product.id}`}
-                      >
-                        {product.product_code}
-                      </Link>
+                      {canViewProducts ? (
+                        <Link
+                          className="font-medium text-foreground underline-offset-4 hover:underline"
+                          href={`/products/catalog/${product.id}`}
+                        >
+                          {product.product_code}
+                        </Link>
+                      ) : (
+                        <span className="font-medium text-foreground">
+                          {product.product_code}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell>{product.description ?? "—"}</TableCell>
                     <TableCell>

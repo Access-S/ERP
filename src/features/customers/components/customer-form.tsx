@@ -37,6 +37,9 @@ interface CustomerFormProps {
   mode: "create" | "edit"
   customerId?: string
   initialValues?: CustomerFormValues
+  canEditIdentity: boolean
+  canEditContacts: boolean
+  canEditFinancial: boolean
 }
 
 const EMPTY_VALUES: CustomerFormValues = {
@@ -63,6 +66,9 @@ export function CustomerForm({
   mode,
   customerId,
   initialValues = EMPTY_VALUES,
+  canEditIdentity,
+  canEditContacts,
+  canEditFinancial,
 }: CustomerFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = React.useTransition()
@@ -78,28 +84,42 @@ export function CustomerForm({
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const masterFields = {
+    const identity = {
       legalName: values.legalName,
       tradingName: values.tradingName,
       customerType: values.customerType,
       industry: values.industry,
+      notes: values.notes,
+    }
+    const contacts = {
+      primaryContactName: values.primaryContactName,
+      primaryContactEmail: values.primaryContactEmail,
+      primaryContactPhone: values.primaryContactPhone,
+    }
+    const financial = {
       paymentTerms: values.paymentTerms,
       creditLimit: values.creditLimit,
       defaultCurrency: values.defaultCurrency,
       defaultDiscountPercentage: values.defaultDiscountPercentage,
       taxId: values.taxId,
       isTaxExempt: values.isTaxExempt,
-      primaryContactName: values.primaryContactName,
-      primaryContactEmail: values.primaryContactEmail,
-      primaryContactPhone: values.primaryContactPhone,
       accountsPayablesEmail: values.accountsPayablesEmail,
-      notes: values.notes,
     }
 
     startTransition(async () => {
       const result = isEdit && customerId
-        ? await updateCustomerAction({ customerId, ...masterFields })
-        : await createCustomerAction({ customerCode: values.customerCode, ...masterFields })
+        ? await updateCustomerAction({
+            customerId,
+            ...(canEditIdentity ? { identity } : {}),
+            ...(canEditContacts ? { contacts } : {}),
+            ...(canEditFinancial ? { financial } : {}),
+          })
+        : await createCustomerAction({
+            customerCode: values.customerCode,
+            ...identity,
+            ...contacts,
+            ...financial,
+          })
 
       if (!result.success || !result.customerId) {
         toast.error(result.message)
@@ -127,7 +147,7 @@ export function CustomerForm({
               onChange={(event) => updateField("customerCode", event.target.value)}
               maxLength={64}
               required
-              disabled={isEdit || isPending}
+              disabled={isEdit || isPending || !canEditIdentity}
               autoFocus={!isEdit}
             />
             <p className="text-xs text-muted-foreground">
@@ -144,7 +164,7 @@ export function CustomerForm({
               onChange={(event) => updateField("customerType", event.target.value)}
               maxLength={64}
               required
-              disabled={isPending}
+              disabled={isPending || !canEditIdentity}
             />
           </div>
           <div className="space-y-2">
@@ -155,7 +175,7 @@ export function CustomerForm({
               onChange={(event) => updateField("legalName", event.target.value)}
               maxLength={200}
               required
-              disabled={isPending}
+              disabled={isPending || !canEditIdentity}
             />
           </div>
           <div className="space-y-2">
@@ -165,7 +185,7 @@ export function CustomerForm({
               value={values.tradingName}
               onChange={(event) => updateField("tradingName", event.target.value)}
               maxLength={200}
-              disabled={isPending}
+              disabled={isPending || !canEditIdentity}
             />
           </div>
           <div className="space-y-2 md:col-span-2">
@@ -175,7 +195,7 @@ export function CustomerForm({
               value={values.industry}
               onChange={(event) => updateField("industry", event.target.value)}
               maxLength={100}
-              disabled={isPending}
+              disabled={isPending || !canEditIdentity}
             />
           </div>
         </CardContent>
@@ -194,7 +214,7 @@ export function CustomerForm({
               value={values.paymentTerms}
               onChange={(event) => updateField("paymentTerms", event.target.value)}
               maxLength={100}
-              disabled={isPending}
+              disabled={isPending || !canEditFinancial}
             />
           </div>
           <div className="space-y-2">
@@ -206,7 +226,7 @@ export function CustomerForm({
               step="any"
               value={values.creditLimit}
               onChange={(event) => updateField("creditLimit", event.target.value)}
-              disabled={isPending}
+              disabled={isPending || !canEditFinancial}
             />
           </div>
           <div className="space-y-2">
@@ -218,7 +238,7 @@ export function CustomerForm({
               minLength={3}
               maxLength={3}
               required
-              disabled={isPending}
+              disabled={isPending || !canEditFinancial}
             />
           </div>
           <div className="space-y-2">
@@ -231,7 +251,7 @@ export function CustomerForm({
               step="any"
               value={values.defaultDiscountPercentage}
               onChange={(event) => updateField("defaultDiscountPercentage", event.target.value)}
-              disabled={isPending}
+              disabled={isPending || !canEditFinancial}
             />
           </div>
           <div className="space-y-2">
@@ -241,7 +261,7 @@ export function CustomerForm({
               value={values.taxId}
               onChange={(event) => updateField("taxId", event.target.value)}
               maxLength={64}
-              disabled={isPending}
+              disabled={isPending || !canEditFinancial}
             />
           </div>
           <div className="flex items-center gap-3 pt-7">
@@ -249,7 +269,7 @@ export function CustomerForm({
               id="tax-exempt"
               checked={values.isTaxExempt}
               onCheckedChange={(checked) => updateField("isTaxExempt", checked === true)}
-              disabled={isPending}
+              disabled={isPending || !canEditFinancial}
             />
             <Label htmlFor="tax-exempt">Tax exempt</Label>
           </div>
@@ -269,7 +289,7 @@ export function CustomerForm({
               value={values.primaryContactName}
               onChange={(event) => updateField("primaryContactName", event.target.value)}
               maxLength={200}
-              disabled={isPending}
+              disabled={isPending || !canEditContacts}
             />
           </div>
           <div className="space-y-2">
@@ -280,7 +300,7 @@ export function CustomerForm({
               value={values.primaryContactPhone}
               onChange={(event) => updateField("primaryContactPhone", event.target.value)}
               maxLength={64}
-              disabled={isPending}
+              disabled={isPending || !canEditContacts}
             />
           </div>
           <div className="space-y-2">
@@ -291,7 +311,7 @@ export function CustomerForm({
               value={values.primaryContactEmail}
               onChange={(event) => updateField("primaryContactEmail", event.target.value)}
               maxLength={254}
-              disabled={isPending}
+              disabled={isPending || !canEditContacts}
             />
           </div>
           <div className="space-y-2">
@@ -302,7 +322,7 @@ export function CustomerForm({
               value={values.accountsPayablesEmail}
               onChange={(event) => updateField("accountsPayablesEmail", event.target.value)}
               maxLength={254}
-              disabled={isPending}
+              disabled={isPending || !canEditFinancial}
             />
           </div>
           <div className="space-y-2 md:col-span-2">
@@ -313,7 +333,7 @@ export function CustomerForm({
               onChange={(event) => updateField("notes", event.target.value)}
               maxLength={2000}
               rows={4}
-              disabled={isPending}
+              disabled={isPending || !canEditIdentity}
             />
           </div>
         </CardContent>
@@ -323,7 +343,11 @@ export function CustomerForm({
         <Button variant="outline" asChild>
           <Link href={customerId ? `/products/customers/${customerId}` : "/products/customers"}>Cancel</Link>
         </Button>
-        <Button type="submit" loading={isPending}>
+        <Button
+          type="submit"
+          loading={isPending}
+          disabled={!canEditIdentity && !canEditContacts && !canEditFinancial}
+        >
           {isEdit ? "Save Changes" : "Create Customer"}
         </Button>
       </div>

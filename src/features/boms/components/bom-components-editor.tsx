@@ -53,10 +53,13 @@ interface BomComponentsEditorProps {
   status: BomStatus
   lines: BomLineItem[]
   partOptions: BomPartOption[]
+  canEdit: boolean
+  canViewParts: boolean
 }
 
 interface BomLineRowProps {
   editable: boolean
+  canViewPart: boolean
   line: BomLineItem
   onEdit: (line: BomLineItem) => void
   onRemove: (line: BomLineItem) => void
@@ -99,6 +102,7 @@ const PartOptionRow = React.memo(function PartOptionRow({
 
 const BomLineRow = React.memo(function BomLineRow({
   editable,
+  canViewPart,
   line,
   onEdit,
   onRemove,
@@ -107,12 +111,16 @@ const BomLineRow = React.memo(function BomLineRow({
     <TableRow>
       <TableCell className="tabular-nums">{line.position ?? "—"}</TableCell>
       <TableCell>
-        <Link
-          className="font-medium text-foreground underline-offset-4 hover:underline"
-          href={`/products/parts/${line.part_id}`}
-        >
-          {line.part_code}
-        </Link>
+        {canViewPart ? (
+          <Link
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+            href={`/products/parts/${line.part_id}`}
+          >
+            {line.part_code}
+          </Link>
+        ) : (
+          <span className="font-medium text-foreground">{line.part_code}</span>
+        )}
       </TableCell>
       <TableCell>
         <span className="block max-w-[320px] truncate" title={line.description ?? undefined}>
@@ -170,9 +178,11 @@ export function BomComponentsEditor({
   status,
   lines,
   partOptions,
+  canEdit,
+  canViewParts,
 }: BomComponentsEditorProps) {
   const router = useRouter()
-  const editable = status === "DRAFT"
+  const editable = status === "DRAFT" && canEdit
   const [isPending, startTransition] = React.useTransition()
   const [addOpen, setAddOpen] = React.useState(false)
   const [selectedPart, setSelectedPart] = React.useState<BomPartOption | null>(null)
@@ -358,6 +368,7 @@ export function BomComponentsEditor({
               <BomLineRow
                 key={line.id}
                 editable={editable}
+                canViewPart={canViewParts}
                 line={line}
                 onEdit={handleEditOpen}
                 onRemove={handleRemoveOpen}

@@ -5,6 +5,9 @@ import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { CustomerForm } from "@/features/customers/components/customer-form"
 import { getCustomerById } from "@/features/customers/services/customer-service"
+import { PermissionDenied } from "@/features/auth/components/permission-denied"
+import { getCurrentPrincipal } from "@/features/auth/services/authorization-service"
+import { hasCustomerPermission } from "@/features/customers/services/customer-authorization"
 
 export const dynamic = "force-dynamic"
 
@@ -14,6 +17,30 @@ export default async function EditCustomerPage({
 }: {
   params: Promise<{ customerId: string }>
 }) {
+  const principal = await getCurrentPrincipal()
+  const canEditIdentity = principal
+    ? hasCustomerPermission(principal, "editIdentity")
+    : false
+  const canEditContacts = principal
+    ? hasCustomerPermission(principal, "editContacts")
+    : false
+  const canEditFinancial = principal
+    ? hasCustomerPermission(principal, "editFinancial")
+    : false
+  if (
+    !principal ||
+    !hasCustomerPermission(principal, "view") ||
+    (!canEditIdentity && !canEditContacts && !canEditFinancial)
+  ) {
+    return (
+      <PermissionDenied
+        description="You need permission to edit at least one Customer field group."
+        backHref="/products/customers"
+        backLabel="Return to Customers"
+      />
+    )
+  }
+
   const { customerId } = await params
   const customer = await getCustomerById(customerId)
   if (!customer) notFound()
@@ -36,6 +63,9 @@ export default async function EditCustomerPage({
         <CustomerForm
           mode="edit"
           customerId={customer.id}
+          canEditIdentity={canEditIdentity}
+          canEditContacts={canEditContacts}
+          canEditFinancial={canEditFinancial}
           initialValues={{
             customerCode: customer.customer_code,
             legalName: customer.legal_name,

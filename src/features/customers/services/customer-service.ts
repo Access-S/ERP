@@ -9,7 +9,10 @@ import type {
 import type {
   CreateCustomerInput,
   Customer,
+  CustomerContactFields,
   CustomerDetail,
+  CustomerFinancialFields,
+  CustomerIdentityFields,
   SetCustomerActiveInput,
   UpdateCustomerInput,
 } from "../types/customer-schema"
@@ -414,23 +417,41 @@ function isPrismaError(error: unknown, code: string): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === code
 }
 
-function customerData(input: CreateCustomerInput | UpdateCustomerInput) {
+function customerIdentityData(input: CustomerIdentityFields) {
   return {
     legal_name: input.legalName,
     trading_name: input.tradingName,
     customer_type: input.customerType,
     industry: input.industry,
+    notes: input.notes,
+  }
+}
+
+function customerContactData(input: CustomerContactFields) {
+  return {
+    primary_contact_name: input.primaryContactName,
+    primary_contact_email: input.primaryContactEmail,
+    primary_contact_phone: input.primaryContactPhone,
+  }
+}
+
+function customerFinancialData(input: CustomerFinancialFields) {
+  return {
     payment_terms: input.paymentTerms,
     credit_limit: input.creditLimit,
     default_currency: input.defaultCurrency,
     default_discount_percentage: input.defaultDiscountPercentage,
     tax_id: input.taxId,
     is_tax_exempt: input.isTaxExempt,
-    primary_contact_name: input.primaryContactName,
-    primary_contact_email: input.primaryContactEmail,
-    primary_contact_phone: input.primaryContactPhone,
     accounts_payables_email: input.accountsPayablesEmail,
-    notes: input.notes,
+  }
+}
+
+function customerData(input: CreateCustomerInput) {
+  return {
+    ...customerIdentityData(input),
+    ...customerContactData(input),
+    ...customerFinancialData(input),
   }
 }
 
@@ -464,7 +485,12 @@ export async function updateCustomer(
   try {
     const customer = await prisma.customer.update({
       where: { id: input.customerId },
-      data: { ...customerData(input), updated_at: new Date() },
+      data: {
+        ...(input.identity ? customerIdentityData(input.identity) : {}),
+        ...(input.contacts ? customerContactData(input.contacts) : {}),
+        ...(input.financial ? customerFinancialData(input.financial) : {}),
+        updated_at: new Date(),
+      },
       select: { id: true },
     })
     return { customerId: customer.id }

@@ -21,6 +21,7 @@ remain separate responsibilities.
 | [Roles and permissions](roles-and-permissions.md) | Business roles, permission catalogue, role matrix, ownership, and open business decisions | A role, module, action, approval, or scope changes |
 | [Audit events](audit-events.md) | Events that must be recorded, minimum fields, privacy rules, and retention decisions | A security-sensitive event or audit requirement is introduced |
 | [Implementation plan](implementation-plan.md) | Ordered delivery stages, verification gates, and current progress | An auth task starts, completes, changes, or becomes blocked |
+| [Products & BOM role UAT](product-bom-role-uat.md) | Manual role-by-role checks for Customers, Products, Parts, and BOM workflows | A module permission, field scope, role grant, or test outcome changes |
 | [RBAC migration runbook](rbac-migration-runbook.md) | Safe commands, verification, retry, and recovery guidance for the authorization foundation | The RBAC schema, seed, audit, or deployment process changes |
 | [ADR 001: Auth foundation](decisions/001-auth-foundation.md) | Durable record of the initial Auth.js, Prisma, and RBAC decisions | A foundational decision is replaced or amended |
 

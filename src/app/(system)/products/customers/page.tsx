@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardDescription, CardTitle } from "@/components/ui/card"
 import { Plus } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
+import { PermissionDenied } from "@/features/auth/components/permission-denied"
+import { getCurrentPrincipal } from "@/features/auth/services/authorization-service"
+import { hasCustomerPermission } from "@/features/customers/services/customer-authorization"
 
 export const dynamic = "force-dynamic"
 
@@ -19,6 +22,17 @@ const exposureFormatter = new Intl.NumberFormat("en-US", {
 
 // ───────────────── BLOCK 2: Page ───────────────────────────────
 export default async function CustomersPage() {
+  const principal = await getCurrentPrincipal()
+  if (!principal || !hasCustomerPermission(principal, "view")) {
+    return (
+      <PermissionDenied
+        description="You need permission to view Customer records."
+        backHref="/products"
+        backLabel="Return to Products & BOM"
+      />
+    )
+  }
+
   const stats = await getCustomerStats()
 
   return (
@@ -29,12 +43,14 @@ export default async function CustomersPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Customers</h1>
         </div>
-        <Button asChild>
-          <Link href="/products/customers/new">
-            <Plus className="mr-2 h-4 w-4" />
-            New Customer
-          </Link>
-        </Button>
+        {hasCustomerPermission(principal, "create") && (
+          <Button asChild>
+            <Link href="/products/customers/new">
+              <Plus className="mr-2 h-4 w-4" />
+              New Customer
+            </Link>
+          </Button>
+        )}
       </div>
 
       {/* KPI Row */}

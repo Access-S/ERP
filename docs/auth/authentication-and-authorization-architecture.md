@@ -46,7 +46,8 @@ As of 2026-09-09, the application has a working prototype authentication layer:
 - The session contains user ID, name, email, the compatibility role, and
   `authVersion`.
 - `src/proxy.ts` redirects unauthenticated page requests to `/login`.
-- Customer, Product, Part, and BOM mutations verify that a session exists.
+- Customer, Product, Part, and BOM mutations enforce typed permissions from the
+  normalized RBAC model.
 - The database contains 11 seeded system roles, 72 stable permissions, normalized
   role assignments, account status, normalized email, and `authVersion`.
 - The existing `ADMIN` user was preserved and mapped to `SYSTEM_ADMIN`.
@@ -60,14 +61,11 @@ system.
 
 ### 3.1 Known gaps
 
-- A signed-in user can generally perform any implemented mutation.
 - The legacy `User.role` string is still copied into Auth.js during the
   compatibility period, although secure permission decisions now resolve the
   normalized assignments from the database.
-- Completed Customer, Product, Part, and BOM actions still use their older
-  session-exists checks; Phase 3 must replace these with individual permissions.
-- Page reads and navigation are not yet consistently driven by the normalized
-  principal.
+- Future modules and broader application navigation must adopt the normalized
+  principal as they are implemented.
 - JWT contents may remain valid after role or account changes.
 - The central guard rejects stale JWTs at protected operations, but a complete
   logout/revocation experience for already-open pages is not yet implemented.
@@ -341,6 +339,17 @@ Implementation status as of 2026-09-10:
   dashboard/catalog reads. Product creation also requires draft-BOM creation;
   Product deactivation requires BOM archival. Operational master fields and
   commercial price fields are submitted and authorized independently.
+- The BOM module enforces `bom.view` before list/detail reads and table fetches.
+  Draft creation is separate from draft editing, and draft editing also requires
+  Parts visibility because it loads the active Parts Library. Activation requires
+  both `bom.activate` and `bom.archive` because the same serializable transaction
+  archives the previous active revision. Production Planners prepare drafts while
+  Operations Managers release them.
+- The Customers module enforces `customer.view` before list/detail reads and table
+  fetches. Updates submit identity, operational-contact, and financial field
+  groups independently. Sales / Customer Service owns identity and contacts;
+  Finance / Accounts owns credit, payment, discount, tax, currency, and
+  accounts-payable email; Operations Managers control lifecycle status.
 
 ## 10. Password and recovery controls
 
@@ -465,3 +474,5 @@ them; they do not block initial RBAC schema and centralized guard work.
 | 2026-09-10 | Implemented the central authorization policy/service, normalized login, authVersion session freshness, minimal access query, and core/database UAT. |
 | 2026-09-10 | Applied normalized permissions to the Parts module routes and Server Actions with permission-aware controls and direct-operation UAT. |
 | 2026-09-10 | Protected Product routes and actions, separated operational/commercial editing, and enforced compound BOM permissions for Product lifecycle operations. |
+| 2026-09-10 | Protected BOM routes and actions, separated preparation from activation, and required archive authority for the activation transaction. |
+| 2026-09-10 | Protected Customer routes and actions and split identity, contact, financial, and lifecycle controls by business ownership. |

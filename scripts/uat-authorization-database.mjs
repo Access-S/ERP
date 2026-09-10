@@ -9,6 +9,8 @@ import {
 } from "../src/features/auth/services/authorization-policy.ts"
 import { hasPartPermission } from "../src/features/parts/services/part-authorization.ts"
 import { hasProductPermission } from "../src/features/products/services/product-authorization.ts"
+import { hasBomPermission } from "../src/features/boms/services/bom-authorization.ts"
+import { hasCustomerPermission } from "../src/features/customers/services/customer-authorization.ts"
 
 const prisma = new PrismaClient()
 
@@ -73,6 +75,25 @@ async function main() {
     assert.equal(hasProductPermission(principal, operation), false)
   }
   pass("Live SYSTEM_ADMIN is view-only in the protected Products module")
+
+  assert.equal(hasBomPermission(principal, "view"), true)
+  for (const operation of ["createDraft", "editDraft", "activate"]) {
+    assert.equal(hasBomPermission(principal, operation), false)
+  }
+  pass("Live SYSTEM_ADMIN is view-only in the protected BOM module")
+
+  assert.equal(hasCustomerPermission(principal, "view"), true)
+  for (const operation of [
+    "create",
+    "editIdentity",
+    "editContacts",
+    "editFinancial",
+    "deactivate",
+    "reactivate",
+  ]) {
+    assert.equal(hasCustomerPermission(principal, operation), false)
+  }
+  pass("Live SYSTEM_ADMIN is view-only in the protected Customers module")
 
   assert.throws(
     () => resolvePrincipalFromAccessRecord(

@@ -7,11 +7,26 @@ import { getBomStats } from "@/features/boms/services/bom-service"
 import { Button } from "@/components/ui/button"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { PermissionDenied } from "@/features/auth/components/permission-denied"
+import { getCurrentPrincipal } from "@/features/auth/services/authorization-service"
+import { hasPermission } from "@/features/auth/services/authorization-policy"
+import { hasBomPermission } from "@/features/boms/services/bom-authorization"
 
 export const dynamic = "force-dynamic"
 
 // ───────────────── BLOCK 2: Page ─────────────────────────────────────────────
 export default async function BomsPage() {
+  const principal = await getCurrentPrincipal()
+  if (!principal || !hasBomPermission(principal, "view")) {
+    return (
+      <PermissionDenied
+        description="You need permission to view BOM revisions and components."
+        backHref="/products"
+        backLabel="Return to Products & BOM"
+      />
+    )
+  }
+
   const stats = await getBomStats()
 
   return (
@@ -24,22 +39,28 @@ export default async function BomsPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/products/catalog">
-              <Boxes className="mr-2 h-4 w-4" />
-              Product Catalog
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/products/parts">
-              <Library className="mr-2 h-4 w-4" />
-              Parts Library
-            </Link>
-          </Button>
-          <Button disabled>
-            <PackageSearch className="mr-2 h-4 w-4" />
-            New BOM
-          </Button>
+          {hasPermission(principal, "product.view") && (
+            <Button variant="outline" asChild>
+              <Link href="/products/catalog">
+                <Boxes className="mr-2 h-4 w-4" />
+                Product Catalog
+              </Link>
+            </Button>
+          )}
+          {hasPermission(principal, "part.view") && (
+            <Button variant="outline" asChild>
+              <Link href="/products/parts">
+                <Library className="mr-2 h-4 w-4" />
+                Parts Library
+              </Link>
+            </Button>
+          )}
+          {hasBomPermission(principal, "createDraft") && (
+            <Button disabled>
+              <PackageSearch className="mr-2 h-4 w-4" />
+              New BOM
+            </Button>
+          )}
         </div>
       </div>
 

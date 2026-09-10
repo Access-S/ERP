@@ -15,9 +15,8 @@ This document is the source of truth for who will use the ERP, what each role
 is responsible for, and how permissions should be designed. It must be updated
 when a module, business process, approval, or role changes.
 
-The matrix describes the target authorization model. The application currently
-checks that mutation callers are signed in, but it does not yet enforce these
-role-specific permissions.
+The matrix describes the target authorization model. Customers, Parts, Products,
+and BOMs now enforce these role-specific permissions.
 
 ## 2. Agreed user population
 
@@ -466,8 +465,9 @@ features should reuse or deliberately extend this catalogue.
 
 ## 9. Current application enforcement gap
 
-Current mutation entry points verify authentication but generally allow any
-signed-in user to perform the action. The role matrix is not yet enforced.
+Customer, Part, Product, and BOM entry points now enforce the role matrix at
+protected page reads and Server Actions. Future modules must adopt the same
+central authorization boundary as they are implemented.
 
 The normalized `Role`, `Permission`, `UserRole`, and `RolePermission` tables now
 exist and are seeded from the typed authorization registry. The legacy
@@ -488,8 +488,8 @@ Completed foundation:
 
 Remaining enforcement work:
 
-1. Replace authentication-only checks in every Server Action and API endpoint
-   with the implemented central permission guard.
+1. Apply the implemented central permission guard to every future module entry
+   point and API endpoint.
 2. Protect sensitive reads and return only permitted data.
 3. Use the same permission result to hide or disable unavailable UI actions.
 4. Record sensitive approvals, status changes, and role assignments later.
@@ -578,3 +578,7 @@ For every change:
 | 2026-09-10 | Enforce all five Parts permissions independently. | Viewing, master-data maintenance, and lifecycle control belong to different operational responsibilities. |
 | 2026-09-10 | Separate Product operational fields from commercial price updates. | Production Planning owns production master data while Finance owns commercial pricing. |
 | 2026-09-10 | Treat Product creation and deactivation as compound BOM operations. | Creating a Product creates a draft BOM, and deactivation archives BOMs, so both permission boundaries must approve the change. |
+| 2026-09-10 | Require `bom.archive` when activating a BOM revision. | Activation archives the previous active revision in the same transaction, so release authority cannot bypass archival authority. |
+| 2026-09-10 | Require Parts visibility for draft BOM editing. | The draft editor loads active Part master records for component selection. |
+| 2026-09-10 | Split Customer edits into identity, contacts, and financial payloads. | Sales and Finance can update their owned fields without receiving authority over the other field groups. |
+| 2026-09-10 | Treat accounts-payable email as a financial Customer field. | It belongs to the Finance relationship and should not be changed through general operational-contact access. |

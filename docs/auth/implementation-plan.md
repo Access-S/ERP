@@ -1,6 +1,6 @@
 # Authentication and Authorization Implementation Plan
 
-Status: Ready to begin
+Status: In progress; Phase 3 complete
 Owner: Product owner / Engineering
 Last updated: 2026-09-10
 
@@ -21,9 +21,9 @@ matrix. Update it in the same commit as implementation work.
 | Password hashing | Prototype complete | Existing bcrypt hashes; production parameters still open |
 | JWT session | Freshness foundation complete | User ID, compatibility role, and `authVersion` are copied into the session |
 | Page redirect | Prototype complete | Next.js Proxy redirects unauthenticated requests |
-| Mutation authentication | Partial | Customer, Product, Part, and BOM writes require a session |
+| Mutation authentication | Completed master-data modules protected | Customer, Product, Part, and BOM writes enforce typed permissions |
 | Normalized roles and permissions | Foundation complete | 11 system roles, 72 permissions, 188 grants, and existing-user mapping are seeded |
-| Server-side permission enforcement | Guard complete; module rollout pending | Central typed guard resolves current database permissions; Phase 3 must adopt it in module boundaries |
+| Server-side permission enforcement | Four master-data modules complete | Central typed guard is adopted by Customers, Parts, Products, and BOMs |
 | Account administration | Foundation only | Account states and safe bootstrap script exist; no management UI or invitation flow |
 | Session invalidation after access change | Guard complete; lifecycle UI pending | `authVersion` mismatch is rejected as stale; role-management flows must increment it |
 | Auth security audit log | Not started | Event catalogue exists; persistence does not |
@@ -84,17 +84,17 @@ Module status:
 | --- | --- | --- |
 | Parts | Complete | List/detail routes, table fetch, create, edit, deactivate, and reactivate |
 | Products | Complete | Dashboard/catalog reads, create, field-scoped edit, deactivate, and reactivate |
-| BOM revisions | Pending | Phase 3 next module |
-| Customers | Pending | Final completed master-data module |
+| BOM revisions | Complete | List/detail reads, draft creation/editing, Parts lookup, and compound activation/archive boundary |
+| Customers | Complete | List/detail routes, create, field-scoped identity/contact/financial edits, deactivate, and reactivate |
 
 For each module:
 
-- [ ] Protect list/detail reads where required.
-- [ ] Protect every Server Action independently.
-- [ ] Apply the stable permission key from the role matrix.
-- [ ] Add allowed and denied direct-invocation tests.
-- [ ] Update navigation and buttons using the same effective permission result.
-- [ ] Verify that hidden controls are not the only protection.
+- [x] Protect list/detail reads where required.
+- [x] Protect every Server Action independently.
+- [x] Apply the stable permission key from the role matrix.
+- [x] Add allowed and denied direct-invocation tests.
+- [x] Update navigation and buttons using the same effective permission result.
+- [x] Verify that hidden controls are not the only protection.
 
 Exit gate: all completed master-data modules enforce the documented matrix on
 the server and pass deny-path tests.
@@ -184,3 +184,5 @@ verify the mapping, then remove the legacy free-text role in a later migration.
 | 2026-09-10 | Upgraded vulnerable Next.js 16.3.0 to patched 16.3.4 and applied compatible transitive dependency fixes discovered during the auth review. |
 | 2026-09-10 | Completed Phase 3 Parts enforcement across reads, mutations, action visibility, and allowed/denied operation UAT. |
 | 2026-09-10 | Completed Phase 3 Product enforcement, including field-scoped master/commercial edits and compound Product/BOM lifecycle permissions. |
+| 2026-09-10 | Completed Phase 3 BOM enforcement across reads, draft preparation, Parts lookup, and compound activation/archive authorization. |
+| 2026-09-10 | Completed Phase 3 Customer enforcement, including separate identity, contact, financial, and lifecycle permission boundaries. |

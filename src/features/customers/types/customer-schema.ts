@@ -51,11 +51,21 @@ const optionalEmail = (label: string) =>
     z.string().trim().email(`${label} must be a valid email address.`).max(254).nullable()
   )
 
-export const customerMasterFieldsSchema = z.object({
+export const customerIdentityFieldsSchema = z.object({
   legalName: z.string().trim().min(1, "Legal name is required.").max(200),
   tradingName: optionalText("Trading name", 200),
   customerType: z.string().trim().min(1, "Customer type is required.").max(64),
   industry: optionalText("Industry", 100),
+  notes: optionalText("Notes", 2_000),
+})
+
+export const customerContactFieldsSchema = z.object({
+  primaryContactName: optionalText("Primary contact name", 200),
+  primaryContactEmail: optionalEmail("Primary contact email"),
+  primaryContactPhone: optionalText("Primary contact phone", 64),
+})
+
+export const customerFinancialFieldsSchema = z.object({
   paymentTerms: optionalText("Payment terms", 100),
   creditLimit: z.preprocess(
     (value) => value === "" || value === null || value === undefined ? 0 : Number(value),
@@ -69,12 +79,12 @@ export const customerMasterFieldsSchema = z.object({
   ),
   taxId: optionalText("Tax ID", 64),
   isTaxExempt: z.boolean(),
-  primaryContactName: optionalText("Primary contact name", 200),
-  primaryContactEmail: optionalEmail("Primary contact email"),
-  primaryContactPhone: optionalText("Primary contact phone", 64),
   accountsPayablesEmail: optionalEmail("Accounts payable email"),
-  notes: optionalText("Notes", 2_000),
 })
+
+export const customerMasterFieldsSchema = customerIdentityFieldsSchema
+  .merge(customerContactFieldsSchema)
+  .merge(customerFinancialFieldsSchema)
 
 export const createCustomerInputSchema = customerMasterFieldsSchema.extend({
   customerCode: z.string().trim()
@@ -82,9 +92,15 @@ export const createCustomerInputSchema = customerMasterFieldsSchema.extend({
     .max(64, "Customer code must be 64 characters or fewer."),
 })
 
-export const updateCustomerInputSchema = customerMasterFieldsSchema.extend({
+export const updateCustomerInputSchema = z.object({
   customerId: z.string().uuid("Invalid Customer."),
-})
+  identity: customerIdentityFieldsSchema.optional(),
+  contacts: customerContactFieldsSchema.optional(),
+  financial: customerFinancialFieldsSchema.optional(),
+}).refine(
+  (value) => value.identity || value.contacts || value.financial,
+  "At least one Customer field group must be provided."
+)
 
 export const setCustomerActiveSchema = z.object({
   customerId: z.string().uuid("Invalid Customer."),
@@ -101,6 +117,9 @@ export const customerMutationResultSchema = z.object({
 export type Customer = z.infer<typeof customerSchema>
 export type CustomerProduct = z.infer<typeof customerProductSchema>
 export type CustomerDetail = z.infer<typeof customerDetailSchema>
+export type CustomerIdentityFields = z.infer<typeof customerIdentityFieldsSchema>
+export type CustomerContactFields = z.infer<typeof customerContactFieldsSchema>
+export type CustomerFinancialFields = z.infer<typeof customerFinancialFieldsSchema>
 export type CustomerMasterFields = z.infer<typeof customerMasterFieldsSchema>
 export type CreateCustomerInput = z.infer<typeof createCustomerInputSchema>
 export type UpdateCustomerInput = z.infer<typeof updateCustomerInputSchema>

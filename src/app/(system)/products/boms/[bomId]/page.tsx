@@ -9,6 +9,10 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { PermissionDenied } from "@/features/auth/components/permission-denied"
+import { getCurrentPrincipal } from "@/features/auth/services/authorization-service"
+import { hasPermission } from "@/features/auth/services/authorization-policy"
+import { hasBomPermission } from "@/features/boms/services/bom-authorization"
 
 // ───────────────── BLOCK 2: Helpers ─────────────────
 function formatStatus(value: string) {
@@ -21,10 +25,25 @@ export default async function BomWorkspacePage({
 }: {
   params: Promise<{ bomId: string }>
 }) {
+  const principal = await getCurrentPrincipal()
+  if (!principal || !hasBomPermission(principal, "view")) {
+    return (
+      <PermissionDenied
+        description="You need permission to view BOM revisions and components."
+        backHref="/products"
+        backLabel="Return to Products & BOM"
+      />
+    )
+  }
+
   const { bomId } = await params
   const bom = await getBomById(bomId)
   if (!bom) notFound()
-  const partOptions = bom.status === "DRAFT" ? await getBomPartOptions() : []
+  const canEditDraft = hasBomPermission(principal, "editDraft")
+  const canViewParts = hasPermission(principal, "part.view")
+  const partOptions = bom.status === "DRAFT" && canEditDraft
+    ? await getBomPartOptions()
+    : []
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -57,19 +76,25 @@ export default async function BomWorkspacePage({
             status={bom.status}
             health={bom.health}
             healthIssues={bom.health_issues}
+            canCreateDraft={hasBomPermission(principal, "createDraft")}
+            canActivate={hasBomPermission(principal, "activate")}
           />
-          <Button variant="outline" asChild>
-            <Link href={`/products/catalog/${bom.product_id}`}>
-              <Boxes className="mr-2 h-4 w-4" />
-              Product Details
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/products/parts">
-              <Library className="mr-2 h-4 w-4" />
-              Parts Library
-            </Link>
-          </Button>
+          {hasPermission(principal, "product.view") && (
+            <Button variant="outline" asChild>
+              <Link href={`/products/catalog/${bom.product_id}`}>
+                <Boxes className="mr-2 h-4 w-4" />
+                Product Details
+              </Link>
+            </Button>
+          )}
+          {canViewParts && (
+            <Button variant="outline" asChild>
+              <Link href="/products/parts">
+                <Library className="mr-2 h-4 w-4" />
+                Parts Library
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -131,6 +156,8 @@ export default async function BomWorkspacePage({
             status={bom.status}
             lines={bom.lines}
             partOptions={partOptions}
+            canEdit={canEditDraft}
+            canViewParts={canViewParts}
           />
         </CardContent>
       </Card>

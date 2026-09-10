@@ -3,9 +3,23 @@ import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { CustomerForm } from "@/features/customers/components/customer-form"
+import { PermissionDenied } from "@/features/auth/components/permission-denied"
+import { getCurrentPrincipal } from "@/features/auth/services/authorization-service"
+import { hasCustomerPermission } from "@/features/customers/services/customer-authorization"
 
 // ---------------- BLOCK 2: Page ----------------
-export default function NewCustomerPage() {
+export default async function NewCustomerPage() {
+  const principal = await getCurrentPrincipal()
+  if (!principal || !hasCustomerPermission(principal, "create")) {
+    return (
+      <PermissionDenied
+        description="You need permission to create Customer records."
+        backHref="/products/customers"
+        backLabel="Return to Customers"
+      />
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="space-y-2">
@@ -21,7 +35,12 @@ export default function NewCustomerPage() {
         </p>
       </div>
       <div className="max-w-5xl">
-        <CustomerForm mode="create" />
+        <CustomerForm
+          mode="create"
+          canEditIdentity
+          canEditContacts={hasCustomerPermission(principal, "editContacts")}
+          canEditFinancial={hasCustomerPermission(principal, "editFinancial")}
+        />
       </div>
     </div>
   )
