@@ -188,3 +188,4 @@ verify the mapping, then remove the legacy free-text role in a later migration.
 | 2026-09-10 | Completed Phase 3 Customer enforcement, including separate identity, contact, financial, and lifecycle permission boundaries. |
 | 2026-09-10 | Accepted Phase 3 manual role UAT across all isolated Product/BOM roles and the Sales + Finance add/remove multi-role scenario. |
 | 2026-09-11 | Added the protected Access Control overview, Users and Roles pages, effective-permission visibility, existing-role assignment, account status controls, authVersion invalidation, and last-active-administrator protection. |
+| 2026-09-11 | Hardened Access Control clients against stale development Server Action responses and verified the reversible suspend/reactivate workflow end to end. |

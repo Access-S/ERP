@@ -116,3 +116,15 @@ npm run uat:access-control
 They cover last-administrator protection and rejected/accepted access-change
 input. Database-backed authorization audits and the existing role UAT remain
 required regression checks before merge.
+
+### Local development note
+
+`next dev` and `next build` both use the `.next` directory. Running a production
+build while a development server and browser tab are still open can leave the
+browser holding an older Server Action reference. The symptom can be an
+"unexpected response" even when the action code and database transition are
+valid. Restart `npm run dev` or hard-refresh the browser before continuing
+interactive Server Action testing after a build.
+
+Access Control clients catch unreadable Server Action responses and show a
+recoverable refresh message instead of crashing the page.

@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import type { UserStatus } from "@prisma/client"
-import { useRouter } from "next/navigation"
 import { Ban, PauseCircle, RotateCcw } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -46,21 +45,24 @@ function StatusDialog({
   variant?: "outline" | "destructive" | "default"
   children: React.ReactNode
 }) {
-  const router = useRouter()
   const [open, setOpen] = React.useState(false)
   const [isPending, startTransition] = React.useTransition()
   const copy = statusCopy[nextStatus]
 
   function updateStatus() {
     startTransition(async () => {
-      const result = await setUserStatusAction({ userId, status: nextStatus })
-      if (!result.success) {
-        toast.error(result.message)
-        return
+      try {
+        const result = await setUserStatusAction({ userId, status: nextStatus })
+        if (!result.success) {
+          toast.error(result.message)
+          return
+        }
+        toast.success(result.message)
+        setOpen(false)
+      } catch (error) {
+        console.error("Account status response failed", error)
+        toast.error("The server response could not be read. Refresh the page before trying again.")
       }
-      toast.success(result.message)
-      setOpen(false)
-      router.refresh()
     })
   }
 

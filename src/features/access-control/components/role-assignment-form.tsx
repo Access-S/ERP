@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { signOut } from "next-auth/react"
-import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -26,7 +25,6 @@ export function RoleAssignmentForm({
   roles: readonly RoleOption[]
   initialRoleIds: readonly string[]
 }) {
-  const router = useRouter()
   const [isPending, startTransition] = React.useTransition()
   const [selectedRoleIds, setSelectedRoleIds] = React.useState(
     () => new Set(initialRoleIds)
@@ -47,21 +45,24 @@ export function RoleAssignmentForm({
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     startTransition(async () => {
-      const result = await assignUserRolesAction({
-        userId,
-        roleIds: [...selectedRoleIds],
-      })
-      if (!result.success) {
-        toast.error(result.message)
-        return
-      }
+      try {
+        const result = await assignUserRolesAction({
+          userId,
+          roleIds: [...selectedRoleIds],
+        })
+        if (!result.success) {
+          toast.error(result.message)
+          return
+        }
 
-      toast.success(result.message)
-      if (result.requiresReauthentication) {
-        await signOut({ callbackUrl: "/login" })
-        return
+        toast.success(result.message)
+        if (result.requiresReauthentication) {
+          await signOut({ callbackUrl: "/login" })
+        }
+      } catch (error) {
+        console.error("Role assignment response failed", error)
+        toast.error("The server response could not be read. Refresh the page before trying again.")
       }
-      router.refresh()
     })
   }
 
