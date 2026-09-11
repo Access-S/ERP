@@ -24,17 +24,22 @@ Authorized System Administrators can use the following routes:
 | `/settings/access/users` | List users, statuses, roles, and last sign-in | `admin.user.view` | None |
 | `/settings/access/users/[userId]` | Inspect effective permissions | `admin.user.view` | `admin.role.assign` or `admin.user.manage` |
 | `/settings/access/roles` | List role templates | `admin.user.view` | None |
-| `/settings/access/roles/[roleId]` | Inspect a role's permissions | `admin.user.view` | None |
+| `/settings/access/roles/[roleId]` | Inspect permissions and assigned users | `admin.user.view` | `admin.role.manage` for custom-role lifecycle |
+| `/settings/access/roles/new` | Create or duplicate a custom role | `admin.role.manage` | `admin.role.manage` |
+| `/settings/access/roles/[roleId]/edit` | Edit a custom role | `admin.role.manage` | `admin.role.manage` |
 
 The current change operations are:
 
 - replace an existing user's complete role set with one or more active roles;
 - suspend an active user;
 - reactivate a suspended or disabled user; and
-- disable an active or suspended user.
+- disable an active or suspended user;
+- create a custom role from scratch or by duplicating any role;
+- edit a custom role's name, description, and permissions; and
+- archive or reactivate an unassigned custom role.
 
-User invitation, password setup, and custom-role creation are not part of this
-slice. Standard roles are intentionally read-only.
+User invitation and password setup are not part of this slice. Standard roles
+are intentionally read-only.
 
 ## Authorization and safety rules
 
@@ -84,21 +89,23 @@ flowchart TD
     L --> M[Old sessions become invalid]
 ```
 
-## Custom-role direction
+## Custom-role workflow
 
-The next Access Control slice will add custom roles without allowing companies
-to invent arbitrary permission keys. The software owns the permission
-catalogue; an authorized company administrator chooses from that catalogue.
+Custom roles adapt the ERP to companies where one person performs several job
+functions or where responsibilities do not match a standard template. The
+software owns the permission catalogue; an authorized company administrator
+chooses from that catalogue and cannot invent unenforced permission strings.
 
-Planned rules:
+Implemented rules:
 
 - create a custom role from an empty role or by duplicating a standard role;
 - edit the name, description, and selected permissions of custom roles;
 - never edit a standard role in place;
-- show affected user count and permission differences before saving;
 - archive rather than delete roles that have history;
-- prevent archiving a role while it is the only source of recoverable
-  administration access; and
+- show assigned users before editing;
+- prevent archiving any role while users remain assigned;
+- invalidate assigned users' sessions when an active role's permissions change;
+- retain the immutable custom-role key when its display name changes; and
 - continue resolving multiple assigned roles additively, with deny-by-default
   when no permission grants an operation.
 

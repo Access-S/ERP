@@ -1,6 +1,6 @@
 # Authentication and Authorization Implementation Plan
 
-Status: In progress; Phase 4 administration foundation implemented
+Status: In progress; Phase 4 existing-user and custom-role administration implemented
 Owner: Product owner / Engineering
 Last updated: 2026-09-11
 
@@ -22,10 +22,10 @@ matrix. Update it in the same commit as implementation work.
 | JWT session | Freshness foundation complete | User ID, compatibility role, and `authVersion` are copied into the session |
 | Page redirect | Prototype complete | Next.js Proxy redirects unauthenticated requests |
 | Mutation authentication | Completed master-data modules protected | Customer, Product, Part, and BOM writes enforce typed permissions |
-| Normalized roles and permissions | Foundation complete | 11 system roles, 72 permissions, 188 grants, and existing-user mapping are seeded |
+| Normalized roles and permissions | Foundation complete | 11 system roles, 73 permissions, 189 standard grants, and existing-user mapping are seeded |
 | Server-side permission enforcement | Four master-data modules complete | Central typed guard is adopted by Customers, Parts, Products, and BOMs |
-| Account administration | Foundation only | Account states and safe bootstrap script exist; no management UI or invitation flow |
-| Session invalidation after access change | Guard complete; lifecycle UI pending | `authVersion` mismatch is rejected as stale; role-management flows must increment it |
+| Account administration | Existing users and roles complete | Status, assignment, effective-access, and custom-role UI exist; invitation is pending |
+| Session invalidation after access change | Implemented for current administration flows | Status, assignment, and active custom-role permission changes increment `authVersion` |
 | Auth security audit log | Not started | Event catalogue exists; persistence does not |
 | Authorization tests | Core complete | Pure policy and live database UAT cover unauthenticated, stale, inactive, multi-role, allowed, denied, and System Administrator separation paths |
 
@@ -107,6 +107,8 @@ the server and pass deny-path tests.
 - [ ] Add activation/password setup.
 - [x] Add suspend, reactivate, and disable operations for existing users.
 - [x] Add multiple-role assignment and removal for existing users.
+- [x] Add create, duplicate, edit, archive, and reactivate workflows for custom roles.
+- [x] Keep system roles locked and custom permissions constrained to the catalogue.
 - [x] Prevent accidental removal of the last recoverable administrator.
 - [ ] Require reasons for sensitive access changes where defined.
 
@@ -189,3 +191,4 @@ verify the mapping, then remove the legacy free-text role in a later migration.
 | 2026-09-10 | Accepted Phase 3 manual role UAT across all isolated Product/BOM roles and the Sales + Finance add/remove multi-role scenario. |
 | 2026-09-11 | Added the protected Access Control overview, Users and Roles pages, effective-permission visibility, existing-role assignment, account status controls, authVersion invalidation, and last-active-administrator protection. |
 | 2026-09-11 | Hardened Access Control clients against stale development Server Action responses and verified the reversible suspend/reactivate workflow end to end. |
+| 2026-09-11 | Added `admin.role.manage`, custom-role create/duplicate/edit/archive/reactivate workflows, assigned-user impact visibility, session invalidation on permission changes, and end-to-end lifecycle verification. |

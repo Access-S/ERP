@@ -1,4 +1,7 @@
+import Link from "next/link"
+import { Plus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
@@ -26,18 +29,28 @@ export default async function AccessControlRolesPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">Roles and permissions</h1>
-        <p className="text-sm text-muted-foreground">
-          Standard templates are locked reference roles. Open one to inspect its exact access.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold tracking-tight">Roles and permissions</h1>
+          <p className="text-sm text-muted-foreground">
+            Standard templates stay locked; custom roles can be tailored to each company.
+          </p>
+        </div>
+        {hasPermission(principal, "admin.role.manage") && (
+          <Button asChild>
+            <Link href="/settings/access/roles/new">
+              <Plus className="mr-2 h-4 w-4" />
+              New custom role
+            </Link>
+          </Button>
+        )}
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Role catalogue</CardTitle>
           <CardDescription>
-            Custom role creation will be added after assignment controls and safety rules are verified.
+            Open a standard role to duplicate it, or open a custom role to edit its permissions and lifecycle.
           </CardDescription>
         </CardHeader>
         <CardContent>

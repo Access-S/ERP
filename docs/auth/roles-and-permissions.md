@@ -17,7 +17,8 @@ is responsible for, and how permissions should be designed. It must be updated
 when a module, business process, approval, or role changes.
 
 The matrix describes the target authorization model. Customers, Parts, Products,
-and BOMs now enforce these role-specific permissions.
+and BOMs now enforce these role-specific permissions, and Access Control now
+supports multiple assignments and company-specific custom roles.
 
 ## 2. Agreed user population
 
@@ -306,6 +307,7 @@ Purpose: administer the application securely.
 Typical work:
 
 - Create, disable, and support user accounts.
+- Create, duplicate, edit, archive, and reactivate custom roles.
 - Assign approved roles.
 - Configure authentication, integrations, reference settings, and imports.
 - Review technical logs and investigate access problems.
@@ -463,15 +465,20 @@ features should reuse or deliberately extend this catalogue.
 - `admin.user.view`
 - `admin.user.manage`
 - `admin.role.assign`
+- `admin.role.manage`
 - `admin.configuration.manage`
 - `admin.integration.manage`
 - `admin.audit.view`
 
-## 9. Current application enforcement gap
+## 9. Current application enforcement state
 
 Customer, Part, Product, and BOM entry points now enforce the role matrix at
 protected page reads and Server Actions. Future modules must adopt the same
 central authorization boundary as they are implemented.
+
+Access Control now supports existing-user status management, multiple role
+assignments, effective-permission inspection, and custom roles built only from
+the controlled permission catalogue. Standard roles remain locked.
 
 The normalized `Role`, `Permission`, `UserRole`, and `RolePermission` tables now
 exist and are seeded from the typed authorization registry. The legacy
@@ -586,3 +593,5 @@ For every change:
 | 2026-09-10 | Require Parts visibility for draft BOM editing. | The draft editor loads active Part master records for component selection. |
 | 2026-09-10 | Split Customer edits into identity, contacts, and financial payloads. | Sales and Finance can update their owned fields without receiving authority over the other field groups. |
 | 2026-09-10 | Treat accounts-payable email as a financial Customer field. | It belongs to the Finance relationship and should not be changed through general operational-contact access. |
+| 2026-09-11 | Keep standard roles locked and allow custom roles to be created or duplicated from the controlled permission catalogue. | Companies can adapt access to their staffing model without changing stable permissions or shared baseline templates. |
+| 2026-09-11 | Block custom-role archival while any user remains assigned. | Archival must not silently revoke access from a group of users; administrators must deliberately reassign them first. |

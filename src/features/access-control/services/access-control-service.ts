@@ -25,7 +25,7 @@ const roleSummarySelect = {
     where: { permission: { isActive: true } },
     select: {
       permission: {
-        select: { key: true, module: true, description: true },
+        select: { id: true, key: true, module: true, description: true },
       },
     },
     orderBy: { permission: { key: "asc" as const } },
@@ -89,7 +89,24 @@ export async function getAccessControlRoles() {
 export async function getAccessControlRole(roleId: string) {
   return prisma.role.findUnique({
     where: { id: roleId },
-    select: roleSummarySelect,
+    select: {
+      ...roleSummarySelect,
+      userRoles: {
+        orderBy: { user: { name: "asc" } },
+        select: {
+          assignedAt: true,
+          user: { select: { id: true, name: true, email: true, status: true } },
+        },
+      },
+    },
+  })
+}
+
+export async function getPermissionCatalogue() {
+  return prisma.permission.findMany({
+    where: { isActive: true },
+    select: { id: true, key: true, module: true, description: true },
+    orderBy: [{ module: "asc" }, { key: "asc" }],
   })
 }
 

@@ -4,7 +4,10 @@ import {
 } from "../src/features/access-control/services/access-control-policy.ts"
 import {
   assignUserRolesSchema,
+  createCustomRoleSchema,
+  setCustomRoleActiveSchema,
   setUserStatusSchema,
+  updateCustomRoleSchema,
 } from "../src/features/access-control/types/access-control-schema.ts"
 
 const baseCheck = {
@@ -78,4 +81,45 @@ assert.equal(
   "must accept supported status transitions"
 )
 
-console.log("Access Control policy UAT passed (8 checks).")
+const customRole = createCustomRoleSchema.parse({
+  name: "  Site   Manager  ",
+  description: "  Oversees one production site.  ",
+  permissionIds: [roleId, roleId],
+})
+assert.equal(customRole.name, "Site Manager", "must normalize custom-role names")
+assert.equal(
+  customRole.description,
+  "Oversees one production site.",
+  "must trim custom-role descriptions"
+)
+assert.deepEqual(
+  customRole.permissionIds,
+  [roleId],
+  "must deduplicate custom-role permissions"
+)
+assert.equal(
+  createCustomRoleSchema.safeParse({
+    name: "X",
+    description: "",
+    permissionIds: [roleId],
+  }).success,
+  false,
+  "must reject undersized role names"
+)
+assert.equal(
+  updateCustomRoleSchema.safeParse({
+    roleId: "not-a-role",
+    name: "Site Manager",
+    description: "",
+    permissionIds: [roleId],
+  }).success,
+  false,
+  "must reject invalid role identifiers"
+)
+assert.equal(
+  setCustomRoleActiveSchema.safeParse({ roleId, isActive: false }).success,
+  true,
+  "must accept archive status input"
+)
+
+console.log("Access Control policy UAT passed (14 checks).")

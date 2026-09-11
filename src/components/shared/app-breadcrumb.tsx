@@ -40,6 +40,8 @@ function labelForPath(path: string, segment: string): string {
   if (/^\/products\/parts\/[^/]+\/edit$/.test(path)) return "Edit Part"
   if (/^\/products\/parts\/[^/]+$/.test(path)) return "Part Details"
   if (/^\/settings\/access\/users\/[^/]+$/.test(path)) return "User Access"
+  if (path === "/settings/access/roles/new") return "New Custom Role"
+  if (/^\/settings\/access\/roles\/[^/]+\/edit$/.test(path)) return "Edit Custom Role"
   if (/^\/settings\/access\/roles\/[^/]+$/.test(path)) return "Role Details"
   return (
     ROUTE_LABELS[path] ??

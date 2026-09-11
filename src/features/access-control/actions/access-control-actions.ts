@@ -9,8 +9,16 @@ import {
   replaceUserRoleAssignments,
 } from "../services/access-control-service"
 import {
+  createCustomRole,
+  setCustomRoleActive,
+  updateCustomRole,
+} from "../services/custom-role-service"
+import {
   assignUserRolesSchema,
+  createCustomRoleSchema,
+  setCustomRoleActiveSchema,
   setUserStatusSchema,
+  updateCustomRoleSchema,
   type AccessControlMutationResult,
 } from "../types/access-control-schema"
 
@@ -35,8 +43,26 @@ function mutationFailure(error: unknown): AccessControlMutationResult {
   ) {
     return failure("Another access change happened at the same time. Please try again.")
   }
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "P2002"
+  ) {
+    return failure("A role with this name or identifier already exists.")
+  }
   console.error("Access control mutation failed", error)
   return failure("Access could not be updated. Please try again.")
+}
+
+function revalidateRolePaths(roleId?: string) {
+  revalidatePath("/settings/access")
+  revalidatePath("/settings/access/users")
+  revalidatePath("/settings/access/roles")
+  if (roleId) {
+    revalidatePath(`/settings/access/roles/${roleId}`)
+    revalidatePath(`/settings/access/roles/${roleId}/edit`)
+  }
 }
 
 function revalidateAccessControl(userId: string) {
@@ -91,6 +117,74 @@ export async function setUserStatusAction(
     return {
       success: true,
       message: result.changed ? "Account status updated." : "Account status is unchanged.",
+    }
+  } catch (error) {
+    return mutationFailure(error)
+  }
+}
+
+export async function createCustomRoleAction(
+  input: unknown
+): Promise<AccessControlMutationResult> {
+  try {
+    await requirePermission("admin.role.manage")
+    const parsed = createCustomRoleSchema.safeParse(input)
+    if (!parsed.success) {
+      return failure(parsed.error.issues[0]?.message ?? "Invalid custom role.")
+    }
+
+    const role = await createCustomRole(parsed.data)
+    revalidateRolePaths(role.id)
+    return { success: true, message: "Custom role created.", roleId: role.id }
+  } catch (error) {
+    return mutationFailure(error)
+  }
+}
+
+export async function updateCustomRoleAction(
+  input: unknown
+): Promise<AccessControlMutationResult> {
+  try {
+    const principal = await requirePermission("admin.role.manage")
+    const parsed = updateCustomRoleSchema.safeParse(input)
+    if (!parsed.success) {
+      return failure(parsed.error.issues[0]?.message ?? "Invalid custom role.")
+    }
+
+    const result = await updateCustomRole(parsed.data.roleId, parsed.data)
+    revalidateRolePaths(result.id)
+    return {
+      success: true,
+      message: result.changed ? "Custom role updated." : "Custom role is unchanged.",
+      roleId: result.id,
+      requiresReauthentication: result.affectedUserIds.includes(principal.userId),
+    }
+  } catch (error) {
+    return mutationFailure(error)
+  }
+}
+
+export async function setCustomRoleActiveAction(
+  input: unknown
+): Promise<AccessControlMutationResult> {
+  try {
+    const principal = await requirePermission("admin.role.manage")
+    const parsed = setCustomRoleActiveSchema.safeParse(input)
+    if (!parsed.success) {
+      return failure(parsed.error.issues[0]?.message ?? "Invalid custom role status.")
+    }
+
+    const result = await setCustomRoleActive(parsed.data.roleId, parsed.data.isActive)
+    revalidateRolePaths(result.id)
+    return {
+      success: true,
+      message: result.changed
+        ? parsed.data.isActive
+          ? "Custom role reactivated."
+          : "Custom role archived."
+        : "Custom role status is unchanged.",
+      roleId: result.id,
+      requiresReauthentication: result.affectedUserIds.includes(principal.userId),
     }
   } catch (error) {
     return mutationFailure(error)
