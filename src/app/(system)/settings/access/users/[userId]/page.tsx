@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { RoleAssignmentForm } from "@/features/access-control/components/role-assignment-form"
 import { UserStatusActions } from "@/features/access-control/components/user-status-actions"
+import { InvitationActions } from "@/features/user-onboarding/components/invitation-actions"
 import {
   getAccessControlRoles,
   getAccessControlUser,
+  getUserCredentialState,
 } from "@/features/access-control/services/access-control-service"
 import { PermissionDenied } from "@/features/auth/components/permission-denied"
 import { getCurrentPrincipal } from "@/features/auth/services/authorization-service"
@@ -37,11 +39,12 @@ export default async function AccessControlUserPage({
 
   const { userId } = await params
   if (!z.string().uuid().safeParse(userId).success) notFound()
-  const [user, roles] = await Promise.all([
+  const [user, roles, credentialState] = await Promise.all([
     getAccessControlUser(userId),
     getAccessControlRoles(),
+    getUserCredentialState(userId),
   ])
-  if (!user) notFound()
+  if (!user || !credentialState) notFound()
 
   const activeAssignments = user.roleAssignments.filter(({ role }) => role.isActive)
   const effectivePermissions = new Map<string, { key: string; description: string }[]>()
@@ -60,6 +63,7 @@ export default async function AccessControlUserPage({
   )
   const canAssignRoles = hasPermission(principal, "admin.role.assign")
   const canManageUsers = hasPermission(principal, "admin.user.manage")
+  const canInviteUsers = hasPermission(principal, "admin.user.invite")
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -85,9 +89,40 @@ export default async function AccessControlUserPage({
             userId={user.id}
             status={user.status}
             isCurrentUser={user.id === principal.userId}
+            hasPassword={credentialState.hasPassword}
           />
         )}
       </div>
+
+      {(user.status === "INVITED" ||
+        (user.status === "DISABLED" && !credentialState.hasPassword)) && (
+        <Card className="border-primary/20">
+          <CardHeader>
+            <CardTitle>
+              {user.status === "INVITED" ? "Pending activation" : "Invitation cancelled"}
+            </CardTitle>
+            <CardDescription>
+              {user.status === "INVITED"
+                ? "This account cannot sign in until the recipient creates a password using a valid activation link."
+                : "This account has no password and remains unavailable. Creating a new link restores it to pending activation."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {user.status === "INVITED" && user.invitations[0] && (
+              <p className="text-xs text-muted-foreground">
+                Latest link expires {dateTimeFormatter.format(user.invitations[0].expiresAt)}.
+              </p>
+            )}
+            {canInviteUsers ? (
+              <InvitationActions userId={user.id} />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Ask an administrator with invitation permission to issue a replacement link.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>

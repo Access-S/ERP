@@ -23,7 +23,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         const normalizedEmail = credentials.email.trim().toLowerCase();
-        if (!normalizedEmail || !credentials.password) return null;
+        const passwordBytes = new TextEncoder().encode(credentials.password).length;
+        if (
+          !normalizedEmail ||
+          normalizedEmail.length > 254 ||
+          !credentials.password ||
+          passwordBytes > 72
+        ) return null;
 
         const user = await prisma.user.findUnique({
           where: { normalizedEmail },
@@ -38,7 +44,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
         });
 
-        if (!user || user.status !== UserStatus.ACTIVE) return null;
+        if (!user || user.status !== UserStatus.ACTIVE || !user.password) return null;
 
         const isValidPassword = await bcrypt.compare(
           credentials.password,

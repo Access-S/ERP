@@ -172,6 +172,14 @@
 }
 
 @layer utilities {
+  .auth-grid {
+    background-image:
+      linear-gradient(rgb(255 255 255 / 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(255 255 255 / 0.035) 1px, transparent 1px),
+      radial-gradient(circle at 72% 28%, rgb(249 115 22 / 0.1), transparent 32%);
+    background-size: 42px 42px, 42px 42px, 100% 100%;
+  }
+
   .animate-pulse {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }

@@ -76,6 +76,7 @@ export const PERMISSIONS = [
   { key: "finance.report", module: "FINANCE", description: "Run finance reports" },
 
   { key: "admin.user.view", module: "ADMIN", description: "View user accounts" },
+  { key: "admin.user.invite", module: "ADMIN", description: "Invite new users and reissue activation links" },
   { key: "admin.user.manage", module: "ADMIN", description: "Create, update, suspend, and disable user accounts" },
   { key: "admin.role.assign", module: "ADMIN", description: "Assign and revoke approved roles" },
   { key: "admin.role.manage", module: "ADMIN", description: "Create, edit, archive, and reactivate custom roles" },
@@ -225,7 +226,7 @@ export const SYSTEM_ROLES = [
     permissions: [
       "customer.view", "product.view", "part.view", "bom.view", "forecast.view",
       "production_plan.view", "purchase_order.view", "inventory.view", "production_work.view",
-      "quality.view", "finance.view", "admin.user.view", "admin.user.manage",
+      "quality.view", "finance.view", "admin.user.view", "admin.user.invite", "admin.user.manage",
       "admin.role.assign", "admin.role.manage", "admin.configuration.manage", "admin.integration.manage",
       "admin.audit.view",
     ],

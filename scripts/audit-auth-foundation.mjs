@@ -92,6 +92,43 @@ async function getAuthorizationSummary() {
   return { installed: true, ...counts }
 }
 
+async function getOnboardingSummary() {
+  const installed = await tableExists("user_invitations")
+  if (!installed) return { installed: false }
+
+  const [summary] = await prisma.$queryRaw`
+    SELECT
+      (SELECT COUNT(*)::int FROM user_invitations) AS invitations,
+      (
+        SELECT COUNT(*)::int FROM users
+        WHERE status = 'INVITED' AND password IS NOT NULL
+      ) AS invited_users_with_passwords,
+      (
+        SELECT COUNT(*)::int FROM users
+        WHERE status = 'ACTIVE' AND password IS NULL
+      ) AS active_users_without_passwords,
+      (
+        SELECT COUNT(*)::int
+        FROM user_invitations ui
+        JOIN users u ON u.id = ui.user_id
+        WHERE ui.used_at IS NULL
+          AND ui.revoked_at IS NULL
+          AND u.status <> 'INVITED'
+      ) AS open_invitations_for_non_invited_users,
+      (
+        SELECT COUNT(*)::int FROM (
+          SELECT user_id
+          FROM user_invitations
+          WHERE used_at IS NULL AND revoked_at IS NULL
+          GROUP BY user_id
+          HAVING COUNT(*) > 1
+        ) duplicate_open_invitations
+      ) AS users_with_multiple_open_invitations
+  `
+
+  return { installed: true, ...summary }
+}
+
 function difference(left, right) {
   return [...left].filter((value) => !right.has(value)).sort()
 }
@@ -164,14 +201,23 @@ async function compareAuthorizationRegistry() {
 
 async function main() {
   const users = await prisma.user.findMany({
-    select: { email: true, role: true },
+    select: {
+      email: true,
+      role: true,
+      roleAssignments: { select: { roleId: true } },
+    },
   })
   const legacyRoles = summarizeLegacyRoles(users)
-  const unmappedLegacyRoles = legacyRoles
-    .filter((role) => role.targetRole === null)
-    .map((role) => role.role)
+  const unmappedLegacyRoles = [...new Set(
+    users
+      .filter((user) => user.roleAssignments.length === 0 && !mapLegacyRole(user.role))
+      .map((user) => user.role)
+  )].sort()
 
-  const authorization = await getAuthorizationSummary()
+  const [authorization, onboarding] = await Promise.all([
+    getAuthorizationSummary(),
+    getOnboardingSummary(),
+  ])
   const registry = authorization.installed
     ? await compareAuthorizationRegistry()
     : null
@@ -181,6 +227,7 @@ async function main() {
     legacyRoles,
     unmappedLegacyRoles,
     authorization,
+    onboarding,
     registry,
   }
 
@@ -205,6 +252,15 @@ async function main() {
       registry.missingPermissions.length > 0 ||
       registry.inactivePermissions.length > 0 ||
       registry.grantMismatches.length > 0)
+  ) {
+    process.exitCode = 1
+  }
+  if (
+    report.onboarding.installed &&
+    (report.onboarding.invited_users_with_passwords > 0 ||
+      report.onboarding.active_users_without_passwords > 0 ||
+      report.onboarding.open_invitations_for_non_invited_users > 0 ||
+      report.onboarding.users_with_multiple_open_invitations > 0)
   ) {
     process.exitCode = 1
   }

@@ -1,4 +1,7 @@
+import Link from "next/link"
+import { UserPlus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
@@ -35,14 +38,27 @@ export default async function AccessControlUsersPage() {
   }
 
   const users = await getAccessControlUsers()
+  const canInviteUsers =
+    hasPermission(principal, "admin.user.invite") &&
+    hasPermission(principal, "admin.role.assign")
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">Users</h1>
-        <p className="text-sm text-muted-foreground">
-          Open a user to review and manage their combined role access.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold tracking-tight">Users</h1>
+          <p className="text-sm text-muted-foreground">
+            Open a user to review and manage their combined role access.
+          </p>
+        </div>
+        {canInviteUsers && (
+          <Button asChild>
+            <Link href="/settings/access/users/new">
+              <UserPlus />
+              Invite user
+            </Link>
+          </Button>
+        )}
       </div>
 
       <Card>

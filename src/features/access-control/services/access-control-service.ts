@@ -42,6 +42,16 @@ const userSummarySelect = {
   lastLoginAt: true,
   createdAt: true,
   updatedAt: true,
+  invitations: {
+    orderBy: { createdAt: "desc" as const },
+    take: 1,
+    select: {
+      createdAt: true,
+      expiresAt: true,
+      usedAt: true,
+      revokedAt: true,
+    },
+  },
   roleAssignments: {
     orderBy: { role: { name: "asc" as const } },
     select: {
@@ -53,16 +63,17 @@ const userSummarySelect = {
 } as const
 
 export async function getAccessControlOverview() {
-  const [totalUsers, activeUsers, restrictedUsers, activeRoles, customRoles] =
+  const [totalUsers, activeUsers, invitedUsers, restrictedUsers, activeRoles, customRoles] =
     await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { status: "ACTIVE" } }),
+      prisma.user.count({ where: { status: "INVITED" } }),
       prisma.user.count({ where: { status: { in: ["SUSPENDED", "DISABLED"] } } }),
       prisma.role.count({ where: { isActive: true } }),
       prisma.role.count({ where: { isSystem: false } }),
     ])
 
-  return { totalUsers, activeUsers, restrictedUsers, activeRoles, customRoles }
+  return { totalUsers, activeUsers, invitedUsers, restrictedUsers, activeRoles, customRoles }
 }
 
 export async function getAccessControlUsers() {
@@ -77,6 +88,14 @@ export async function getAccessControlUser(userId: string) {
     where: { id: userId },
     select: userSummarySelect,
   })
+}
+
+export async function getUserCredentialState(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { password: true },
+  })
+  return user ? { hasPassword: Boolean(user.password) } : null
 }
 
 export async function getAccessControlRoles() {
@@ -282,6 +301,12 @@ export async function changeUserStatus(
         where: { id: targetUserId },
         data: { status: nextStatus, authVersion: { increment: 1 } },
       })
+      if (target.status === "INVITED" && nextStatus === "DISABLED") {
+        await transaction.userInvitation.updateMany({
+          where: { userId: targetUserId, usedAt: null, revokedAt: null },
+          data: { revokedAt: new Date() },
+        })
+      }
       return { changed: true }
     },
     { isolationLevel: "Serializable" }

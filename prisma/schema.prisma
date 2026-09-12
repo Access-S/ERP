@@ -185,21 +185,41 @@ model soh {
 }
 
 model User {
-  email                   String     @unique
-  normalizedEmail         String     @unique @map("normalized_email")
-  password                String
+  email                   String           @unique
+  normalizedEmail         String           @unique @map("normalized_email")
+  password                String?
   name                    String
-  role                    String     @default("WAREHOUSE")
-  status                  UserStatus @default(ACTIVE)
-  authVersion             Int        @default(1) @map("auth_version")
-  lastLoginAt             DateTime?  @map("last_login_at") @db.Timestamptz(6)
-  createdAt               DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt               DateTime   @default(now()) @map("updated_at") @db.Timestamptz(6)
-  id                      String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  roleAssignments         UserRole[] @relation("UserRoleAssignments")
-  assignedRoleAssignments UserRole[] @relation("UserRoleAssignedBy")
+  role                    String           @default("WAREHOUSE")
+  status                  UserStatus       @default(ACTIVE)
+  authVersion             Int              @default(1) @map("auth_version")
+  lastLoginAt             DateTime?        @map("last_login_at") @db.Timestamptz(6)
+  createdAt               DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
+  id                      String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roleAssignments         UserRole[]       @relation("UserRoleAssignments")
+  assignedRoleAssignments UserRole[]       @relation("UserRoleAssignedBy")
+  invitations             UserInvitation[] @relation("InvitedUser")
+  createdInvitations      UserInvitation[] @relation("InvitationCreatedBy")
 
   @@map("users")
+}
+
+model UserInvitation {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  tokenHash   String    @unique @map("token_hash")
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz(6)
+  usedAt      DateTime? @map("used_at") @db.Timestamptz(6)
+  revokedAt   DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdById String?   @map("created_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  user        User      @relation("InvitedUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy   User?     @relation("InvitationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([createdById])
+  @@map("user_invitations")
 }
 
 model Role {

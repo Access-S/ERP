@@ -1,8 +1,8 @@
 # Authentication and Authorization Architecture
 
-Status: Approved direction; implementation not yet complete
+Status: Approved direction; onboarding implemented and hardening remains
 Owner: Product owner / Engineering
-Last updated: 2026-09-10
+Last updated: 2026-09-12
 
 ## 1. Purpose
 
@@ -48,13 +48,17 @@ As of 2026-09-09, the application has a working prototype authentication layer:
 - `src/proxy.ts` redirects unauthenticated page requests to `/login`.
 - Customer, Product, Part, and BOM mutations enforce typed permissions from the
   normalized RBAC model.
-- The database contains 11 seeded system roles, 72 stable permissions, normalized
+- The database contains 11 seeded system roles, 74 stable permissions, normalized
   role assignments, account status, normalized email, and `authVersion`.
 - The existing `ADMIN` user was preserved and mapped to `SYSTEM_ADMIN`.
 - Login uses normalized email, rejects non-active accounts, records
   `lastLoginAt`, and places `authVersion` in the JWT/session.
 - A server-only authorization service resolves current active roles and
   permissions and exposes typed `requireUser` and `requirePermission` guards.
+- Administrators with `admin.user.invite` and `admin.role.assign` can create
+  invited accounts; recipients activate them with hashed 48-hour single-use links.
+- The EON login validates bounded credentials on both client and server and does
+  not disclose whether an account exists or is unavailable.
 
 This provides a useful foundation, but it is not the target authorization
 system.
@@ -69,8 +73,8 @@ system.
 - JWT contents may remain valid after role or account changes.
 - The central guard rejects stale JWTs at protected operations, but a complete
   logout/revocation experience for already-open pages is not yet implemented.
-- No login throttling, lockout policy, invitation flow, or password reset flow is
-  implemented.
+- No login throttling, lockout policy, production email delivery, or password
+  reset flow is implemented.
 - Auth and authorization events are not stored in an audit table.
 - The prototype administrator may still use a development password that must be
   rotated before any shared, staging, or production deployment.
@@ -183,7 +187,7 @@ erDiagram
     User {
       uuid id PK
       string email UK
-      string password_hash
+      string nullable_password_hash
       string name
       enum status
       int auth_version

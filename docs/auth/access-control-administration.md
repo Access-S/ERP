@@ -1,8 +1,8 @@
 # Access Control Administration
 
-Status: Phase 4 foundation implemented
+Status: Phase 4 user, role, and invitation administration implemented
 Owner: Product owner / Engineering
-Last updated: 2026-09-11
+Last updated: 2026-09-12
 
 ## Purpose
 
@@ -23,6 +23,7 @@ Authorized System Administrators can use the following routes:
 | `/settings/access` | Access Control overview | `admin.user.view` | None |
 | `/settings/access/users` | List users, statuses, roles, and last sign-in | `admin.user.view` | None |
 | `/settings/access/users/[userId]` | Inspect effective permissions | `admin.user.view` | `admin.role.assign` or `admin.user.manage` |
+| `/settings/access/users/new` | Invite a user and assign initial roles | `admin.user.invite` | Also requires `admin.role.assign` |
 | `/settings/access/roles` | List role templates | `admin.user.view` | None |
 | `/settings/access/roles/[roleId]` | Inspect permissions and assigned users | `admin.user.view` | `admin.role.manage` for custom-role lifecycle |
 | `/settings/access/roles/new` | Create or duplicate a custom role | `admin.role.manage` | `admin.role.manage` |
@@ -37,9 +38,13 @@ The current change operations are:
 - create a custom role from scratch or by duplicating any role;
 - edit a custom role's name, description, and permissions; and
 - archive or reactivate an unassigned custom role.
+- create an invited account with one or more active roles;
+- cancel a pending invitation and revoke its open link; and
+- replace an expired, lost, or cancelled activation link.
 
-User invitation and password setup are not part of this slice. Standard roles
-are intentionally read-only.
+Recipients create their own password through the activation workflow documented
+in [User onboarding](user-onboarding.md). Standard roles are intentionally
+read-only.
 
 ## Authorization and safety rules
 
@@ -65,6 +70,10 @@ The following safeguards apply:
    identity or authorization history.
 6. System roles remain locked so a company-specific change cannot silently
    alter the baseline templates used by another deployment.
+7. Invitation creation requires both `admin.user.invite` and
+   `admin.role.assign`; link reissue requires `admin.user.invite`.
+8. Raw invitation secrets are returned only for controlled delivery and are
+   stored only as hashes.
 
 `User.role` is temporarily maintained as a compatibility display field, but it
 is not an authorization source. Server authorization resolves normalized

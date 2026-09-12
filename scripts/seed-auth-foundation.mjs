@@ -9,10 +9,12 @@ const prisma = new PrismaClient()
 
 async function main() {
   const users = await prisma.user.findMany({
-    select: { id: true, role: true },
+    select: { id: true, role: true, roleAssignments: { select: { roleId: true } } },
   })
   const unmappedRoles = [...new Set(
-    users.filter((user) => !mapLegacyRole(user.role)).map((user) => user.role)
+    users
+      .filter((user) => user.roleAssignments.length === 0 && !mapLegacyRole(user.role))
+      .map((user) => user.role)
   )]
 
   if (unmappedRoles.length > 0) {
@@ -90,6 +92,7 @@ async function main() {
     const rolesByKey = new Map(roles.map((role) => [role.key, role.id]))
 
     for (const user of users) {
+      if (user.roleAssignments.length > 0) continue
       const targetRoleKey = mapLegacyRole(user.role)
       const roleId = targetRoleKey ? rolesByKey.get(targetRoleKey) : undefined
 

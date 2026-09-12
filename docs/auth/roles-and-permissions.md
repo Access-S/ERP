@@ -2,7 +2,7 @@
 
 Status: Draft for business confirmation
 Owner: Product owner / Operations
-Last updated: 2026-09-10
+Last updated: 2026-09-12
 Applies to: General production and manufacturing companies
 
 Related documents: [Auth documentation index](README.md),
@@ -463,6 +463,7 @@ features should reuse or deliberately extend this catalogue.
 ### 8.11 Administration permissions
 
 - `admin.user.view`
+- `admin.user.invite`
 - `admin.user.manage`
 - `admin.role.assign`
 - `admin.role.manage`
@@ -476,9 +477,10 @@ Customer, Part, Product, and BOM entry points now enforce the role matrix at
 protected page reads and Server Actions. Future modules must adopt the same
 central authorization boundary as they are implemented.
 
-Access Control now supports existing-user status management, multiple role
-assignments, effective-permission inspection, and custom roles built only from
-the controlled permission catalogue. Standard roles remain locked.
+Access Control now supports invitation and activation, existing-user status
+management, multiple role assignments, effective-permission inspection, and
+custom roles built only from the controlled permission catalogue. Standard
+roles remain locked.
 
 The normalized `Role`, `Permission`, `UserRole`, and `RolePermission` tables now
 exist and are seeded from the typed authorization registry. The legacy

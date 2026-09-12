@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { SYSTEM_ROLES } from "../src/features/auth/config/authorization-registry.ts"
 import {
   wouldRemoveLastRecoverableAdministrator,
 } from "../src/features/access-control/services/access-control-policy.ts"
@@ -58,6 +59,14 @@ assert.equal(
 
 const userId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 const roleId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+
+assert.deepEqual(
+  SYSTEM_ROLES
+    .filter((role) => role.permissions.includes("admin.user.invite"))
+    .map((role) => role.key),
+  ["SYSTEM_ADMIN"],
+  "must keep user invitation in the technical administrator role by default"
+)
 
 assert.equal(
   assignUserRolesSchema.safeParse({ userId, roleIds: [] }).success,
@@ -122,4 +131,4 @@ assert.equal(
   "must accept archive status input"
 )
 
-console.log("Access Control policy UAT passed (14 checks).")
+console.log("Access Control policy UAT passed (15 checks).")

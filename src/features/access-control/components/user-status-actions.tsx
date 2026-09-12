@@ -93,17 +93,28 @@ export function UserStatusActions({
   userId,
   status,
   isCurrentUser,
+  hasPassword = true,
 }: {
   userId: string
   status: UserStatus
   isCurrentUser: boolean
+  hasPassword?: boolean
 }) {
-  if (status === "INVITED") return null
+  if (status === "DISABLED" && !hasPassword) return null
   if (isCurrentUser) {
     return (
       <p className="text-xs text-muted-foreground">
         Your own account status must be changed by another administrator.
       </p>
+    )
+  }
+
+  if (status === "INVITED") {
+    return (
+      <StatusDialog userId={userId} nextStatus="DISABLED" variant="destructive">
+        <Ban className="mr-2 h-4 w-4" />
+        Cancel invitation
+      </StatusDialog>
     )
   }
 

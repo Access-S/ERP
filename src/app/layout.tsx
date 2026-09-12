@@ -27,8 +27,8 @@ const fontHeading = Chakra_Petch({
 
 // ───────────────── BLOCK 2: Metadata ───────────────────────────
 export const metadata: Metadata = {
-  title: "MRP System",
-  description: "Manufacturing Resource Planning ERP",
+  title: "EON MRP",
+  description: "Manufacturing resource planning and operations ERP",
 }
 
 // ───────────────── BLOCK 3: Root Layout ──────────────────────

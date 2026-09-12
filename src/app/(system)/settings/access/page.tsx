@@ -29,7 +29,7 @@ export default async function AccessControlPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total users</CardDescription>
@@ -40,6 +40,12 @@ export default async function AccessControlPage() {
           <CardHeader className="pb-2">
             <CardDescription>Active users</CardDescription>
             <CardTitle className="text-3xl">{overview.activeUsers}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Awaiting activation</CardDescription>
+            <CardTitle className="text-3xl">{overview.invitedUsers}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
@@ -85,7 +91,7 @@ export default async function AccessControlPage() {
               <Link href="/settings/access/roles">View roles</Link>
             </Button>
             <p className="text-xs text-muted-foreground">
-              Custom role creation is the next access-control phase. {overview.customRoles} custom roles currently exist.
+              {overview.customRoles} custom roles currently exist alongside the standard templates.
             </p>
           </CardContent>
         </Card>

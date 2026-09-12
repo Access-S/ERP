@@ -1,8 +1,8 @@
 # Authentication and Authorization Implementation Plan
 
-Status: In progress; Phase 4 existing-user and custom-role administration implemented
+Status: In progress; Phase 4 onboarding, existing-user, and custom-role administration implemented
 Owner: Product owner / Engineering
-Last updated: 2026-09-11
+Last updated: 2026-09-12
 
 ## 1. Objective
 
@@ -17,14 +17,14 @@ matrix. Update it in the same commit as implementation work.
 
 | Capability | Status | Evidence or gap |
 | --- | --- | --- |
-| Email/password login | Prototype complete | Auth.js Credentials provider and Prisma User lookup |
-| Password hashing | Prototype complete | Existing bcrypt hashes; production parameters still open |
+| Email/password login | Hardened foundation complete | Redesigned login, normalized identifiers, bounded server input, generic failures, and Auth.js Credentials |
+| Password hashing | Initial decision complete | bcrypt cost 12; 12-character minimum and 72-byte maximum recorded in ADR 002 |
 | JWT session | Freshness foundation complete | User ID, compatibility role, and `authVersion` are copied into the session |
 | Page redirect | Prototype complete | Next.js Proxy redirects unauthenticated requests |
 | Mutation authentication | Completed master-data modules protected | Customer, Product, Part, and BOM writes enforce typed permissions |
-| Normalized roles and permissions | Foundation complete | 11 system roles, 73 permissions, 189 standard grants, and existing-user mapping are seeded |
+| Normalized roles and permissions | Foundation complete | 11 system roles, 74 permissions, 190 standard grants, and existing-user mapping are seeded |
 | Server-side permission enforcement | Four master-data modules complete | Central typed guard is adopted by Customers, Parts, Products, and BOMs |
-| Account administration | Existing users and roles complete | Status, assignment, effective-access, and custom-role UI exist; invitation is pending |
+| Account administration | User and role lifecycle complete | Invitation, activation, status, assignment, effective access, and custom-role UI exist |
 | Session invalidation after access change | Implemented for current administration flows | Status, assignment, and active custom-role permission changes increment `authVersion` |
 | Auth security audit log | Not started | Event catalogue exists; persistence does not |
 | Authorization tests | Core complete | Pure policy and live database UAT cover unauthenticated, stale, inactive, multi-role, allowed, denied, and System Administrator separation paths |
@@ -33,7 +33,7 @@ matrix. Update it in the same commit as implementation work.
 
 ### Phase 0: Confirm implementation choices
 
-- [ ] Confirm password hashing choice for new passwords.
+- [x] Confirm password hashing choice for new passwords.
 - [ ] Confirm initial session idle and absolute lifetime.
 - [ ] Confirm who may assign roles.
 - [ ] Confirm whether version 1 is organization-wide or needs site/warehouse
@@ -103,8 +103,8 @@ the server and pass deny-path tests.
 
 - [x] Remove prototype credentials from the login screen and bootstrap script.
 - [ ] Add an environment-safe bootstrap administrator procedure.
-- [ ] Add user creation/invitation.
-- [ ] Add activation/password setup.
+- [x] Add user creation/invitation.
+- [x] Add activation/password setup.
 - [x] Add suspend, reactivate, and disable operations for existing users.
 - [x] Add multiple-role assignment and removal for existing users.
 - [x] Add create, duplicate, edit, archive, and reactivate workflows for custom roles.
@@ -117,12 +117,13 @@ database editing, and an unauthorized user cannot invoke those operations.
 
 ### Phase 5: Session and login hardening
 
-- [ ] Normalize login identifiers.
-- [ ] Add server-side credential validation and maximum lengths.
+- [x] Normalize login identifiers.
+- [x] Add server-side credential validation and maximum lengths.
 - [ ] Configure explicit session lifetimes.
 - [ ] Add session invalidation after password, status, and role changes.
 - [ ] Add rate limiting for authentication attempts.
-- [ ] Add secure invitation and password-reset tokens if email delivery is ready.
+- [x] Add secure invitation tokens with controlled manual delivery.
+- [ ] Add password-reset tokens and production email delivery.
 - [ ] Confirm production TLS, cookie, and secret configuration.
 - [ ] Decide MFA requirements for privileged users.
 
@@ -192,3 +193,4 @@ verify the mapping, then remove the legacy free-text role in a later migration.
 | 2026-09-11 | Added the protected Access Control overview, Users and Roles pages, effective-permission visibility, existing-role assignment, account status controls, authVersion invalidation, and last-active-administrator protection. |
 | 2026-09-11 | Hardened Access Control clients against stale development Server Action responses and verified the reversible suspend/reactivate workflow end to end. |
 | 2026-09-11 | Added `admin.role.manage`, custom-role create/duplicate/edit/archive/reactivate workflows, assigned-user impact visibility, session invalidation on permission changes, and end-to-end lifecycle verification. |
+| 2026-09-12 | Added `admin.user.invite`, administrator-created invited accounts, hashed single-use activation links, recipient password setup, cancellation/reissue recovery, bounded login credentials, and the redesigned EON sign-in experience. |

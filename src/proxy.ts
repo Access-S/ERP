@@ -4,10 +4,12 @@ import { auth } from "@/auth"
 // ───────────────── BLOCK 2: Proxy Logic ────────────────────────
 export default auth((req) => {
   const isLoggedIn = !!req.auth
-  const isLoginPage = req.nextUrl.pathname.startsWith("/login")
+  const isLoginPage = req.nextUrl.pathname === "/login"
+  const isActivationPage = req.nextUrl.pathname.startsWith("/activate-account/")
+  const isPublicPage = isLoginPage || isActivationPage
 
   // 1. If not logged in and trying to access a protected page -> redirect to login
-  if (!isLoggedIn && !isLoginPage) {
+  if (!isLoggedIn && !isPublicPage) {
     return Response.redirect(new URL("/login", req.nextUrl))
   }
 

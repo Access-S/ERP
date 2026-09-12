@@ -39,6 +39,7 @@ function labelForPath(path: string, segment: string): string {
   if (path === "/products/parts/new") return "New Part"
   if (/^\/products\/parts\/[^/]+\/edit$/.test(path)) return "Edit Part"
   if (/^\/products\/parts\/[^/]+$/.test(path)) return "Part Details"
+  if (path === "/settings/access/users/new") return "Invite User"
   if (/^\/settings\/access\/users\/[^/]+$/.test(path)) return "User Access"
   if (path === "/settings/access/roles/new") return "New Custom Role"
   if (/^\/settings\/access\/roles\/[^/]+\/edit$/.test(path)) return "Edit Custom Role"
