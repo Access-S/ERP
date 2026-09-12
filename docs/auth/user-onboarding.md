@@ -98,3 +98,8 @@ Manual UAT must cover authorized invite, unauthorized direct access, duplicate
 email rejection, reissue invalidating the old link, weak/mismatched password
 rejection, successful activation and login, second-use rejection, expiry, and
 cancel/restore behavior.
+
+Manual UAT was accepted by the product owner on 2026-09-12. The redesigned
+login, authorized invitation, role assignment, activation/password setup,
+single-use rejection, replacement-link behavior, cancellation, restoration,
+and resulting role access all behaved as documented.

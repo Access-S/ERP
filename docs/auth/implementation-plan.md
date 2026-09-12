@@ -194,3 +194,4 @@ verify the mapping, then remove the legacy free-text role in a later migration.
 | 2026-09-11 | Hardened Access Control clients against stale development Server Action responses and verified the reversible suspend/reactivate workflow end to end. |
 | 2026-09-11 | Added `admin.role.manage`, custom-role create/duplicate/edit/archive/reactivate workflows, assigned-user impact visibility, session invalidation on permission changes, and end-to-end lifecycle verification. |
 | 2026-09-12 | Added `admin.user.invite`, administrator-created invited accounts, hashed single-use activation links, recipient password setup, cancellation/reissue recovery, bounded login credentials, and the redesigned EON sign-in experience. |
+| 2026-09-12 | Accepted manual UAT for the redesigned login and complete invitation, activation, cancellation, restoration, and assigned-role access lifecycle. |
