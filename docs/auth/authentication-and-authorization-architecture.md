@@ -1,6 +1,6 @@
 # Authentication and Authorization Architecture
 
-Status: Approved direction; onboarding implemented and hardening remains
+Status: Approved direction; onboarding and core audit foundation implemented
 Owner: Product owner / Engineering
 Last updated: 2026-09-12
 
@@ -59,6 +59,8 @@ As of 2026-09-09, the application has a working prototype authentication layer:
   invited accounts; recipients activate them with hashed 48-hour single-use links.
 - The EON login validates bounded credentials on both client and server and does
   not disclose whether an account exists or is unavailable.
+- Security authentication and access-control events are stored in an append-only
+  PostgreSQL table through a server-only, metadata-allowlisted writer.
 
 This provides a useful foundation, but it is not the target authorization
 system.
@@ -75,7 +77,8 @@ system.
   logout/revocation experience for already-open pages is not yet implemented.
 - No login throttling, lockout policy, production email delivery, or password
   reset flow is implemented.
-- Auth and authorization events are not stored in an audit table.
+- Password change/reset and complete logout/session-expiry audit events await
+  those account-security workflows.
 - The prototype administrator may still use a development password that must be
   rotated before any shared, staging, or production deployment.
 - Navigation hiding is not yet driven by effective permissions.
@@ -182,7 +185,6 @@ erDiagram
     Role ||--o{ UserRole : assigned_to
     Role ||--o{ RolePermission : grants
     Permission ||--o{ RolePermission : included_in
-    User ||--o{ SecurityAuditEvent : acts_in
 
     User {
       uuid id PK
@@ -220,9 +222,11 @@ erDiagram
     SecurityAuditEvent {
       uuid id PK
       string event_type
-      uuid actor_user_id FK
+      uuid actor_user_id_snapshot
       string outcome
       datetime occurred_at
+      uuid correlation_id
+      json allowlisted_metadata
     }
 ```
 
@@ -401,6 +405,12 @@ Required security events, fields, privacy limits, and event names are defined in
 [audit-events.md](audit-events.md). Authentication failures must be observable
 without storing secrets. Repeated failure and access-denied patterns should be
 available for alerting when production monitoring is introduced.
+
+The current table is protected by a database trigger that rejects update and
+delete statements. Actor IDs are retained as immutable snapshots rather than
+foreign keys, and the application viewer requires `admin.audit.view`. Critical
+account, invitation, and role events are committed in the same transaction as
+the change they describe.
 
 Business history such as BOM revision activation belongs to the broader ERP
 audit model, but must include the same stable actor user ID and correlation ID

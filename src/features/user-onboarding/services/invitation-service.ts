@@ -3,6 +3,10 @@ import "server-only"
 import { createHash, randomBytes } from "node:crypto"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/db"
+import {
+  createAuditCorrelationId,
+  writeSecurityAuditEvent,
+} from "@/features/security-audit/services/audit-service"
 import { INVITATION_TTL_HOURS } from "../types/user-onboarding-schema"
 
 export class InvitationWorkflowError extends Error {
@@ -38,6 +42,7 @@ export async function createInvitedUser(
   const secret = generateInvitationSecret()
   const tokenHash = hashInvitationSecret(secret)
   const expiresAt = invitationExpiry()
+  const correlationId = createAuditCorrelationId()
 
   const user = await prisma.$transaction(
     async (transaction) => {
@@ -62,7 +67,7 @@ export async function createInvitedUser(
         )
       }
 
-      return transaction.user.create({
+      const createdUser = await transaction.user.create({
         data: {
           name: input.name,
           email: input.email,
@@ -86,6 +91,48 @@ export async function createInvitedUser(
         },
         select: { id: true },
       })
+      await writeSecurityAuditEvent(
+        {
+          eventType: "auth.user.created",
+          outcome: "SUCCESS",
+          actorUserId: createdById,
+          targetType: "USER",
+          targetId: createdUser.id,
+          correlationId,
+          metadata: { status: "INVITED" },
+        },
+        transaction
+      )
+      for (const role of roles) {
+        await writeSecurityAuditEvent(
+          {
+            eventType: "auth.role.assigned",
+            outcome: "SUCCESS",
+            actorUserId: createdById,
+            targetType: "USER",
+            targetId: createdUser.id,
+            correlationId,
+            metadata: { roleKey: role.key },
+          },
+          transaction
+        )
+      }
+      await writeSecurityAuditEvent(
+        {
+          eventType: "auth.invitation.created",
+          outcome: "SUCCESS",
+          actorUserId: createdById,
+          targetType: "USER",
+          targetId: createdUser.id,
+          correlationId,
+          metadata: {
+            operation: "INITIAL",
+            expiresAt: expiresAt.toISOString(),
+          },
+        },
+        transaction
+      )
+      return createdUser
     },
     { isolationLevel: "Serializable" }
   )
@@ -102,6 +149,7 @@ export async function reissueUserInvitation(userId: string, createdById: string)
   const tokenHash = hashInvitationSecret(secret)
   const expiresAt = invitationExpiry()
   const now = new Date()
+  const correlationId = createAuditCorrelationId()
 
   await prisma.$transaction(
     async (transaction) => {
@@ -118,10 +166,24 @@ export async function reissueUserInvitation(userId: string, createdById: string)
         )
       }
 
-      await transaction.userInvitation.updateMany({
+      const revokedInvitations = await transaction.userInvitation.updateMany({
         where: { userId, usedAt: null, revokedAt: null },
         data: { revokedAt: now },
       })
+      if (revokedInvitations.count > 0) {
+        await writeSecurityAuditEvent(
+          {
+            eventType: "auth.invitation.revoked",
+            outcome: "SUCCESS",
+            actorUserId: createdById,
+            targetType: "USER",
+            targetId: userId,
+            correlationId,
+            metadata: { operation: "REISSUED" },
+          },
+          transaction
+        )
+      }
       await transaction.userInvitation.create({
         data: { userId, tokenHash, expiresAt, createdById },
       })
@@ -131,6 +193,21 @@ export async function reissueUserInvitation(userId: string, createdById: string)
           data: { status: "INVITED", authVersion: { increment: 1 } },
         })
       }
+      await writeSecurityAuditEvent(
+        {
+          eventType: "auth.invitation.created",
+          outcome: "SUCCESS",
+          actorUserId: createdById,
+          targetType: "USER",
+          targetId: userId,
+          correlationId,
+          metadata: {
+            operation: "REISSUED",
+            expiresAt: expiresAt.toISOString(),
+          },
+        },
+        transaction
+      )
     },
     { isolationLevel: "Serializable" }
   )
@@ -235,6 +312,16 @@ export async function activateInvitedAccount(secret: string, password: string) {
         },
         data: { revokedAt: now },
       })
+      await writeSecurityAuditEvent(
+        {
+          eventType: "auth.invitation.accepted",
+          outcome: "SUCCESS",
+          actorUserId: invitation.userId,
+          targetType: "USER",
+          targetId: invitation.userId,
+        },
+        transaction
+      )
     },
     { isolationLevel: "Serializable" }
   )

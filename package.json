@@ -25,6 +25,8 @@
     "uat:access-control": "node --no-warnings --experimental-strip-types scripts/uat-access-control-policy.mjs",
     "uat:user-onboarding": "node --no-warnings --experimental-strip-types --env-file=.env scripts/uat-user-onboarding.mjs",
     "uat:user-onboarding-routes": "node --env-file=.env scripts/uat-user-onboarding-routes.mjs",
+    "uat:security-audit": "node --no-warnings --experimental-strip-types --env-file=.env scripts/uat-security-audit.mjs",
+    "uat:security-audit-routes": "node --env-file=.env scripts/uat-security-audit-routes.mjs",
     "import:bom:dry-run": "node --env-file=.env scripts/dry-run-customer-bom-import.mjs \"Data files/All customer Bom - cleaned.xlsx\"",
     "import:bom:apply": "node --env-file=.env scripts/import-customer-boms.mjs \"Data files/All customer Bom - cleaned.xlsx\""
   },

@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 const expiryFormatter = new Intl.DateTimeFormat("en-AU", {
   day: "2-digit",
@@ -52,9 +53,9 @@ export function ActivationLinkPanel({
 
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-3">
-          <label htmlFor="activation-link" className="text-sm font-medium">
+          <Label htmlFor="activation-link" className="text-sm font-medium">
             Activation link
-          </label>
+          </Label>
           <span className="text-xs text-muted-foreground">
             Expires {expiryFormatter.format(new Date(expiresAt))}
           </span>

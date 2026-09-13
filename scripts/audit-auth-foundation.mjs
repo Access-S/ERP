@@ -4,6 +4,7 @@ import {
   PERMISSIONS,
   SYSTEM_ROLES,
 } from "../src/features/auth/config/authorization-registry.ts"
+import { SECURITY_AUDIT_EVENT_TYPES } from "../src/features/security-audit/services/audit-policy.ts"
 
 const prisma = new PrismaClient()
 
@@ -129,6 +130,37 @@ async function getOnboardingSummary() {
   return { installed: true, ...summary }
 }
 
+async function getSecurityAuditSummary() {
+  const installed = await tableExists("security_audit_events")
+  if (!installed) return { installed: false }
+
+  const [summary] = await prisma.$queryRaw`
+    SELECT
+      (SELECT COUNT(*)::int FROM security_audit_events) AS events,
+      (
+        SELECT COUNT(*)::int
+        FROM pg_trigger
+        WHERE tgrelid = 'security_audit_events'::regclass
+          AND tgname = 'security_audit_events_append_only'
+          AND NOT tgisinternal
+      ) AS append_only_triggers
+  `
+  const eventTypes = await prisma.securityAuditEvent.findMany({
+    distinct: ["eventType"],
+    select: { eventType: true },
+  })
+  const expectedTypes = new Set(SECURITY_AUDIT_EVENT_TYPES)
+
+  return {
+    installed: true,
+    ...summary,
+    unexpectedEventTypes: eventTypes
+      .map((event) => event.eventType)
+      .filter((eventType) => !expectedTypes.has(eventType))
+      .sort(),
+  }
+}
+
 function difference(left, right) {
   return [...left].filter((value) => !right.has(value)).sort()
 }
@@ -214,9 +246,10 @@ async function main() {
       .map((user) => user.role)
   )].sort()
 
-  const [authorization, onboarding] = await Promise.all([
+  const [authorization, onboarding, securityAudit] = await Promise.all([
     getAuthorizationSummary(),
     getOnboardingSummary(),
+    getSecurityAuditSummary(),
   ])
   const registry = authorization.installed
     ? await compareAuthorizationRegistry()
@@ -228,6 +261,7 @@ async function main() {
     unmappedLegacyRoles,
     authorization,
     onboarding,
+    securityAudit,
     registry,
   }
 
@@ -261,6 +295,13 @@ async function main() {
       report.onboarding.active_users_without_passwords > 0 ||
       report.onboarding.open_invitations_for_non_invited_users > 0 ||
       report.onboarding.users_with_multiple_open_invitations > 0)
+  ) {
+    process.exitCode = 1
+  }
+  if (
+    report.securityAudit.installed &&
+    (report.securityAudit.append_only_triggers !== 1 ||
+      report.securityAudit.unexpectedEventTypes.length > 0)
   ) {
     process.exitCode = 1
   }

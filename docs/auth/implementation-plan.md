@@ -1,6 +1,6 @@
 # Authentication and Authorization Implementation Plan
 
-Status: In progress; Phase 4 onboarding, existing-user, and custom-role administration implemented
+Status: In progress; core security-audit foundation implemented
 Owner: Product owner / Engineering
 Last updated: 2026-09-12
 
@@ -26,7 +26,7 @@ matrix. Update it in the same commit as implementation work.
 | Server-side permission enforcement | Four master-data modules complete | Central typed guard is adopted by Customers, Parts, Products, and BOMs |
 | Account administration | User and role lifecycle complete | Invitation, activation, status, assignment, effective access, and custom-role UI exist |
 | Session invalidation after access change | Implemented for current administration flows | Status, assignment, and active custom-role permission changes increment `authVersion` |
-| Auth security audit log | Not started | Event catalogue exists; persistence does not |
+| Auth security audit log | Core foundation complete | Append-only PostgreSQL storage, allowlisted writer, protected viewer, and current login/access administration events |
 | Authorization tests | Core complete | Pure policy and live database UAT cover unauthenticated, stale, inactive, multi-role, allowed, denied, and System Administrator separation paths |
 
 ## 3. Delivery sequence
@@ -132,11 +132,13 @@ the login/session security scenarios.
 
 ### Phase 6: Security audit trail
 
-- [ ] Add append-only security audit storage.
-- [ ] Add a server-only event writer with allowlisted metadata.
+- [x] Add append-only security audit storage.
+- [x] Add a server-only event writer with allowlisted metadata.
 - [ ] Record login, account-state, password, role, and access-denied events.
-- [ ] Protect audit viewing with `admin.audit.view`.
-- [ ] Add audit integrity and secret-exclusion tests.
+  Login, account-state, role, invitation, session-revocation, and access-denied
+  events are implemented; password events await the password workflows.
+- [x] Protect audit viewing with `admin.audit.view`.
+- [x] Add audit integrity and secret-exclusion tests.
 - [ ] Decide retention and alerting before production.
 
 Exit gate: the required events in [audit-events.md](audit-events.md) are either
@@ -195,3 +197,4 @@ verify the mapping, then remove the legacy free-text role in a later migration.
 | 2026-09-11 | Added `admin.role.manage`, custom-role create/duplicate/edit/archive/reactivate workflows, assigned-user impact visibility, session invalidation on permission changes, and end-to-end lifecycle verification. |
 | 2026-09-12 | Added `admin.user.invite`, administrator-created invited accounts, hashed single-use activation links, recipient password setup, cancellation/reissue recovery, bounded login credentials, and the redesigned EON sign-in experience. |
 | 2026-09-12 | Accepted manual UAT for the redesigned login and complete invitation, activation, cancellation, restoration, and assigned-role access lifecycle. |
+| 2026-09-12 | Added append-only security-audit storage, a typed allowlisted writer, transactional account/role/invitation events, login and access-denial capture, a protected audit viewer, and rollback-safe integrity/privacy UAT. |

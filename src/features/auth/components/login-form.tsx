@@ -99,14 +99,16 @@ export function LoginForm({ activated = false }: { activated?: boolean }) {
             disabled={isSubmitting}
             {...register("password")}
           />
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={() => setShowPassword((value) => !value)}
-            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="absolute inset-y-0 right-0 h-auto w-11 rounded-l-none text-muted-foreground hover:bg-transparent hover:text-foreground active:scale-100"
             aria-label={showPassword ? "Hide password" : "Show password"}
           >
             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
+          </Button>
         </div>
         {errors.password && (
           <p className="text-sm text-destructive">{errors.password.message}</p>

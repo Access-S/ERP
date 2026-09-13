@@ -2,6 +2,7 @@ import "server-only"
 
 import { auth } from "@/auth"
 import { prisma } from "@/lib/db"
+import { writeSecurityAuditEvent } from "@/features/security-audit/services/audit-service"
 import type { PermissionKey } from "../config/authorization-registry"
 import {
   assertPermission,
@@ -53,6 +54,25 @@ export async function requirePermission(
   permission: PermissionKey
 ): Promise<AuthorizationPrincipal> {
   const principal = await loadCurrentPrincipal()
-  assertPermission(principal, permission)
+  try {
+    assertPermission(principal, permission)
+  } catch (error) {
+    if (error instanceof AuthorizationError && error.code === "PERMISSION_DENIED") {
+      try {
+        await writeSecurityAuditEvent({
+          eventType: "auth.access.denied",
+          outcome: "DENIED",
+          actorUserId: principal.userId,
+          targetType: "PERMISSION",
+          targetId: permission,
+          reasonCode: error.code,
+          metadata: { permissionKey: permission, resourceType: "SERVER_OPERATION" },
+        })
+      } catch (auditError) {
+        console.error("Security access denial could not be audited", auditError)
+      }
+    }
+    throw error
+  }
   return principal
 }

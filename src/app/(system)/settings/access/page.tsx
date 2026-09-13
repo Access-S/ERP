@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { KeyRound, ShieldCheck, Users } from "lucide-react"
+import { History, KeyRound, ShieldCheck, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { PermissionDenied } from "@/features/auth/components/permission-denied"
@@ -11,11 +11,17 @@ export const dynamic = "force-dynamic"
 
 export default async function AccessControlPage() {
   const principal = await getCurrentPrincipal()
-  if (!principal || !hasPermission(principal, "admin.user.view")) {
+  const canViewUsers = Boolean(
+    principal && hasPermission(principal, "admin.user.view")
+  )
+  const canViewAudit = Boolean(
+    principal && hasPermission(principal, "admin.audit.view")
+  )
+  if (!principal || (!canViewUsers && !canViewAudit)) {
     return <PermissionDenied description="You need permission to view user access." />
   }
 
-  const overview = await getAccessControlOverview()
+  const overview = canViewUsers ? await getAccessControlOverview() : null
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -29,7 +35,7 @@ export default async function AccessControlPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      {overview && <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total users</CardDescription>
@@ -60,10 +66,10 @@ export default async function AccessControlPage() {
             <CardTitle className="text-3xl">{overview.activeRoles}</CardTitle>
           </CardHeader>
         </Card>
-      </div>
+      </div>}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
+      <div className="grid gap-6 lg:grid-cols-3">
+        {overview && <Card>
           <CardHeader>
             <Users className="mb-2 h-5 w-5 text-primary" />
             <CardTitle>Users</CardTitle>
@@ -76,9 +82,9 @@ export default async function AccessControlPage() {
               <Link href="/settings/access/users">Manage users</Link>
             </Button>
           </CardContent>
-        </Card>
+        </Card>}
 
-        <Card>
+        {overview && <Card>
           <CardHeader>
             <KeyRound className="mb-2 h-5 w-5 text-primary" />
             <CardTitle>Roles and permissions</CardTitle>
@@ -94,7 +100,24 @@ export default async function AccessControlPage() {
               {overview.customRoles} custom roles currently exist alongside the standard templates.
             </p>
           </CardContent>
-        </Card>
+        </Card>}
+
+        {canViewAudit && (
+          <Card>
+            <CardHeader>
+              <History className="mb-2 h-5 w-5 text-primary" />
+              <CardTitle>Security audit history</CardTitle>
+              <CardDescription>
+                Review immutable sign-in, invitation, account, role, and access-denial events.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" asChild>
+                <Link href="/settings/access/audit">View audit history</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )

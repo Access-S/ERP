@@ -20,6 +20,12 @@ enum UserStatus {
   DISABLED
 }
 
+enum AuditOutcome {
+  SUCCESS
+  FAILURE
+  DENIED
+}
+
 model bom_components {
   id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   product_id       String?   @db.Uuid
@@ -220,6 +226,27 @@ model UserInvitation {
   @@index([expiresAt])
   @@index([createdById])
   @@map("user_invitations")
+}
+
+model SecurityAuditEvent {
+  id                 String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventType          String       @map("event_type") @db.VarChar(100)
+  outcome            AuditOutcome
+  occurredAt         DateTime     @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  actorUserId        String?      @map("actor_user_id") @db.Uuid
+  actorEmailSnapshot String?      @map("actor_email_snapshot") @db.VarChar(254)
+  targetType         String?      @map("target_type") @db.VarChar(40)
+  targetId           String?      @map("target_id") @db.VarChar(128)
+  reasonCode         String?      @map("reason_code") @db.VarChar(80)
+  correlationId      String       @map("correlation_id") @db.Uuid
+  metadata           Json         @default("{}")
+
+  @@index([occurredAt(sort: Desc)])
+  @@index([eventType, occurredAt(sort: Desc)])
+  @@index([actorUserId, occurredAt(sort: Desc)])
+  @@index([targetType, targetId, occurredAt(sort: Desc)])
+  @@index([correlationId])
+  @@map("security_audit_events")
 }
 
 model Role {

@@ -127,13 +127,13 @@ export async function createCustomRoleAction(
   input: unknown
 ): Promise<AccessControlMutationResult> {
   try {
-    await requirePermission("admin.role.manage")
+    const principal = await requirePermission("admin.role.manage")
     const parsed = createCustomRoleSchema.safeParse(input)
     if (!parsed.success) {
       return failure(parsed.error.issues[0]?.message ?? "Invalid custom role.")
     }
 
-    const role = await createCustomRole(parsed.data)
+    const role = await createCustomRole(parsed.data, principal.userId)
     revalidateRolePaths(role.id)
     return { success: true, message: "Custom role created.", roleId: role.id }
   } catch (error) {
@@ -151,7 +151,11 @@ export async function updateCustomRoleAction(
       return failure(parsed.error.issues[0]?.message ?? "Invalid custom role.")
     }
 
-    const result = await updateCustomRole(parsed.data.roleId, parsed.data)
+    const result = await updateCustomRole(
+      parsed.data.roleId,
+      parsed.data,
+      principal.userId
+    )
     revalidateRolePaths(result.id)
     return {
       success: true,
@@ -174,7 +178,11 @@ export async function setCustomRoleActiveAction(
       return failure(parsed.error.issues[0]?.message ?? "Invalid custom role status.")
     }
 
-    const result = await setCustomRoleActive(parsed.data.roleId, parsed.data.isActive)
+    const result = await setCustomRoleActive(
+      parsed.data.roleId,
+      parsed.data.isActive,
+      principal.userId
+    )
     revalidateRolePaths(result.id)
     return {
       success: true,

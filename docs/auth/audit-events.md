@@ -1,8 +1,8 @@
 # Authentication and Authorization Audit Events
 
-Status: Target specification; storage not yet implemented
+Status: Core security-audit storage, writer, event capture, and viewer implemented
 Owner: Product owner / Engineering
-Last updated: 2026-09-10
+Last updated: 2026-09-12
 
 ## 1. Purpose
 
@@ -25,6 +25,34 @@ but should use compatible actor and correlation fields.
   privilege change or enter a durable retry path.
 - Audit access is itself permission-controlled and audited.
 - Timestamps are stored in UTC and displayed in the user's configured timezone.
+
+### 2.1 Current implementation
+
+Migration `20260912010000_add_security_audit_events` adds the
+`security_audit_events` table and a PostgreSQL trigger that rejects every
+ordinary update or deletion. The application exposes no mutation route for
+audit rows.
+
+The server-only writer accepts a closed event-type catalogue, generates the
+correlation ID on the server, bounds identifiers, and retains only metadata
+keys explicitly allowlisted for that event. Password, secret, token, cookie,
+authorization, session, credential, and hash-shaped metadata keys are removed
+even if a developer accidentally includes one.
+
+The following are captured now:
+
+- successful and failed password login attempts;
+- invitation creation, replacement, cancellation, and acceptance;
+- user creation and account status changes;
+- role assignment/revocation, custom-role changes, and permission changes;
+- session invalidation caused by role or account-state changes;
+- sensitive server-operation access denials; and
+- audit-history views.
+
+Critical account, invitation, and role events are inserted in the same database
+transaction as the security change. Password change/reset events will be added
+with those workflows. Logout/expiry events require the later session-lifecycle
+increment.
 
 ## 3. Minimum event shape
 
@@ -124,6 +152,10 @@ role management, exports, approvals, or repeated suspicious behaviour.
 - Export requires a separate permission if exports are implemented.
 - Audit queries must avoid returning authentication metadata that the viewer
   does not need.
+- `/settings/access/audit` requires `admin.audit.view`, provides read-only
+  event/outcome filtering, and returns at most 100 newest matching records.
+- Actor IDs deliberately remain scalar snapshots rather than foreign keys, so
+  later identity retention changes cannot rewrite an historical event.
 - Retention, archival, and legal hold rules must be decided before production.
 
 ## 9. Initial alerts for production
@@ -148,6 +180,12 @@ Tests must prove that:
 5. Users without `admin.audit.view` cannot read audit records.
 6. Audit viewers cannot mutate or delete records through application paths.
 
+Run `npm run uat:security-audit` for rollback-safe database integrity and
+metadata privacy checks. Run `npm run uat:security-audit-routes` against the
+development server for authorized-view, denied-view, and login event capture.
+The route suite deliberately retains its generated records because the database
+correctly prevents historical audit evidence from being deleted.
+
 ## 11. Open decisions
 
 1. Retention period for login failures and source IP addresses.
@@ -164,3 +202,4 @@ Tests must prove that:
 | Date | Change |
 | --- | --- |
 | 2026-09-09 | Created the initial auth, account administration, and authorization event catalogue. |
+| 2026-09-12 | Implemented append-only PostgreSQL storage, the allowlisted server writer, security event capture, protected audit viewer, and integrity/privacy UAT. |

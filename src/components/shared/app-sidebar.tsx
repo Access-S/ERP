@@ -115,10 +115,12 @@ export function AppSidebar({
               asChild
               className="group/label w-full"
             >
-              <button 
+              <Button
+                type="button"
+                variant="ghost"
                 onClick={() => toggleGroup(group.label)}
-                onKeyDown={(e) => e.key === 'Enter' && toggleGroup(group.label)}
-                className="flex items-center justify-between w-full cursor-pointer !text-xs font-heading tracking-[0.15em] text-muted-foreground/70 hover:text-foreground transition-colors duration-200 mb-1 uppercase text-left"
+                className="mb-1 h-8 w-full justify-between px-2 text-left !text-xs font-heading uppercase tracking-[0.15em] text-muted-foreground/70 hover:bg-transparent hover:text-foreground active:scale-100"
+                aria-expanded={openGroups[group.label]}
               >
                 <span>{group.label}</span>
                 <ChevronDown 
@@ -127,7 +129,7 @@ export function AppSidebar({
                     openGroups[group.label] ? "rotate-180" : "rotate-0"
                   )} 
                 />
-              </button>
+              </Button>
             </SidebarGroupLabel>
             
             <AnimatePresence initial={false}>

@@ -16,7 +16,10 @@ export default async function AppLayout({
 }) {
   const principal = await getCurrentPrincipal()
   const canViewAccessControl = Boolean(
-    principal && hasPermission(principal, "admin.user.view")
+    principal && (
+      hasPermission(principal, "admin.user.view") ||
+      hasPermission(principal, "admin.audit.view")
+    )
   )
   const accessLabel = principal
     ? principal.roleKeys.length === 1

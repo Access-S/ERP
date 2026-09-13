@@ -898,9 +898,11 @@ const DayCell = React.memo(function DayCell({
   }, [isFocused])
 
   return (
-    <button
+    <Button
       ref={ref}
       type="button"
+      variant="ghost"
+      size="icon"
       role="gridcell"
       aria-selected={isSelected}
       aria-disabled={isDisabled}
@@ -911,7 +913,7 @@ const DayCell = React.memo(function DayCell({
       onMouseEnter={() => selectionMode === 'range' && onHoverChange(date)}
       onMouseLeave={() => selectionMode === 'range' && onHoverChange(undefined)}
       className={cn(
-        'relative flex items-center justify-center text-sm transition-colors cursor-pointer',
+        'relative flex items-center justify-center rounded-none p-0 text-sm transition-colors cursor-pointer active:scale-100',
         'h-[var(--cell-size,2.75rem)] w-full',
         !isCurrentMonth && !isInRange && !isHoveredEnd && !isDisabled && 'text-muted-foreground opacity-40',
         isDisabled && 'opacity-50 cursor-not-allowed',
@@ -928,7 +930,7 @@ const DayCell = React.memo(function DayCell({
       {isToday && !isSelected && !isInRange && !isDisabled && (
         <span className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary shadow-[0_0_12px_3px_hsl(var(--primary))]" />
       )}
-    </button>
+    </Button>
   )
 })
 

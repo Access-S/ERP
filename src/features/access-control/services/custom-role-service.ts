@@ -3,6 +3,10 @@ import "server-only"
 import { randomUUID } from "node:crypto"
 import type { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/db"
+import {
+  createAuditCorrelationId,
+  writeSecurityAuditEvent,
+} from "@/features/security-audit/services/audit-service"
 import { AccessControlWorkflowError } from "./access-control-service"
 
 type CustomRoleValues = {
@@ -31,20 +35,20 @@ async function assertUniqueRoleName(
       ...(excludedRoleId ? { id: { not: excludedRoleId } } : {}),
       name: { equals: name, mode: "insensitive" },
     },
-    select: { id: true },
+    select: { id: true, key: true },
   })
   if (conflictingRole) {
     throw new AccessControlWorkflowError("A role with this name already exists.")
   }
 }
 
-async function getActivePermissionIds(
+async function getActivePermissions(
   transaction: Prisma.TransactionClient,
   permissionIds: readonly string[]
 ) {
   const permissions = await transaction.permission.findMany({
     where: { id: { in: [...permissionIds] }, isActive: true },
-    select: { id: true },
+    select: { id: true, key: true },
     orderBy: { id: "asc" },
   })
   if (permissions.length !== permissionIds.length) {
@@ -52,19 +56,19 @@ async function getActivePermissionIds(
       "One or more selected permissions are unavailable. Refresh and try again."
     )
   }
-  return permissions.map((permission) => permission.id)
+  return permissions
 }
 
-export async function createCustomRole(values: CustomRoleValues) {
+export async function createCustomRole(values: CustomRoleValues, actingUserId: string) {
   return prisma.$transaction(
     async (transaction) => {
       await assertUniqueRoleName(transaction, values.name)
-      const permissionIds = await getActivePermissionIds(
+      const permissions = await getActivePermissions(
         transaction,
         values.permissionIds
       )
 
-      return transaction.role.create({
+      const role = await transaction.role.create({
         data: {
           key: createCustomRoleKey(values.name),
           name: values.name,
@@ -72,11 +76,39 @@ export async function createCustomRole(values: CustomRoleValues) {
           isSystem: false,
           isActive: true,
           rolePermissions: {
-            create: permissionIds.map((permissionId) => ({ permissionId })),
+            create: permissions.map((permission) => ({ permissionId: permission.id })),
           },
         },
-        select: { id: true },
+        select: { id: true, key: true },
       })
+      const correlationId = createAuditCorrelationId()
+      await writeSecurityAuditEvent(
+        {
+          eventType: "auth.role.created",
+          outcome: "SUCCESS",
+          actorUserId: actingUserId,
+          targetType: "ROLE",
+          targetId: role.id,
+          correlationId,
+          metadata: { roleKey: role.key },
+        },
+        transaction
+      )
+      for (const permission of permissions) {
+        await writeSecurityAuditEvent(
+          {
+            eventType: "auth.role.permission_added",
+            outcome: "SUCCESS",
+            actorUserId: actingUserId,
+            targetType: "ROLE",
+            targetId: role.id,
+            correlationId,
+            metadata: { roleKey: role.key, permissionKey: permission.key },
+          },
+          transaction
+        )
+      }
+      return role
     },
     { isolationLevel: "Serializable" }
   )
@@ -84,7 +116,8 @@ export async function createCustomRole(values: CustomRoleValues) {
 
 export async function updateCustomRole(
   roleId: string,
-  values: CustomRoleValues
+  values: CustomRoleValues,
+  actingUserId: string
 ) {
   return prisma.$transaction(
     async (transaction) => {
@@ -92,12 +125,17 @@ export async function updateCustomRole(
         where: { id: roleId },
         select: {
           id: true,
+          key: true,
           isSystem: true,
           isActive: true,
           name: true,
           description: true,
-          rolePermissions: { select: { permissionId: true } },
-          userRoles: { select: { userId: true } },
+          rolePermissions: {
+            select: { permissionId: true, permission: { select: { key: true } } },
+          },
+          userRoles: {
+            select: { userId: true, user: { select: { authVersion: true } } },
+          },
         },
       })
       if (!role) throw new AccessControlWorkflowError("The role no longer exists.")
@@ -108,10 +146,11 @@ export async function updateCustomRole(
       }
 
       await assertUniqueRoleName(transaction, values.name, roleId)
-      const permissionIds = await getActivePermissionIds(
+      const permissions = await getActivePermissions(
         transaction,
         values.permissionIds
       )
+      const permissionIds = permissions.map((permission) => permission.id)
       const currentPermissionIds = new Set(
         role.rolePermissions.map((grant) => grant.permissionId)
       )
@@ -144,6 +183,89 @@ export async function updateCustomRole(
         })
       }
 
+      const correlationId = createAuditCorrelationId()
+      const changedFields = [
+        ...(role.name !== values.name ? ["name"] : []),
+        ...(role.description !== values.description ? ["description"] : []),
+        ...(permissionsChanged ? ["permissions"] : []),
+      ]
+      await writeSecurityAuditEvent(
+        {
+          eventType: "auth.role.updated",
+          outcome: "SUCCESS",
+          actorUserId: actingUserId,
+          targetType: "ROLE",
+          targetId: role.id,
+          correlationId,
+          metadata: { roleKey: role.key, changedFields },
+        },
+        transaction
+      )
+      if (permissionsChanged) {
+        const currentPermissionById = new Map(
+          role.rolePermissions.map((grant) => [grant.permissionId, grant.permission.key])
+        )
+        const nextPermissionById = new Map(
+          permissions.map((permission) => [permission.id, permission.key])
+        )
+        for (const permissionId of currentPermissionIds) {
+          if (nextPermissionIds.has(permissionId)) continue
+          await writeSecurityAuditEvent(
+            {
+              eventType: "auth.role.permission_removed",
+              outcome: "SUCCESS",
+              actorUserId: actingUserId,
+              targetType: "ROLE",
+              targetId: role.id,
+              correlationId,
+              metadata: {
+                roleKey: role.key,
+                permissionKey: currentPermissionById.get(permissionId) ?? "UNKNOWN",
+              },
+            },
+            transaction
+          )
+        }
+        for (const permissionId of nextPermissionIds) {
+          if (currentPermissionIds.has(permissionId)) continue
+          await writeSecurityAuditEvent(
+            {
+              eventType: "auth.role.permission_added",
+              outcome: "SUCCESS",
+              actorUserId: actingUserId,
+              targetType: "ROLE",
+              targetId: role.id,
+              correlationId,
+              metadata: {
+                roleKey: role.key,
+                permissionKey: nextPermissionById.get(permissionId) ?? "UNKNOWN",
+              },
+            },
+            transaction
+          )
+        }
+      }
+      if (permissionsChanged && role.isActive) {
+        for (const assignment of role.userRoles) {
+          await writeSecurityAuditEvent(
+            {
+              eventType: "auth.session.revoked",
+              outcome: "SUCCESS",
+              actorUserId: actingUserId,
+              targetType: "USER",
+              targetId: assignment.userId,
+              correlationId,
+              metadata: {
+                cause: "ROLE_PERMISSIONS_CHANGED",
+                previousAuthVersion: assignment.user.authVersion,
+                nextAuthVersion: assignment.user.authVersion + 1,
+              },
+            },
+            transaction
+          )
+        }
+      }
+
       return {
         id: role.id,
         changed: true,
@@ -156,17 +278,24 @@ export async function updateCustomRole(
   )
 }
 
-export async function setCustomRoleActive(roleId: string, isActive: boolean) {
+export async function setCustomRoleActive(
+  roleId: string,
+  isActive: boolean,
+  actingUserId: string
+) {
   return prisma.$transaction(
     async (transaction) => {
       const role = await transaction.role.findUnique({
         where: { id: roleId },
         select: {
           id: true,
+          key: true,
           isSystem: true,
           isActive: true,
           _count: { select: { userRoles: true, rolePermissions: true } },
-          userRoles: { select: { userId: true } },
+          userRoles: {
+            select: { userId: true, user: { select: { authVersion: true } } },
+          },
         },
       })
       if (!role) throw new AccessControlWorkflowError("The role no longer exists.")
@@ -195,6 +324,42 @@ export async function setCustomRoleActive(roleId: string, isActive: boolean) {
         where: { roleAssignments: { some: { roleId } } },
         data: { authVersion: { increment: 1 } },
       })
+
+      const correlationId = createAuditCorrelationId()
+      await writeSecurityAuditEvent(
+        {
+          eventType: "auth.role.updated",
+          outcome: "SUCCESS",
+          actorUserId: actingUserId,
+          targetType: "ROLE",
+          targetId: role.id,
+          correlationId,
+          metadata: {
+            roleKey: role.key,
+            changedFields: ["isActive"],
+            isActive,
+          },
+        },
+        transaction
+      )
+      for (const assignment of role.userRoles) {
+        await writeSecurityAuditEvent(
+          {
+            eventType: "auth.session.revoked",
+            outcome: "SUCCESS",
+            actorUserId: actingUserId,
+            targetType: "USER",
+            targetId: assignment.userId,
+            correlationId,
+            metadata: {
+              cause: "ROLE_STATUS_CHANGED",
+              previousAuthVersion: assignment.user.authVersion,
+              nextAuthVersion: assignment.user.authVersion + 1,
+            },
+          },
+          transaction
+        )
+      }
 
       return {
         id: role.id,

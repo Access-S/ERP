@@ -3,7 +3,27 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { UserStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { writeSecurityAuditEvent } from "@/features/security-audit/services/audit-service";
 import bcrypt from "bcryptjs";
+
+async function recordLoginFailure(
+  input: Omit<
+    Parameters<typeof writeSecurityAuditEvent>[0],
+    "eventType" | "outcome"
+  >
+) {
+  try {
+    await writeSecurityAuditEvent({
+      ...input,
+      eventType: "auth.login.failed",
+      outcome: "FAILURE",
+    });
+  } catch (error) {
+    // A failed audit sink must be visible operationally, but it must not turn a
+    // rejected credential attempt into a different client response.
+    console.error("Login failure could not be audited", error);
+  }
+}
 
 // ───────────────── BLOCK 2: Auth Configuration ──────────────────
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -19,6 +39,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           typeof credentials?.email !== "string" ||
           typeof credentials?.password !== "string"
         ) {
+          await recordLoginFailure({
+            reasonCode: "INVALID_INPUT",
+            targetType: "USER",
+          });
           return null;
         }
 
@@ -29,7 +53,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           normalizedEmail.length > 254 ||
           !credentials.password ||
           passwordBytes > 72
-        ) return null;
+        ) {
+          await recordLoginFailure({
+            actorEmailSnapshot: normalizedEmail,
+            reasonCode: "INVALID_INPUT",
+            targetType: "USER",
+          });
+          return null;
+        }
 
         const user = await prisma.user.findUnique({
           where: { normalizedEmail },
@@ -44,18 +75,47 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
         });
 
-        if (!user || user.status !== UserStatus.ACTIVE || !user.password) return null;
+        if (!user || user.status !== UserStatus.ACTIVE || !user.password) {
+          await recordLoginFailure({
+            actorEmailSnapshot: normalizedEmail,
+            targetType: "USER",
+            targetId: user?.id,
+            reasonCode: user ? "ACCOUNT_UNAVAILABLE" : "INVALID_CREDENTIALS",
+          });
+          return null;
+        }
 
         const isValidPassword = await bcrypt.compare(
           credentials.password,
           user.password
         );
 
-        if (!isValidPassword) return null;
+        if (!isValidPassword) {
+          await recordLoginFailure({
+            actorEmailSnapshot: normalizedEmail,
+            targetType: "USER",
+            targetId: user.id,
+            reasonCode: "INVALID_CREDENTIALS",
+          });
+          return null;
+        }
 
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { lastLoginAt: new Date() },
+        await prisma.$transaction(async (transaction) => {
+          await transaction.user.update({
+            where: { id: user.id },
+            data: { lastLoginAt: new Date() },
+          });
+          await writeSecurityAuditEvent(
+            {
+              eventType: "auth.login.succeeded",
+              outcome: "SUCCESS",
+              actorUserId: user.id,
+              targetType: "USER",
+              targetId: user.id,
+              metadata: { authenticationMethod: "PASSWORD" },
+            },
+            transaction
+          );
         });
 
         return {

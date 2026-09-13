@@ -3,6 +3,10 @@ import "server-only"
 import type { UserStatus } from "@prisma/client"
 import { prisma } from "@/lib/db"
 import {
+  createAuditCorrelationId,
+  writeSecurityAuditEvent,
+} from "@/features/security-audit/services/audit-service"
+import {
   SYSTEM_ADMIN_ROLE_KEY,
   wouldRemoveLastRecoverableAdministrator,
 } from "./access-control-policy"
@@ -159,6 +163,7 @@ export async function replaceUserRoleAssignments(
           select: {
             id: true,
             status: true,
+            authVersion: true,
             roleAssignments: {
               select: { role: { select: { id: true, key: true, isActive: true } } },
             },
@@ -234,13 +239,66 @@ export async function replaceUserRoleAssignments(
       const currentLegacyRole = target.roleAssignments.find(({ role }) =>
         nextSet.has(role.id)
       )?.role.key
-      await transaction.user.update({
+      const updatedUser = await transaction.user.update({
         where: { id: targetUserId },
         data: {
           role: currentLegacyRole ?? roles[0].key,
           authVersion: { increment: 1 },
         },
+        select: { authVersion: true },
       })
+
+      const correlationId = createAuditCorrelationId()
+      const currentRoleById = new Map(
+        target.roleAssignments.map(({ role }) => [role.id, role.key])
+      )
+      const nextRoleById = new Map(roles.map((role) => [role.id, role.key]))
+      for (const roleId of removedRoleIds) {
+        await writeSecurityAuditEvent(
+          {
+            eventType: "auth.role.revoked",
+            outcome: "SUCCESS",
+            actorUserId: assignedById,
+            targetType: "USER",
+            targetId: targetUserId,
+            correlationId,
+            metadata: { roleKey: currentRoleById.get(roleId) ?? "UNKNOWN" },
+          },
+          transaction
+        )
+      }
+      for (const roleId of addedRoleIds) {
+        await writeSecurityAuditEvent(
+          {
+            eventType: "auth.role.assigned",
+            outcome: "SUCCESS",
+            actorUserId: assignedById,
+            targetType: "USER",
+            targetId: targetUserId,
+            correlationId,
+            metadata: { roleKey: nextRoleById.get(roleId) ?? "UNKNOWN" },
+          },
+          transaction
+        )
+      }
+      if (target.status !== "INVITED") {
+        await writeSecurityAuditEvent(
+          {
+            eventType: "auth.session.revoked",
+            outcome: "SUCCESS",
+            actorUserId: assignedById,
+            targetType: "USER",
+            targetId: targetUserId,
+            correlationId,
+            metadata: {
+              cause: "ROLE_ASSIGNMENTS_CHANGED",
+              previousAuthVersion: target.authVersion,
+              nextAuthVersion: updatedUser.authVersion,
+            },
+          },
+          transaction
+        )
+      }
 
       return { changed: true }
     },
@@ -266,6 +324,7 @@ export async function changeUserStatus(
         select: {
           id: true,
           status: true,
+          authVersion: true,
           roleAssignments: {
             select: { role: { select: { key: true, isActive: true } } },
           },
@@ -297,15 +356,67 @@ export async function changeUserStatus(
         }
       }
 
-      await transaction.user.update({
+      const updatedUser = await transaction.user.update({
         where: { id: targetUserId },
         data: { status: nextStatus, authVersion: { increment: 1 } },
+        select: { authVersion: true },
       })
+      const correlationId = createAuditCorrelationId()
+      const statusEventType =
+        nextStatus === "ACTIVE"
+          ? "auth.user.reactivated"
+          : nextStatus === "SUSPENDED"
+            ? "auth.user.suspended"
+            : "auth.user.disabled"
+      await writeSecurityAuditEvent(
+        {
+          eventType: statusEventType,
+          outcome: "SUCCESS",
+          actorUserId: actingUserId,
+          targetType: "USER",
+          targetId: targetUserId,
+          correlationId,
+          metadata: { previousStatus: target.status, nextStatus },
+        },
+        transaction
+      )
+      if (target.status !== "INVITED") {
+        await writeSecurityAuditEvent(
+          {
+            eventType: "auth.session.revoked",
+            outcome: "SUCCESS",
+            actorUserId: actingUserId,
+            targetType: "USER",
+            targetId: targetUserId,
+            correlationId,
+            metadata: {
+              cause: "ACCOUNT_STATUS_CHANGED",
+              previousAuthVersion: target.authVersion,
+              nextAuthVersion: updatedUser.authVersion,
+            },
+          },
+          transaction
+        )
+      }
       if (target.status === "INVITED" && nextStatus === "DISABLED") {
-        await transaction.userInvitation.updateMany({
+        const revokedInvitations = await transaction.userInvitation.updateMany({
           where: { userId: targetUserId, usedAt: null, revokedAt: null },
           data: { revokedAt: new Date() },
         })
+        if (revokedInvitations.count > 0) {
+          await writeSecurityAuditEvent(
+            {
+              eventType: "auth.invitation.revoked",
+              outcome: "SUCCESS",
+              actorUserId: actingUserId,
+              targetType: "USER",
+              targetId: targetUserId,
+              correlationId,
+              metadata: { operation: "CANCELLED" },
+            },
+            transaction
+          )
+        }
       }
       return { changed: true }
     },

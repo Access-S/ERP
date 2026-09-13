@@ -28,6 +28,7 @@ Authorized System Administrators can use the following routes:
 | `/settings/access/roles/[roleId]` | Inspect permissions and assigned users | `admin.user.view` | `admin.role.manage` for custom-role lifecycle |
 | `/settings/access/roles/new` | Create or duplicate a custom role | `admin.role.manage` | `admin.role.manage` |
 | `/settings/access/roles/[roleId]/edit` | Edit a custom role | `admin.role.manage` | `admin.role.manage` |
+| `/settings/access/audit` | View and filter immutable security events | `admin.audit.view` | None; audit records cannot be changed through the application |
 
 The current change operations are:
 
@@ -74,6 +75,9 @@ The following safeguards apply:
    `admin.role.assign`; link reissue requires `admin.user.invite`.
 8. Raw invitation secrets are returned only for controlled delivery and are
    stored only as hashes.
+9. Security-sensitive account, invitation, role, permission, session-revocation,
+   and access-denial events are written by the server; critical change events
+   share the database transaction with the change they describe.
 
 `User.role` is temporarily maintained as a compatibility display field, but it
 is not an authorization source. Server authorization resolves normalized
