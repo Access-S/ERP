@@ -16,6 +16,7 @@ import {
   ChevronDown,
   Table,
   ShieldCheck,
+  KeyRound,
   LogOut, // ADDED: Icon for Sign Out
 } from "lucide-react"
 // Import from our new global types folder
@@ -180,6 +181,12 @@ export function AppSidebar({
                 </span>
               </div>
             </div>
+            <Button variant="ghost" className="h-10 w-full justify-start" asChild>
+              <Link href="/settings/account/security">
+                <KeyRound className="mr-2 h-4 w-4" />
+                Account security
+              </Link>
+            </Button>
             <Button 
               variant="ghost" 
               className="w-full justify-start h-11 motion-safe:transition-colors text-muted-foreground hover:text-foreground" 

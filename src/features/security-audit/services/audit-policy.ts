@@ -1,6 +1,11 @@
 export const SECURITY_AUDIT_EVENT_TYPES = [
   "auth.login.succeeded",
   "auth.login.failed",
+  "auth.password.changed",
+  "auth.password.change_failed",
+  "auth.password_reset.requested",
+  "auth.password_reset.completed",
+  "auth.password_reset.failed",
   "auth.session.revoked",
   "auth.invitation.created",
   "auth.invitation.accepted",
@@ -32,6 +37,11 @@ export type AuditMetadataValue =
 const ALLOWED_METADATA_KEYS: Record<SecurityAuditEventType, readonly string[]> = {
   "auth.login.succeeded": ["authenticationMethod"],
   "auth.login.failed": [],
+  "auth.password.changed": ["operation"],
+  "auth.password.change_failed": ["operation"],
+  "auth.password_reset.requested": ["operation", "expiresAt"],
+  "auth.password_reset.completed": ["operation"],
+  "auth.password_reset.failed": ["operation"],
   "auth.session.revoked": ["cause", "previousAuthVersion", "nextAuthVersion"],
   "auth.invitation.created": ["operation", "expiresAt"],
   "auth.invitation.accepted": [],

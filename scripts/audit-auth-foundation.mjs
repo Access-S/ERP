@@ -130,6 +130,40 @@ async function getOnboardingSummary() {
   return { installed: true, ...summary }
 }
 
+async function getPasswordResetSummary() {
+  const installed = await tableExists("password_reset_tokens")
+  if (!installed) return { installed: false }
+
+  const [summary] = await prisma.$queryRaw`
+    SELECT
+      (SELECT COUNT(*)::int FROM password_reset_tokens) AS reset_tokens,
+      (
+        SELECT COUNT(*)::int
+        FROM password_reset_tokens prt
+        JOIN users u ON u.id = prt.user_id
+        WHERE prt.used_at IS NULL
+          AND prt.revoked_at IS NULL
+          AND u.status <> 'ACTIVE'
+      ) AS open_resets_for_non_active_users,
+      (
+        SELECT COUNT(*)::int
+        FROM password_reset_tokens
+        WHERE used_at IS NOT NULL AND revoked_at IS NOT NULL
+      ) AS used_and_revoked_tokens,
+      (
+        SELECT COUNT(*)::int FROM (
+          SELECT user_id
+          FROM password_reset_tokens
+          WHERE used_at IS NULL AND revoked_at IS NULL
+          GROUP BY user_id
+          HAVING COUNT(*) > 1
+        ) duplicate_open_resets
+      ) AS users_with_multiple_open_resets
+  `
+
+  return { installed: true, ...summary }
+}
+
 async function getSecurityAuditSummary() {
   const installed = await tableExists("security_audit_events")
   if (!installed) return { installed: false }
@@ -246,9 +280,10 @@ async function main() {
       .map((user) => user.role)
   )].sort()
 
-  const [authorization, onboarding, securityAudit] = await Promise.all([
+  const [authorization, onboarding, passwordReset, securityAudit] = await Promise.all([
     getAuthorizationSummary(),
     getOnboardingSummary(),
+    getPasswordResetSummary(),
     getSecurityAuditSummary(),
   ])
   const registry = authorization.installed
@@ -261,6 +296,7 @@ async function main() {
     unmappedLegacyRoles,
     authorization,
     onboarding,
+    passwordReset,
     securityAudit,
     registry,
   }
@@ -302,6 +338,14 @@ async function main() {
     report.securityAudit.installed &&
     (report.securityAudit.append_only_triggers !== 1 ||
       report.securityAudit.unexpectedEventTypes.length > 0)
+  ) {
+    process.exitCode = 1
+  }
+  if (
+    report.passwordReset.installed &&
+    (report.passwordReset.open_resets_for_non_active_users > 0 ||
+      report.passwordReset.used_and_revoked_tokens > 0 ||
+      report.passwordReset.users_with_multiple_open_resets > 0)
   ) {
     process.exitCode = 1
   }

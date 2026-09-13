@@ -29,6 +29,7 @@ Authorized System Administrators can use the following routes:
 | `/settings/access/roles/new` | Create or duplicate a custom role | `admin.role.manage` | `admin.role.manage` |
 | `/settings/access/roles/[roleId]/edit` | Edit a custom role | `admin.role.manage` | `admin.role.manage` |
 | `/settings/access/audit` | View and filter immutable security events | `admin.audit.view` | None; audit records cannot be changed through the application |
+| `/settings/access/users/[userId]` password recovery | Issue a one-hour reset link for another active account | `admin.user.manage` | Administrator never chooses or views the password |
 
 The current change operations are:
 

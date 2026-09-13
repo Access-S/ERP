@@ -15,7 +15,15 @@ import { loginSchema } from "@/features/user-onboarding/types/user-onboarding-sc
 
 type LoginValues = z.infer<typeof loginSchema>
 
-export function LoginForm({ activated = false }: { activated?: boolean }) {
+export function LoginForm({
+  activated = false,
+  passwordChanged = false,
+  passwordReset = false,
+}: {
+  activated?: boolean
+  passwordChanged?: boolean
+  passwordReset?: boolean
+}) {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [loginError, setLoginError] = useState<string | null>(null)
@@ -54,6 +62,14 @@ export function LoginForm({ activated = false }: { activated?: boolean }) {
         <Alert className="border-success/30 bg-success/10">
           <AlertTitle>Account activated</AlertTitle>
           <AlertDescription>Your password is ready. Sign in to continue.</AlertDescription>
+        </Alert>
+      )}
+      {(passwordChanged || passwordReset) && (
+        <Alert className="border-success/30 bg-success/10">
+          <AlertTitle>Password updated</AlertTitle>
+          <AlertDescription>
+            Sign in with your new password. Previous sessions are no longer valid.
+          </AlertDescription>
         </Alert>
       )}
       {loginError && (

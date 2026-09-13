@@ -21,12 +21,14 @@ remain separate responsibilities.
 | [Roles and permissions](roles-and-permissions.md) | Business roles, permission catalogue, role matrix, ownership, and open business decisions | A role, module, action, approval, or scope changes |
 | [Access Control administration](access-control-administration.md) | Current user/role administration pages, safety rules, workflow, and custom-role direction | An account lifecycle, role-assignment, or custom-role workflow changes |
 | [User onboarding](user-onboarding.md) | Invitation, activation, password, link-delivery, and verification rules | User creation, activation, password policy, or delivery changes |
+| [Password management](password-management.md) | Self-service password changes, administrator reset links, session invalidation, and delivery boundary | Password change, recovery, reset, or password-session behaviour changes |
 | [Audit events](audit-events.md) | Events that must be recorded, minimum fields, privacy rules, and retention decisions | A security-sensitive event or audit requirement is introduced |
 | [Implementation plan](implementation-plan.md) | Ordered delivery stages, verification gates, and current progress | An auth task starts, completes, changes, or becomes blocked |
 | [Products & BOM role UAT](product-bom-role-uat.md) | Manual role-by-role checks for Customers, Products, Parts, and BOM workflows | A module permission, field scope, role grant, or test outcome changes |
 | [RBAC migration runbook](rbac-migration-runbook.md) | Safe commands, verification, retry, and recovery guidance for the authorization foundation | The RBAC schema, seed, audit, or deployment process changes |
 | [ADR 001: Auth foundation](decisions/001-auth-foundation.md) | Durable record of the initial Auth.js, Prisma, and RBAC decisions | A foundational decision is replaced or amended |
 | [ADR 002: User invitations and passwords](decisions/002-user-invitations-and-passwords.md) | Durable record of invitation-token, delivery, and bcrypt decisions | Password hashing or onboarding security changes |
+| [ADR 003: Password management and recovery](decisions/003-password-management-and-recovery.md) | Durable record of reset-token, administrator-assistance, and session-revocation decisions | Password change or recovery security changes |
 
 ## Sources of truth
 

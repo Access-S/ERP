@@ -6,7 +6,8 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth
   const isLoginPage = req.nextUrl.pathname === "/login"
   const isActivationPage = req.nextUrl.pathname.startsWith("/activate-account/")
-  const isPublicPage = isLoginPage || isActivationPage
+  const isPasswordResetPage = req.nextUrl.pathname.startsWith("/reset-password/")
+  const isPublicPage = isLoginPage || isActivationPage || isPasswordResetPage
 
   // 1. If not logged in and trying to access a protected page -> redirect to login
   if (!isLoggedIn && !isPublicPage) {

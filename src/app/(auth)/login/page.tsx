@@ -17,9 +17,13 @@ const capabilities = [
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ activated?: string }>
+  searchParams: Promise<{
+    activated?: string
+    passwordChanged?: string
+    passwordReset?: string
+  }>
 }) {
-  const { activated } = await searchParams
+  const { activated, passwordChanged, passwordReset } = await searchParams
 
   return (
     <main className="grid min-h-screen lg:grid-cols-[minmax(0,1.12fr)_minmax(440px,0.88fr)]">
@@ -95,7 +99,11 @@ export default async function LoginPage({
             </p>
           </div>
 
-          <LoginForm activated={activated === "1"} />
+          <LoginForm
+            activated={activated === "1"}
+            passwordChanged={passwordChanged === "1"}
+            passwordReset={passwordReset === "1"}
+          />
 
           <div className="mt-9 flex items-center justify-between border-t pt-5 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
             <span>Authorised personnel only</span>

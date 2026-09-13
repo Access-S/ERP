@@ -42,6 +42,7 @@ even if a developer accidentally includes one.
 The following are captured now:
 
 - successful and failed password login attempts;
+- successful and failed password changes and resets;
 - invitation creation, replacement, cancellation, and acceptance;
 - user creation and account status changes;
 - role assignment/revocation, custom-role changes, and permission changes;
@@ -49,10 +50,9 @@ The following are captured now:
 - sensitive server-operation access denials; and
 - audit-history views.
 
-Critical account, invitation, and role events are inserted in the same database
-transaction as the security change. Password change/reset events will be added
-with those workflows. Logout/expiry events require the later session-lifecycle
-increment.
+Critical account, invitation, role, and successful password events are inserted
+in the same database transaction as the security change. Logout/expiry events
+require the later session-lifecycle increment.
 
 ## 3. Minimum event shape
 
@@ -203,3 +203,4 @@ correctly prevents historical audit evidence from being deleted.
 | --- | --- |
 | 2026-09-09 | Created the initial auth, account administration, and authorization event catalogue. |
 | 2026-09-12 | Implemented append-only PostgreSQL storage, the allowlisted server writer, security event capture, protected audit viewer, and integrity/privacy UAT. |
+| 2026-09-13 | Added allowlisted password change/reset events and correlated session-revocation capture. |

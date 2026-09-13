@@ -26,7 +26,8 @@ matrix. Update it in the same commit as implementation work.
 | Server-side permission enforcement | Four master-data modules complete | Central typed guard is adopted by Customers, Parts, Products, and BOMs |
 | Account administration | User and role lifecycle complete | Invitation, activation, status, assignment, effective access, and custom-role UI exist |
 | Session invalidation after access change | Implemented for current administration flows | Status, assignment, and active custom-role permission changes increment `authVersion` |
-| Auth security audit log | Core foundation complete | Append-only PostgreSQL storage, allowlisted writer, protected viewer, and current login/access administration events |
+| Auth security audit log | Core foundation complete | Append-only PostgreSQL storage, allowlisted writer, protected viewer, and login/access/password administration events |
+| Password management | Complete and manually accepted | Self-service changes, one-hour administrator reset links, session invalidation, and audit capture |
 | Authorization tests | Core complete | Pure policy and live database UAT cover unauthenticated, stale, inactive, multi-role, allowed, denied, and System Administrator separation paths |
 
 ## 3. Delivery sequence
@@ -120,10 +121,11 @@ database editing, and an unauthorized user cannot invoke those operations.
 - [x] Normalize login identifiers.
 - [x] Add server-side credential validation and maximum lengths.
 - [ ] Configure explicit session lifetimes.
-- [ ] Add session invalidation after password, status, and role changes.
+- [x] Add session invalidation after password, status, and role changes.
 - [ ] Add rate limiting for authentication attempts.
 - [x] Add secure invitation tokens with controlled manual delivery.
-- [ ] Add password-reset tokens and production email delivery.
+- [x] Add password-reset tokens and controlled administrator delivery.
+- [ ] Add production email delivery and public recovery requests.
 - [ ] Confirm production TLS, cookie, and secret configuration.
 - [ ] Decide MFA requirements for privileged users.
 
@@ -134,9 +136,7 @@ the login/session security scenarios.
 
 - [x] Add append-only security audit storage.
 - [x] Add a server-only event writer with allowlisted metadata.
-- [ ] Record login, account-state, password, role, and access-denied events.
-  Login, account-state, role, invitation, session-revocation, and access-denied
-  events are implemented; password events await the password workflows.
+- [x] Record login, account-state, password, role, and access-denied events.
 - [x] Protect audit viewing with `admin.audit.view`.
 - [x] Add audit integrity and secret-exclusion tests.
 - [ ] Decide retention and alerting before production.
@@ -198,3 +198,5 @@ verify the mapping, then remove the legacy free-text role in a later migration.
 | 2026-09-12 | Added `admin.user.invite`, administrator-created invited accounts, hashed single-use activation links, recipient password setup, cancellation/reissue recovery, bounded login credentials, and the redesigned EON sign-in experience. |
 | 2026-09-12 | Accepted manual UAT for the redesigned login and complete invitation, activation, cancellation, restoration, and assigned-role access lifecycle. |
 | 2026-09-12 | Added append-only security-audit storage, a typed allowlisted writer, transactional account/role/invitation events, login and access-denial capture, a protected audit viewer, and rollback-safe integrity/privacy UAT. |
+| 2026-09-13 | Added self-service password changes, administrator-delivered one-hour reset links, password-triggered session invalidation, and password audit events. |
+| 2026-09-13 | Product owner manually accepted the password change, administrator recovery, single-use reset, credential restoration, session invalidation, and audit scenarios. |

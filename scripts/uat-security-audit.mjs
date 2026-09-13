@@ -58,6 +58,23 @@ async function main() {
   assert.equal(JSON.stringify(sanitized).includes("must-never-be-stored"), false)
   checks += 2
 
+  const passwordResetMetadata = sanitizeAuditMetadata("auth.password_reset.requested", {
+    operation: "ADMIN_LINK",
+    expiresAt: "2026-09-13T03:00:00.000Z",
+    password: "must-never-be-stored",
+    resetToken: "must-never-be-stored",
+    tokenHash: "must-never-be-stored",
+  })
+  assert.deepEqual(passwordResetMetadata, {
+    operation: "ADMIN_LINK",
+    expiresAt: "2026-09-13T03:00:00.000Z",
+  })
+  assert.equal(
+    JSON.stringify(passwordResetMetadata).includes("must-never-be-stored"),
+    false
+  )
+  checks += 2
+
   const truncated = sanitizeAuditMetadata("auth.role.updated", {
     roleKey: "R".repeat(300),
     changedFields: Array.from({ length: 60 }, (_, index) => `field-${index}`),

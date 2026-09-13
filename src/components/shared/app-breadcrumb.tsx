@@ -23,6 +23,8 @@ const ROUTE_LABELS: Record<string, string> = {
   "/purchase-orders": "Purchase Orders",
   "/forecasts": "Forecasts",
   "/settings": "Settings",
+  "/settings/account": "My Account",
+  "/settings/account/security": "Account Security",
   "/settings/access": "Access Control",
   "/settings/access/users": "Users",
   "/settings/access/roles": "Roles & Permissions",

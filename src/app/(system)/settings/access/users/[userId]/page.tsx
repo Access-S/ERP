@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { RoleAssignmentForm } from "@/features/access-control/components/role-assignment-form"
 import { UserStatusActions } from "@/features/access-control/components/user-status-actions"
 import { InvitationActions } from "@/features/user-onboarding/components/invitation-actions"
+import { PasswordResetActions } from "@/features/password-management/components/password-reset-actions"
 import {
   getAccessControlRoles,
   getAccessControlUser,
@@ -118,6 +119,36 @@ export default async function AccessControlUserPage({
             ) : (
               <p className="text-sm text-muted-foreground">
                 Ask an administrator with invitation permission to issue a replacement link.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {credentialState.hasPassword && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5 text-primary" />
+              <CardTitle>Password recovery</CardTitle>
+            </div>
+            <CardDescription>
+              Administrators can issue a short-lived reset link but cannot choose or view
+              this user&apos;s password.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {user.id === principal.userId ? (
+              <Button variant="outline" asChild>
+                <Link href="/settings/account/security">Change your password</Link>
+              </Button>
+            ) : canManageUsers && user.status === "ACTIVE" ? (
+              <PasswordResetActions userId={user.id} />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {user.status === "ACTIVE"
+                  ? "You do not have permission to create password reset links."
+                  : "Reactivate this account before creating a password reset link."}
               </p>
             )}
           </CardContent>
