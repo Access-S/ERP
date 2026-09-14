@@ -1,6 +1,6 @@
 # Roles and Permissions
 
-Status: Draft for business confirmation
+Status: Approved baseline; maintained as modules are implemented
 Owner: Product owner / Operations
 Last updated: 2026-09-12
 Applies to: General production and manufacturing companies
@@ -158,6 +158,8 @@ Typical work:
 - Create and maintain sales orders when that module is introduced.
 - View Products, active BOM availability, inventory availability, and order progress.
 - Record Customer forecasts or demand information when permitted.
+- Enter, correct, cancel, and release Standard or Blanket Customer POs.
+- Record documented positive Blanket PO top-ups.
 - Maintain Customer-facing Product descriptions or SKU mappings later.
 
 Boundaries:
@@ -166,6 +168,8 @@ Boundaries:
 - Cannot directly adjust inventory.
 - Cannot change Customer credit limits or override credit holds.
 - Cannot activate BOMs or approve purchase orders.
+- Cannot override a Customer PO validation failure; discrepancies must be
+  corrected with the Customer.
 
 ### 5.4 Production Planner (`PRODUCTION_PLANNER`)
 
@@ -322,22 +326,22 @@ Boundaries:
 
 ## 6. High-level module matrix
 
-This is the initial target matrix. Detailed permission keys in section 8 will
-be used by application code after business confirmation.
+This is the maintained baseline matrix. Detailed permission keys in section 8
+are enforced by application code as each module is implemented.
 
-| Role | Customers | Product/Part Master | BOM | Forecast & Planning | Purchasing | Inventory | Production | Quality | Finance | Security |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Executive / GM | V | V | V+A | V | V+A | V | V | V | V+A | — |
-| Operations Manager | V+A | V+A | V+A | V+A | V+A | V+A | T+A | V | V | — |
-| Sales / Customer Service | T | V | V | T | V | V | V | V | V-limited | — |
-| Production Planner | V | T | T | T | V | V | T | V | V-limited | — |
-| Procurement / Purchasing | V | V | V | V | T | V | V | V | V-limited | — |
-| Warehouse / Inventory | V-limited | V | V-released | V | V-receiving | T | V | V | — | — |
-| Production Supervisor | — | V | V-released | V | V | V | T | V | — | — |
-| Production Operator / Team Leader | — | V-limited | V-released | V-assigned | — | T-limited | T-assigned | T-report | — | — |
-| Quality Control | V-limited | V | V-released | V | V | T-quality | V | T+A | — | — |
-| Finance / Accounts | T-financial | V-financial | V | V | V-financial | V-value | V | V | T+A | — |
-| System Administrator | V-support | V-support | V-support | V-support | V-support | V-support | V-support | V-support | V-support | ADM |
+| Role | Customers | Product/Part Master | BOM | Customer Orders | Forecast & Planning | Purchasing | Inventory | Production | Quality | Finance | Security |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Executive / GM | V | V | V+A | V | V | V+A | V | V | V | V+A | — |
+| Operations Manager | V+A | V+A | V+A | V | V+A | V+A | V+A | T+A | V | V | — |
+| Sales / Customer Service | T | V | V | T+A | T | V | V | V | V | V-limited | — |
+| Production Planner | V | T | T | V | T | V | V | T | V | V-limited | — |
+| Procurement / Purchasing | V | V | V | — | V | T | V | V | V | V-limited | — |
+| Warehouse / Inventory | V-limited | V | V-released | — | V | V-receiving | T | V | V | — | — |
+| Production Supervisor | — | V | V-released | V | V | V | V | T | V | — | — |
+| Production Operator / Team Leader | — | V-limited | V-released | — | V-assigned | — | T-limited | T-assigned | T-report | — | — |
+| Quality Control | V-limited | V | V-released | — | V | V | T-quality | V | T+A | — | — |
+| Finance / Accounts | T-financial | V-financial | V | — | V | V-financial | V-value | V | V | T+A | — |
+| System Administrator | V-support | V-support | V-support | V-support | V-support | V-support | V-support | V-support | V-support | V-support | ADM |
 
 Terms such as `limited`, `released`, `assigned`, `financial`, and `quality`
 represent data or field scope that must be defined when those modules are built.
@@ -350,6 +354,8 @@ represent data or field scope that must be defined when those modules are built.
 | Change Customer credit, discount, payment, or tax settings | Finance / Accounts | Finance authority; Executive above threshold |
 | Create/edit Product and Part master data | Production Planner | Operations Manager for deactivation |
 | Prepare draft BOM | Production Planner | Operations Manager activates/releases |
+| Enter/correct a Customer PO or release | Sales / Customer Service | Automatic validation; no manager approval or override |
+| Record a Blanket Customer PO top-up | Sales / Customer Service | Customer authority is retained as an amendment |
 | Create purchase order | Procurement / Purchasing | Operations Manager; Executive above threshold |
 | Receive purchased stock | Warehouse / Inventory | Based on approved PO; Quality controls held stock |
 | Enter inventory adjustment | Warehouse / Inventory | Operations Manager above threshold |
@@ -411,7 +417,20 @@ features should reuse or deliberately extend this catalogue.
 - `production_plan.create`
 - `production_plan.release`
 
-### 8.6 Purchasing permissions
+### 8.6 Customer Order permissions
+
+- `customer_order.view`
+- `customer_order.create`
+- `customer_order.edit`
+- `customer_order.cancel`
+- `customer_order.blanket_amend`
+- `customer_order.release.create`
+- `customer_order.release.edit`
+
+These permissions apply to purchase orders received from Customers. They are
+separate from supplier purchasing permissions below.
+
+### 8.7 Purchasing permissions
 
 - `purchase_order.view`
 - `purchase_order.create`
@@ -421,7 +440,7 @@ features should reuse or deliberately extend this catalogue.
 - `purchase_order.cancel`
 - `purchase_order.view_cost`
 
-### 8.7 Inventory permissions
+### 8.8 Inventory permissions
 
 - `inventory.view`
 - `inventory.receive`
@@ -433,7 +452,7 @@ features should reuse or deliberately extend this catalogue.
 - `inventory.adjust.approve`
 - `inventory.view_value`
 
-### 8.8 Production permissions
+### 8.9 Production permissions
 
 - `production_work.view`
 - `production_work.assign`
@@ -442,7 +461,7 @@ features should reuse or deliberately extend this catalogue.
 - `production_work.complete`
 - `production_work.cancel`
 
-### 8.9 Quality permissions
+### 8.10 Quality permissions
 
 - `quality.view`
 - `quality.inspect`
@@ -451,7 +470,7 @@ features should reuse or deliberately extend this catalogue.
 - `quality.reject`
 - `quality.nonconformance.manage`
 
-### 8.10 Finance permissions
+### 8.11 Finance permissions
 
 - `finance.view`
 - `finance.customer_credit.manage`
@@ -460,7 +479,7 @@ features should reuse or deliberately extend this catalogue.
 - `finance.override_credit_hold`
 - `finance.report`
 
-### 8.11 Administration permissions
+### 8.12 Administration permissions
 
 - `admin.user.view`
 - `admin.user.invite`
@@ -473,9 +492,10 @@ features should reuse or deliberately extend this catalogue.
 
 ## 9. Current application enforcement state
 
-Customer, Part, Product, and BOM entry points now enforce the role matrix at
-protected page reads and Server Actions. Future modules must adopt the same
-central authorization boundary as they are implemented.
+Customer, Part, Product, and BOM entry points enforce the role matrix at
+protected page reads and Server Actions. The Customer Order domain foundation
+now has typed operation boundaries; page and mutation enforcement will arrive
+with its Standard Customer PO workflow.
 
 Access Control now supports invitation and activation, existing-user status
 management, multiple role assignments, effective-permission inspection, and

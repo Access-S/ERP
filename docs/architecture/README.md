@@ -13,6 +13,9 @@ workflow state, approval process, or core data relationship.
 - [Sales/CRM and Customer onboarding](sales-crm-and-customer-onboarding-workflow.md)
   — deferred Lead, Prospect, Opportunity, RFQ, costing, Quote, approval, and
   Customer-conversion module.
+- [Customer Orders and Production Planning](customer-orders-and-production-planning-workflow.md)
+  — Standard and Blanket Customer POs, releases, commercial validation,
+  revisions, and planning handoff.
 
 - [Audit information architecture](audit-information-architecture.md) documents
   canonical append-only storage, classified security views, future operational

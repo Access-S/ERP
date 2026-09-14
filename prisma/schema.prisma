@@ -26,6 +26,42 @@ enum AuditOutcome {
   DENIED
 }
 
+enum CustomerOrderType {
+  STANDARD
+  BLANKET
+}
+
+enum CustomerOrderStatus {
+  DRAFT
+  PO_CHECK
+  ACTIVE
+  EXHAUSTED
+  EXPIRED
+  CLOSED
+  CANCELLED
+}
+
+enum CustomerOrderReleaseStatus {
+  DRAFT
+  PO_CHECK
+  READY_FOR_PLANNING
+  PLANNING
+  PLANNED
+  IN_PRODUCTION
+  COMPLETED
+  CANCELLED
+}
+
+enum CustomerOrderUom {
+  UNIT
+  SHIPPER
+}
+
+enum CustomerOrderLineValidationStatus {
+  VALID
+  PO_CHECK
+}
+
 model bom_components {
   id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   product_id       String?   @db.Uuid
@@ -60,40 +96,42 @@ model po_status_history {
 }
 
 model products {
-  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  product_code      String            @unique
-  description       String?
-  units_per_shipper Int?
-  daily_run_rate    Decimal?          @db.Decimal
-  hourly_run_rate   Decimal?          @db.Decimal
-  mins_per_shipper  Decimal?          @db.Decimal
-  price_per_shipper Decimal?          @db.Decimal
-  created_at        DateTime          @default(now()) @db.Timestamptz(6)
-  updated_at        DateTime          @default(now()) @db.Timestamptz(6)
-  category          String?
-  customer_id       String?           @db.Uuid
-  uom               String            @default("Each")
-  is_active         Boolean           @default(true)
-  bom_components    bom_components[]
-  boms              Bom[]
-  customer          Customer?         @relation(fields: [customer_id], references: [id])
-  purchase_orders   purchase_orders[]
+  id                           String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_code                 String                     @unique
+  description                  String?
+  units_per_shipper            Int?
+  daily_run_rate               Decimal?                   @db.Decimal
+  hourly_run_rate              Decimal?                   @db.Decimal
+  mins_per_shipper             Decimal?                   @db.Decimal
+  price_per_shipper            Decimal?                   @db.Decimal
+  created_at                   DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at                   DateTime                   @default(now()) @db.Timestamptz(6)
+  category                     String?
+  customer_id                  String?                    @db.Uuid
+  uom                          String                     @default("Each")
+  is_active                    Boolean                    @default(true)
+  bom_components               bom_components[]
+  boms                         Bom[]
+  customer                     Customer?                  @relation(fields: [customer_id], references: [id])
+  customer_order_release_lines CustomerOrderReleaseLine[]
+  purchase_orders              purchase_orders[]
 
   @@index([product_code(ops: raw("gin_trgm_ops")), description(ops: raw("gin_trgm_ops"))], map: "idx_product_search", type: Gin)
 }
 
 model Bom {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  product_id     String    @db.Uuid
-  revision       Int       @default(1)
-  status         BomStatus @default(DRAFT)
-  quantity_basis String    @default("PER_SHIPPER")
-  effective_from DateTime? @db.Date
-  effective_to   DateTime? @db.Date
-  created_at     DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime  @default(now()) @db.Timestamptz(6)
-  product        products  @relation(fields: [product_id], references: [id], onDelete: Cascade)
-  lines          BomLine[]
+  id                           String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id                   String                     @db.Uuid
+  revision                     Int                        @default(1)
+  status                       BomStatus                  @default(DRAFT)
+  quantity_basis               String                     @default("PER_SHIPPER")
+  effective_from               DateTime?                  @db.Date
+  effective_to                 DateTime?                  @db.Date
+  created_at                   DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at                   DateTime                   @default(now()) @db.Timestamptz(6)
+  product                      products                   @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  lines                        BomLine[]
+  customer_order_release_lines CustomerOrderReleaseLine[]
 
   @@unique([product_id, revision])
   @@index([product_id])
@@ -136,30 +174,31 @@ model BomLine {
 }
 
 model purchase_orders {
-  id                      String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  po_number               String              @unique
+  id                      String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  po_number               String                    @unique
   sequence                Int
-  product_id              String?             @db.Uuid
+  product_id              String?                   @db.Uuid
   customer_name           String
-  po_created_date         DateTime?           @db.Date
-  po_received_date        DateTime?           @db.Date
-  requested_delivery_date DateTime?           @db.Date
+  po_created_date         DateTime?                 @db.Date
+  po_received_date        DateTime?                 @db.Date
+  requested_delivery_date DateTime?                 @db.Date
   ordered_qty_pieces      Int
-  ordered_qty_shippers    Decimal             @db.Decimal
-  customer_amount         Decimal             @db.Decimal
-  system_amount           Decimal             @db.Decimal
-  current_status          String              @default("Open")
-  delivery_date           DateTime?           @db.Date
+  ordered_qty_shippers    Decimal                   @db.Decimal
+  customer_amount         Decimal                   @db.Decimal
+  system_amount           Decimal                   @db.Decimal
+  current_status          String                    @default("Open")
+  delivery_date           DateTime?                 @db.Date
   delivery_docket_number  String?
-  created_at              DateTime            @default(now()) @db.Timestamptz(6)
-  updated_at              DateTime            @default(now()) @db.Timestamptz(6)
+  created_at              DateTime                  @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime                  @default(now()) @db.Timestamptz(6)
   description             String?
-  hourly_run_rate         Decimal?            @db.Decimal
-  mins_per_shipper        Decimal?            @db.Decimal
-  customer_id             String?             @db.Uuid
+  hourly_run_rate         Decimal?                  @db.Decimal
+  mins_per_shipper        Decimal?                  @db.Decimal
+  customer_id             String?                   @db.Uuid
   po_status_history       po_status_history[]
-  customer                Customer?           @relation(fields: [customer_id], references: [id])
-  products                products?           @relation(fields: [product_id], references: [id], onUpdate: NoAction)
+  customer                Customer?                 @relation(fields: [customer_id], references: [id])
+  products                products?                 @relation(fields: [product_id], references: [id], onUpdate: NoAction)
+  migrated_release_line   CustomerOrderReleaseLine?
 
   @@index([product_id], map: "idx_po_product_id")
   @@index([customer_id], map: "idx_po_customer_id")
@@ -191,26 +230,30 @@ model soh {
 }
 
 model User {
-  email                   String               @unique
-  normalizedEmail         String               @unique @map("normalized_email")
+  email                   String                         @unique
+  normalizedEmail         String                         @unique @map("normalized_email")
   password                String?
   name                    String
-  role                    String               @default("WAREHOUSE")
-  status                  UserStatus           @default(ACTIVE)
-  authVersion             Int                  @default(1) @map("auth_version")
-  lastLoginAt             DateTime?            @map("last_login_at") @db.Timestamptz(6)
-  failedLoginAttempts     Int                  @default(0) @map("failed_login_attempts")
-  failedLoginWindowStart  DateTime?            @map("failed_login_window_start") @db.Timestamptz(6)
-  loginBlockedUntil       DateTime?            @map("login_blocked_until") @db.Timestamptz(6)
-  createdAt               DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt               DateTime             @default(now()) @map("updated_at") @db.Timestamptz(6)
-  id                      String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  roleAssignments         UserRole[]           @relation("UserRoleAssignments")
-  assignedRoleAssignments UserRole[]           @relation("UserRoleAssignedBy")
-  invitations             UserInvitation[]     @relation("InvitedUser")
-  createdInvitations      UserInvitation[]     @relation("InvitationCreatedBy")
-  passwordResetTokens     PasswordResetToken[] @relation("PasswordResetUser")
-  createdPasswordResets   PasswordResetToken[] @relation("PasswordResetCreatedBy")
+  role                    String                         @default("WAREHOUSE")
+  status                  UserStatus                     @default(ACTIVE)
+  authVersion             Int                            @default(1) @map("auth_version")
+  lastLoginAt             DateTime?                      @map("last_login_at") @db.Timestamptz(6)
+  failedLoginAttempts     Int                            @default(0) @map("failed_login_attempts")
+  failedLoginWindowStart  DateTime?                      @map("failed_login_window_start") @db.Timestamptz(6)
+  loginBlockedUntil       DateTime?                      @map("login_blocked_until") @db.Timestamptz(6)
+  createdAt               DateTime                       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime                       @default(now()) @map("updated_at") @db.Timestamptz(6)
+  id                      String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roleAssignments         UserRole[]                     @relation("UserRoleAssignments")
+  assignedRoleAssignments UserRole[]                     @relation("UserRoleAssignedBy")
+  invitations             UserInvitation[]               @relation("InvitedUser")
+  createdInvitations      UserInvitation[]               @relation("InvitationCreatedBy")
+  passwordResetTokens     PasswordResetToken[]           @relation("PasswordResetUser")
+  createdPasswordResets   PasswordResetToken[]           @relation("PasswordResetCreatedBy")
+  createdCustomerOrders   CustomerPurchaseOrder[]        @relation("CustomerOrderCreatedBy")
+  createdCustomerReleases CustomerOrderRelease[]         @relation("CustomerOrderReleaseCreatedBy")
+  recordedOrderAmendments CustomerOrderAmendment[]       @relation("CustomerOrderAmendmentRecordedBy")
+  createdReleaseRevisions CustomerOrderReleaseRevision[] @relation("CustomerOrderReleaseRevisionCreatedBy")
 
   @@map("users")
 }
@@ -387,6 +430,7 @@ model Customer {
   shipping_addresses            AddressCustomerShipping[]
   products                      products[]
   purchase_orders               purchase_orders[]
+  customer_purchase_orders      CustomerPurchaseOrder[]
 
   @@map("customers")
 }
@@ -409,4 +453,175 @@ model AddressCustomerBilling {
 
   @@id([customer_id, address_id])
   @@map("customer_billing_addresses")
+}
+
+model CustomerOrderSettings {
+  id                    String   @id @default("DEFAULT") @db.VarChar(40)
+  priceTolerancePercent Decimal  @default(0) @map("price_tolerance_percent") @db.Decimal(7, 4)
+  currencyDecimalPlaces Int      @default(2) @map("currency_decimal_places")
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("customer_order_settings")
+}
+
+model CustomerOrderNumberCounter {
+  key          String   @id @db.VarChar(40)
+  lastSequence BigInt   @default(0) @map("last_sequence")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("customer_order_number_counters")
+}
+
+model CustomerPurchaseOrder {
+  id                      String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  internalOrderNumber     String                   @unique @map("internal_order_number") @db.VarChar(40)
+  customerId              String                   @map("customer_id") @db.Uuid
+  type                    CustomerOrderType
+  customerPoNumber        String                   @map("customer_po_number") @db.VarChar(100)
+  originalAuthorizedValue Decimal                  @default(0) @map("original_authorized_value") @db.Decimal(19, 2)
+  currency                String                   @default("AUD") @db.Char(3)
+  receivedDate            DateTime                 @map("received_date") @db.Date
+  validFrom               DateTime?                @map("valid_from") @db.Date
+  validTo                 DateTime?                @map("valid_to") @db.Date
+  status                  CustomerOrderStatus      @default(DRAFT)
+  createdById             String?                  @map("created_by_id") @db.Uuid
+  createdAt               DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime                 @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  customer                Customer                 @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  createdBy               User?                    @relation("CustomerOrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  amendments              CustomerOrderAmendment[]
+  releases                CustomerOrderRelease[]
+
+  @@unique([customerId, customerPoNumber])
+  @@index([customerId, status])
+  @@index([type, status])
+  @@index([validTo])
+  @@index([createdById])
+  @@map("customer_purchase_orders")
+}
+
+model CustomerOrderAmendment {
+  id                       String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customerPurchaseOrderId  String                @map("customer_purchase_order_id") @db.Uuid
+  valueDelta               Decimal               @map("value_delta") @db.Decimal(19, 2)
+  previousAuthorizedValue  Decimal               @map("previous_authorized_value") @db.Decimal(19, 2)
+  resultingAuthorizedValue Decimal               @map("resulting_authorized_value") @db.Decimal(19, 2)
+  customerReference        String?               @map("customer_reference") @db.VarChar(100)
+  receivedDate             DateTime              @map("received_date") @db.Date
+  effectiveDate            DateTime              @map("effective_date") @db.Date
+  reason                   String?               @db.VarChar(500)
+  recordedById             String?               @map("recorded_by_id") @db.Uuid
+  createdAt                DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  customerPurchaseOrder    CustomerPurchaseOrder @relation(fields: [customerPurchaseOrderId], references: [id], onDelete: Restrict)
+  recordedBy               User?                 @relation("CustomerOrderAmendmentRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
+
+  @@index([customerPurchaseOrderId, createdAt])
+  @@index([recordedById])
+  @@map("customer_order_amendments")
+}
+
+model CustomerOrderRelease {
+  id                           String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customerPurchaseOrderId      String                         @map("customer_purchase_order_id") @db.Uuid
+  internalReleaseNumber        String                         @unique @map("internal_release_number") @db.VarChar(40)
+  customerReleaseReference     String?                        @map("customer_release_reference") @db.VarChar(100)
+  receivedDate                 DateTime                       @map("received_date") @db.Date
+  defaultRequestedDeliveryDate DateTime?                      @map("default_requested_delivery_date") @db.Date
+  customerNetTotal             Decimal?                       @map("customer_net_total") @db.Decimal(19, 2)
+  expectedNetTotal             Decimal?                       @map("expected_net_total") @db.Decimal(19, 2)
+  varianceAmount               Decimal?                       @map("variance_amount") @db.Decimal(19, 2)
+  variancePercentage           Decimal?                       @map("variance_percentage") @db.Decimal(9, 4)
+  tolerancePercentageSnapshot  Decimal?                       @map("tolerance_percentage_snapshot") @db.Decimal(7, 4)
+  validationIssues             Json                           @default("[]") @map("validation_issues")
+  status                       CustomerOrderReleaseStatus     @default(DRAFT)
+  revisionNumber               Int                            @default(1) @map("revision_number")
+  committedValue               Decimal?                       @map("committed_value") @db.Decimal(19, 2)
+  committedAt                  DateTime?                      @map("committed_at") @db.Timestamptz(6)
+  cancelledAt                  DateTime?                      @map("cancelled_at") @db.Timestamptz(6)
+  lastValidatedAt              DateTime?                      @map("last_validated_at") @db.Timestamptz(6)
+  createdById                  String?                        @map("created_by_id") @db.Uuid
+  createdAt                    DateTime                       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                    DateTime                       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  customerPurchaseOrder        CustomerPurchaseOrder          @relation(fields: [customerPurchaseOrderId], references: [id], onDelete: Restrict)
+  createdBy                    User?                          @relation("CustomerOrderReleaseCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  lines                        CustomerOrderReleaseLine[]
+  revisions                    CustomerOrderReleaseRevision[]
+
+  @@index([customerPurchaseOrderId, status])
+  @@index([status, receivedDate])
+  @@index([createdById])
+  @@map("customer_order_releases")
+}
+
+model CustomerOrderReleaseLine {
+  id                         String                            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  releaseId                  String                            @map("release_id") @db.Uuid
+  position                   Int
+  productId                  String                            @map("product_id") @db.Uuid
+  bomId                      String?                           @map("bom_id") @db.Uuid
+  productCodeSnapshot        String                            @map("product_code_snapshot") @db.VarChar(100)
+  productDescriptionSnapshot String?                           @map("product_description_snapshot") @db.VarChar(500)
+  orderedQuantity            Decimal                           @map("ordered_quantity") @db.Decimal(19, 6)
+  orderUom                   CustomerOrderUom                  @map("order_uom")
+  requestedDeliveryDate      DateTime                          @map("requested_delivery_date") @db.Date
+  unitsPerShipperSnapshot    Int                               @map("units_per_shipper_snapshot")
+  pricePerShipperSnapshot    Decimal                           @map("price_per_shipper_snapshot") @db.Decimal(19, 4)
+  calculatedShippers         Decimal                           @map("calculated_shippers") @db.Decimal(19, 6)
+  customerLineValue          Decimal                           @map("customer_line_value") @db.Decimal(19, 2)
+  expectedLineValue          Decimal                           @map("expected_line_value") @db.Decimal(19, 2)
+  varianceAmount             Decimal                           @map("variance_amount") @db.Decimal(19, 2)
+  variancePercentage         Decimal                           @map("variance_percentage") @db.Decimal(9, 4)
+  validationStatus           CustomerOrderLineValidationStatus @default(PO_CHECK) @map("validation_status")
+  validationIssues           Json                              @default("[]") @map("validation_issues")
+  legacyPurchaseOrderId      String?                           @unique @map("legacy_purchase_order_id") @db.Uuid
+  createdAt                  DateTime                          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                  DateTime                          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  release                    CustomerOrderRelease              @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  product                    products                          @relation(fields: [productId], references: [id], onDelete: Restrict)
+  bom                        Bom?                              @relation(fields: [bomId], references: [id], onDelete: Restrict)
+  legacyPurchaseOrder        purchase_orders?                  @relation(fields: [legacyPurchaseOrderId], references: [id], onDelete: Restrict)
+
+  @@unique([releaseId, position])
+  @@index([productId])
+  @@index([bomId])
+  @@index([requestedDeliveryDate])
+  @@index([validationStatus])
+  @@map("customer_order_release_lines")
+}
+
+model CustomerOrderReleaseRevision {
+  id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  releaseId    String               @map("release_id") @db.Uuid
+  revision     Int
+  snapshot     Json
+  changeReason String?              @map("change_reason") @db.VarChar(500)
+  createdById  String?              @map("created_by_id") @db.Uuid
+  createdAt    DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  release      CustomerOrderRelease @relation(fields: [releaseId], references: [id], onDelete: Restrict)
+  createdBy    User?                @relation("CustomerOrderReleaseRevisionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([releaseId, revision])
+  @@index([createdById])
+  @@map("customer_order_release_revisions")
+}
+
+model BusinessAuditEvent {
+  id                 String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventType          String       @map("event_type") @db.VarChar(100)
+  outcome            AuditOutcome
+  occurredAt         DateTime     @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  actorUserId        String?      @map("actor_user_id") @db.Uuid
+  actorEmailSnapshot String?      @map("actor_email_snapshot") @db.VarChar(254)
+  targetType         String       @map("target_type") @db.VarChar(40)
+  targetId           String       @map("target_id") @db.VarChar(128)
+  correlationId      String       @map("correlation_id") @db.Uuid
+  metadata           Json         @default("{}")
+
+  @@index([occurredAt(sort: Desc)])
+  @@index([eventType, occurredAt(sort: Desc)])
+  @@index([actorUserId, occurredAt(sort: Desc)])
+  @@index([targetType, targetId, occurredAt(sort: Desc)])
+  @@index([correlationId])
+  @@map("business_audit_events")
 }

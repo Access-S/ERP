@@ -36,6 +36,14 @@ export const PERMISSIONS = [
   { key: "production_plan.create", module: "PLANNING", description: "Create production plans" },
   { key: "production_plan.release", module: "PLANNING", description: "Release production plans" },
 
+  { key: "customer_order.view", module: "CUSTOMER_ORDER", description: "View customer purchase orders and releases" },
+  { key: "customer_order.create", module: "CUSTOMER_ORDER", description: "Create standard and blanket customer purchase orders" },
+  { key: "customer_order.edit", module: "CUSTOMER_ORDER", description: "Correct editable customer purchase orders" },
+  { key: "customer_order.cancel", module: "CUSTOMER_ORDER", description: "Cancel eligible customer purchase orders and releases" },
+  { key: "customer_order.blanket_amend", module: "CUSTOMER_ORDER", description: "Record customer-authorised blanket PO top-ups" },
+  { key: "customer_order.release.create", module: "CUSTOMER_ORDER", description: "Create releases against customer purchase orders" },
+  { key: "customer_order.release.edit", module: "CUSTOMER_ORDER", description: "Correct uncompleted customer order releases" },
+
   { key: "purchase_order.view", module: "PURCHASING", description: "View purchase orders" },
   { key: "purchase_order.create", module: "PURCHASING", description: "Create purchase orders" },
   { key: "purchase_order.edit", module: "PURCHASING", description: "Edit purchase orders" },
@@ -109,7 +117,7 @@ export const SYSTEM_ROLES = [
     description: "Company-wide oversight and high-impact approval",
     permissions: [
       "customer.view", "product.view", "part.view", "bom.view", "bom.activate", "bom.archive",
-      "forecast.view", "production_plan.view", "purchase_order.view", "purchase_order.approve",
+      "forecast.view", "production_plan.view", "customer_order.view", "purchase_order.view", "purchase_order.approve",
       "purchase_order.cancel", "inventory.view", "production_work.view", "quality.view",
       "finance.view", "finance.override_credit_hold", "finance.report",
     ],
@@ -123,7 +131,7 @@ export const SYSTEM_ROLES = [
       "product.view", "product.deactivate", "product.reactivate",
       "part.view", "part.deactivate", "part.reactivate",
       "bom.view", "bom.activate", "bom.archive", "forecast.view",
-      "production_plan.view", "production_plan.create", "production_plan.release",
+      "production_plan.view", "production_plan.create", "production_plan.release", "customer_order.view",
       "purchase_order.view", "purchase_order.approve", "purchase_order.cancel",
       "inventory.view", "inventory.adjust.approve",
       "production_work.view", "production_work.assign", "production_work.start",
@@ -138,7 +146,10 @@ export const SYSTEM_ROLES = [
     permissions: [
       "customer.view", "customer.create", "customer.edit_identity", "customer.edit_contacts",
       "customer.address.manage", "product.view", "bom.view", "forecast.view", "forecast.create",
-      "forecast.edit", "purchase_order.view", "inventory.view", "production_work.view", "quality.view",
+      "forecast.edit", "customer_order.view", "customer_order.create", "customer_order.edit",
+      "customer_order.cancel", "customer_order.blanket_amend", "customer_order.release.create",
+      "customer_order.release.edit", "purchase_order.view", "inventory.view", "production_work.view",
+      "quality.view",
     ],
   },
   {
@@ -150,7 +161,7 @@ export const SYSTEM_ROLES = [
       "part.view", "part.create", "part.edit", "bom.view", "bom.draft.create",
       "bom.draft.edit", "bom.draft.discard", "bom.import", "forecast.view",
       "forecast.create", "forecast.edit", "production_plan.view", "production_plan.create",
-      "purchase_order.view", "inventory.view", "production_work.view", "quality.view",
+      "customer_order.view", "purchase_order.view", "inventory.view", "production_work.view", "quality.view",
     ],
   },
   {
@@ -181,7 +192,7 @@ export const SYSTEM_ROLES = [
     description: "Execution and supervision of approved production plans",
     permissions: [
       "product.view", "part.view", "bom.view", "forecast.view", "production_plan.view",
-      "production_plan.release", "purchase_order.view", "inventory.view", "production_work.view",
+      "production_plan.release", "customer_order.view", "purchase_order.view", "inventory.view", "production_work.view",
       "production_work.assign", "production_work.start", "production_work.report",
       "production_work.complete", "production_work.cancel", "quality.view",
     ],
@@ -225,7 +236,7 @@ export const SYSTEM_ROLES = [
     description: "Technical account, access, configuration, integration, and audit administration",
     permissions: [
       "customer.view", "product.view", "part.view", "bom.view", "forecast.view",
-      "production_plan.view", "purchase_order.view", "inventory.view", "production_work.view",
+      "production_plan.view", "customer_order.view", "purchase_order.view", "inventory.view", "production_work.view",
       "quality.view", "finance.view", "admin.user.view", "admin.user.invite", "admin.user.manage",
       "admin.role.assign", "admin.role.manage", "admin.configuration.manage", "admin.integration.manage",
       "admin.audit.view",

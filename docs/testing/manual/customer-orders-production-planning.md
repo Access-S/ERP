@@ -1,6 +1,6 @@
 # Customer Orders and Production Planning Manual Tests
 
-Status: **Not ready** - approved design, implementation not started
+Status: **Not ready for browser UAT** - domain/database foundation complete; UI pending
 Owner: Product owner / Customer Service / Production Planning
 Last updated: 2026-09-14
 
@@ -149,4 +149,3 @@ entered as a new release.
 
 Do not record customer documents, real prices, credentials, or personal details
 in this file or in screenshots attached to defects.
-

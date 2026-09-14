@@ -1,6 +1,6 @@
 # Customer Orders and Production Planning Workflow
 
-Status: Approved design baseline; implementation not started
+Status: Phase 1 domain and database foundation implemented; UI not started
 Owner: Product owner / Customer Service / Production Planning
 Last updated: 2026-09-14
 
@@ -54,6 +54,8 @@ for purchase orders sent to suppliers.
     replanning or operational change review; they never silently rewrite the
     plan's original demand snapshot.
 20. Completed releases are locked. Further demand is entered as a new release.
+21. The rollout tolerance defaults to `0%` until an authorised administrator
+    deliberately configures another percentage.
 
 ## 3. Terminology
 
@@ -319,6 +321,7 @@ A line or release becomes `PO_CHECK` when any applicable condition exists:
 - inactive Product or Product assigned to another Customer;
 - missing/invalid Units per Shipper;
 - missing/non-positive approved price;
+- missing active BOM revision;
 - non-positive quantity;
 - quantity does not resolve to complete shippers;
 - missing requested delivery date;
@@ -599,12 +602,14 @@ Migration rules:
 
 ### Phase 1 - Domain and migration foundation
 
-- Add enums, normalized Customer PO/release/line/amendment models, constraints,
+- **Implemented 2026-09-14.** Add enums, normalized Customer
+  PO/release/line/amendment models, constraints,
   indexes, and relationships.
-- Add company tolerance configuration with a safe default decision.
-- Implement pure decimal conversion and validation rules.
-- Add dry-run legacy mapping and reversible database UAT.
-- Add proposed Customer Order permission keys and role grants.
+- Added company tolerance configuration with a safe `0%` rollout default.
+- Implemented pure decimal conversion and validation rules.
+- Added dry-run legacy mapping and reversible database UAT.
+- Added Customer Order permission keys and standard-role grants.
+- Added a serializable, parent-row-locked blanket commitment boundary.
 
 ### Phase 2 - Standard Customer PO entry
 
@@ -638,12 +643,12 @@ Migration rules:
 - Deferred manual scenarios in
   [Customer Orders and Production Planning Manual Tests](../testing/manual/customer-orders-production-planning.md).
 
-## 21. First implementation goal
+## 21. Current implementation goal
 
-The first coding goal is **Phase 1: Domain and migration foundation**. It should
-not begin with a production calendar or a large entry form. The calculation,
-status, balance, revision, permission, and migration boundaries must be proven
-first so every later page uses the same rules.
+Phase 1 is complete. The current goal is **Phase 2: Standard Customer PO
+entry**. It will build the list, create, detail, correction, and cancellation
+workflow on the tested calculation, status, permission, audit, and migration
+boundaries.
 
 ## 22. Open future decisions
 
@@ -671,4 +676,3 @@ These do not block the initial domain foundation:
 | 2026-09-14 | Treat Blanket POs as value-only envelopes with multiple releases. | Customers may call off varying SKUs and quantities throughout a six- or twelve-month period. |
 | 2026-09-14 | Preserve top-ups as append-only amendments. | The original authority and every later customer-funded increase must remain traceable. |
 | 2026-09-14 | Allow CS edits to uncompleted demand while requiring replanning/change review after planning begins. | Customer requirements can change, but Production must not silently operate against stale demand. |
-
