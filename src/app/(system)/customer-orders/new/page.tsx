@@ -1,0 +1,49 @@
+import Link from "next/link"
+import { ArrowLeft } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { PermissionDenied } from "@/features/auth/components/permission-denied"
+import { getCurrentPrincipal } from "@/features/auth/services/authorization-service"
+import { StandardCustomerOrderForm } from "@/features/customer-orders/components/standard-customer-order-form"
+import { hasCustomerOrderPermission } from "@/features/customer-orders/services/customer-order-authorization"
+import { getCustomerOrderCreateOptions } from "@/features/customer-orders/services/customer-order-service"
+
+export const dynamic = "force-dynamic"
+
+export default async function NewCustomerOrderPage() {
+  const principal = await getCurrentPrincipal()
+  if (!principal || !hasCustomerOrderPermission(principal, "create")) {
+    return (
+      <PermissionDenied
+        description="You need permission to create Customer Orders."
+        backHref="/customer-orders"
+        backLabel="Return to Customer Orders"
+      />
+    )
+  }
+
+  const options = await getCustomerOrderCreateOptions()
+  const now = new Date()
+  const today = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ].join("-")
+
+  return (
+    <div className="flex flex-col gap-6 p-6">
+      <div className="space-y-2">
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/customer-orders"><ArrowLeft className="mr-2 h-4 w-4" />Customer Orders</Link>
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">New Standard Customer PO</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            The system validates every line and the complete PO before releasing it to planning.
+          </p>
+        </div>
+      </div>
+      <StandardCustomerOrderForm options={options} today={today} />
+    </div>
+  )
+}

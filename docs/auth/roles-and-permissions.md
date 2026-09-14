@@ -492,10 +492,11 @@ separate from supplier purchasing permissions below.
 
 ## 9. Current application enforcement state
 
-Customer, Part, Product, and BOM entry points enforce the role matrix at
-protected page reads and Server Actions. The Customer Order domain foundation
-now has typed operation boundaries; page and mutation enforcement will arrive
-with its Standard Customer PO workflow.
+Customer, Part, Product, BOM, and Customer Order entry points enforce the role
+matrix at protected page reads and Server Actions. Customer Order navigation is
+also permission-aware: Customer Service can create, correct, and cancel
+pre-planning orders; designated operational roles can view them; unrelated
+roles do not receive access.
 
 Access Control now supports invitation and activation, existing-user status
 management, multiple role assignments, effective-permission inspection, and

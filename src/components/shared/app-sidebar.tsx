@@ -11,6 +11,7 @@ import {
   Package,
   Warehouse,
   ShoppingCart,
+  ReceiptText,
   TrendingUp,
   Cpu,
   ChevronDown,
@@ -55,6 +56,12 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
+    label: "Customer & Demand",
+    items: [
+      { title: "Customer Orders", url: "/customer-orders", icon: ReceiptText },
+    ],
+  },
+  {
     label: "Procurement",
     items: [
       { title: "Purchase Orders", url: "/purchasing", icon: ShoppingCart },
@@ -77,16 +84,26 @@ const administrationNavGroup: NavGroup = {
 // ───────────────── BLOCK 3: Component ─────────────────────────
 export function AppSidebar({
   canViewAccessControl = false,
+  canViewCustomerOrders = false,
   accessLabel,
 }: {
   canViewAccessControl?: boolean
+  canViewCustomerOrders?: boolean
   accessLabel?: string
 }) {
   const pathname = usePathname()
   const { data: session } = useSession()
+  const permittedNavGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) => item.url !== "/customer-orders" || canViewCustomerOrders
+      ),
+    }))
+    .filter((group) => group.items.length > 0)
   const visibleNavGroups = canViewAccessControl
-    ? [...navGroups, administrationNavGroup]
-    : navGroups
+    ? [...permittedNavGroups, administrationNavGroup]
+    : permittedNavGroups
   
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
     visibleNavGroups.reduce((acc, group) => ({ ...acc, [group.label]: true }), {})

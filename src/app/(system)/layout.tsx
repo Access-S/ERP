@@ -21,6 +21,9 @@ export default async function AppLayout({
       hasPermission(principal, "admin.audit.view")
     )
   )
+  const canViewCustomerOrders = Boolean(
+    principal && hasPermission(principal, "customer_order.view")
+  )
   const accessLabel = principal
     ? principal.roleKeys.length === 1
       ? principal.roleKeys[0].replaceAll("_", " ")
@@ -31,6 +34,7 @@ export default async function AppLayout({
     <SidebarProvider>
       <AppSidebar
         canViewAccessControl={canViewAccessControl}
+        canViewCustomerOrders={canViewCustomerOrders}
         accessLabel={accessLabel}
       />
       <SidebarInset>

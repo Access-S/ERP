@@ -148,6 +148,45 @@ async function testReversibleWorkflow() {
       assert.equal(stored.releases[0].lines.length, 1)
       assert.equal(stored.releases[0].revisions.length, 1)
       assert.equal(stored.releases[0].lines[0].calculatedShippers.toFixed(), "100")
+
+      const poCheckReleaseNumber = await allocateCustomerOrderNumber(tx, "RELEASE")
+      const poCheckRelease = await tx.customerOrderRelease.create({
+        data: {
+          customerPurchaseOrderId: order.id,
+          internalReleaseNumber: poCheckReleaseNumber,
+          receivedDate: new Date("2026-09-14T00:00:00.000Z"),
+          customerNetTotal: 1000,
+          tolerancePercentageSnapshot: 0,
+          validationIssues: ["Line 1 requires an active BOM and requested delivery date."],
+          status: "PO_CHECK",
+          lastValidatedAt: new Date(),
+          lines: {
+            create: {
+              position: 1,
+              productId: product.id,
+              productCodeSnapshot: product.product_code,
+              productDescriptionSnapshot: product.description,
+              orderedQuantity: 2400,
+              orderUom: "UNIT",
+              customerLineValue: 1000,
+              validationStatus: "PO_CHECK",
+              validationIssues: ["An active BOM is required.", "Requested delivery date is required."],
+            },
+          },
+          revisions: {
+            create: {
+              revision: 1,
+              snapshot: { status: "PO_CHECK", validationIssueCount: 2 },
+              changeReason: "Initial incomplete UAT submission",
+            },
+          },
+        },
+        include: { lines: true },
+      })
+      assert.equal(poCheckRelease.status, "PO_CHECK")
+      assert.equal(poCheckRelease.lines[0].bomId, null)
+      assert.equal(poCheckRelease.lines[0].requestedDeliveryDate, null)
+      assert.equal(poCheckRelease.lines[0].expectedLineValue, null)
       completed = true
       throw new ExpectedRollback("Rollback Customer Order database UAT data")
     }, {

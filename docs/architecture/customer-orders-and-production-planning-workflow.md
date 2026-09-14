@@ -613,10 +613,19 @@ Migration rules:
 
 ### Phase 2 - Standard Customer PO entry
 
-- Customer Order list, create, details, and edit pages.
-- Multi-line Standard PO entry.
-- Automatic line/total calculation and `PO_CHECK` classification.
-- Correction workflow and immutable revision history.
+- **Implemented 2026-09-14.** Added permission-aware Customer Order list,
+  create, detail, and edit pages with whole-row navigation.
+- Added multi-line Standard PO entry using unit or shipper quantities and
+  GST-exclusive Customer values.
+- The server reloads Customer ownership, active BOM, packaging, approved price,
+  and tolerance data before using decimal calculations to assign `PO_CHECK` or
+  `READY_FOR_PLANNING`.
+- Incomplete submissions retain their validation evidence in `PO_CHECK`; valid
+  releases are committed atomically for planning.
+- Corrections create immutable revision snapshots, and pre-planning
+  cancellation retains the order and its history.
+- Page, sidebar, and Server Action permissions are enforced and covered by
+  authenticated route UAT.
 
 ### Phase 3 - Blanket POs and releases
 
@@ -645,10 +654,10 @@ Migration rules:
 
 ## 21. Current implementation goal
 
-Phase 1 is complete. The current goal is **Phase 2: Standard Customer PO
-entry**. It will build the list, create, detail, correction, and cancellation
-workflow on the tested calculation, status, permission, audit, and migration
-boundaries.
+Phases 1 and 2 are complete. The current goal is **Phase 3: Blanket POs and
+releases**. It will add blanket authority, validity, balance, top-up,
+multi-release, and release-cancellation behaviour on the existing atomic
+commitment boundary.
 
 ## 22. Open future decisions
 

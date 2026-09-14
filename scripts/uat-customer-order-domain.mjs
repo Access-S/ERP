@@ -8,6 +8,10 @@ import {
   validateCustomerOrderLine,
   validateCustomerOrderRelease,
 } from "../src/features/customer-orders/services/customer-order-validation.ts"
+import {
+  cancelCustomerOrderInputSchema,
+  createStandardCustomerOrderInputSchema,
+} from "../src/features/customer-orders/types/customer-order-schema.ts"
 
 const CUSTOMER_ID = "customer-1"
 
@@ -170,5 +174,44 @@ assert.throws(
 )
 pass("Blanket reductions are rejected until their future rules are designed")
 
-console.log("\nCustomer Order domain validation passed without database writes.")
+const validFormInput = {
+  customerId: "11111111-1111-4111-8111-111111111111",
+  customerPoNumber: "UAT-PO-001",
+  receivedDate: "2026-09-14",
+  customerReleaseReference: "",
+  defaultRequestedDeliveryDate: "2026-10-01",
+  customerNetTotal: "1000.00",
+  lines: [{
+    productId: "22222222-2222-4222-8222-222222222222",
+    orderUom: "UNIT",
+    orderedQuantity: "2400",
+    requestedDeliveryDate: "",
+    customerLineValue: "1000.00",
+  }],
+}
+assert.equal(createStandardCustomerOrderInputSchema.safeParse(validFormInput).success, true)
+assert.equal(
+  createStandardCustomerOrderInputSchema.safeParse({
+    ...validFormInput,
+    receivedDate: "2026-02-30",
+  }).success,
+  false
+)
+assert.equal(
+  createStandardCustomerOrderInputSchema.safeParse({
+    ...validFormInput,
+    customerNetTotal: "1000.001",
+  }).success,
+  false
+)
+assert.equal(
+  cancelCustomerOrderInputSchema.safeParse({
+    orderId: validFormInput.customerId,
+    releaseId: validFormInput.lines[0].productId,
+    reason: "too short",
+  }).success,
+  false
+)
+pass("Form boundaries reject impossible dates, excess money precision, and weak cancellation reasons")
 
+console.log("\nCustomer Order domain validation passed without database writes.")

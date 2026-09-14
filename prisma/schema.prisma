@@ -564,14 +564,14 @@ model CustomerOrderReleaseLine {
   productDescriptionSnapshot String?                           @map("product_description_snapshot") @db.VarChar(500)
   orderedQuantity            Decimal                           @map("ordered_quantity") @db.Decimal(19, 6)
   orderUom                   CustomerOrderUom                  @map("order_uom")
-  requestedDeliveryDate      DateTime                          @map("requested_delivery_date") @db.Date
-  unitsPerShipperSnapshot    Int                               @map("units_per_shipper_snapshot")
-  pricePerShipperSnapshot    Decimal                           @map("price_per_shipper_snapshot") @db.Decimal(19, 4)
-  calculatedShippers         Decimal                           @map("calculated_shippers") @db.Decimal(19, 6)
+  requestedDeliveryDate      DateTime?                         @map("requested_delivery_date") @db.Date
+  unitsPerShipperSnapshot    Int?                              @map("units_per_shipper_snapshot")
+  pricePerShipperSnapshot    Decimal?                          @map("price_per_shipper_snapshot") @db.Decimal(19, 4)
+  calculatedShippers         Decimal?                          @map("calculated_shippers") @db.Decimal(19, 6)
   customerLineValue          Decimal                           @map("customer_line_value") @db.Decimal(19, 2)
-  expectedLineValue          Decimal                           @map("expected_line_value") @db.Decimal(19, 2)
-  varianceAmount             Decimal                           @map("variance_amount") @db.Decimal(19, 2)
-  variancePercentage         Decimal                           @map("variance_percentage") @db.Decimal(9, 4)
+  expectedLineValue          Decimal?                          @map("expected_line_value") @db.Decimal(19, 2)
+  varianceAmount             Decimal?                          @map("variance_amount") @db.Decimal(19, 2)
+  variancePercentage         Decimal?                          @map("variance_percentage") @db.Decimal(9, 4)
   validationStatus           CustomerOrderLineValidationStatus @default(PO_CHECK) @map("validation_status")
   validationIssues           Json                              @default("[]") @map("validation_issues")
   legacyPurchaseOrderId      String?                           @unique @map("legacy_purchase_order_id") @db.Uuid

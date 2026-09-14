@@ -1,11 +1,13 @@
 # Customer Orders and Production Planning Manual Tests
 
-Status: **Not ready for browser UAT** - domain/database foundation complete; UI pending
+Status: **Partially ready for browser UAT** - Standard PO scenarios ready; Blanket and Planning pending
 Owner: Product owner / Customer Service / Production Planning
 Last updated: 2026-09-14
 
 Use these scenarios only after the relevant implementation phase is marked
 ready. Use dummy Customer PO and SKU references beginning with `UAT-`.
+
+Current ready scope: `COPP-01` to `COPP-05` and `COPP-16`.
 
 ## Customer Order entry
 
@@ -141,11 +143,21 @@ Expected: The original planning snapshot remains visible and the plan becomes
 Expected: The release cannot be edited and the additional requirement must be
 entered as a new release.
 
+### COPP-16 - Cancel a Standard PO before planning
+
+1. Open a Standard PO in `PO Check` or `Ready for Planning`.
+2. Select **Cancel Customer PO** and enter a clear reason of at least 10 characters.
+3. Confirm the cancellation.
+
+Expected: The order becomes `Cancelled`, can no longer be edited, and its
+lines, revisions, and cancellation reason remain visible in history.
+
 ## Result record
 
 | Date | Environment | Tester | Scenarios | Result | Defect or notes |
 | --- | --- | --- | --- | --- | --- |
-|  |  |  | COPP-01 to COPP-15 | Not ready | Implementation pending |
+|  |  |  | COPP-01 to COPP-05, COPP-16 | Ready | Standard PO workflow |
+|  |  |  | COPP-06 to COPP-15 | Not ready | Blanket and Planning implementation pending |
 
 Do not record customer documents, real prices, credentials, or personal details
 in this file or in screenshots attached to defects.

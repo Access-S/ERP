@@ -33,6 +33,7 @@
     "uat:customer-orders-audit": "node --no-warnings --experimental-strip-types scripts/uat-customer-order-audit-policy.mjs",
     "uat:customer-orders-numbering": "node --no-warnings --experimental-strip-types scripts/uat-customer-order-numbering.mjs",
     "uat:customer-orders-database": "node --no-warnings --experimental-strip-types --env-file=.env scripts/uat-customer-order-database.mjs",
+    "uat:customer-orders-routes": "node --env-file=.env scripts/uat-customer-order-routes.mjs",
     "uat:password-management-routes": "node --env-file=.env scripts/uat-password-management-routes.mjs",
     "uat:auth-session-policy": "node --no-warnings --experimental-strip-types scripts/uat-auth-session-policy.mjs",
     "uat:auth-session-routes": "node --no-warnings --experimental-strip-types --env-file=.env scripts/uat-auth-session-routes.mjs",
