@@ -29,6 +29,7 @@ Whenever a feature or permission materially changes:
 | File | Use |
 | --- | --- |
 | [Current System Scenarios](current-system-scenarios.md) | Main browser checklist for functionality currently ready to test |
+| [Customer Orders and Production Planning](customer-orders-production-planning.md) | Deferred scenarios for the approved Customer PO, blanket-release, and planning design; currently **Not ready** |
 
 ## Related detailed checks
 
