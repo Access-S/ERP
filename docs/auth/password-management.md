@@ -2,7 +2,7 @@
 
 Status: Implemented and manually accepted for self-service changes and administrator-delivered reset links; email delivery deferred
 Owner: Product owner / Engineering
-Last updated: 2026-09-13
+Last updated: 2026-09-14
 
 ## Purpose
 
@@ -69,6 +69,7 @@ receive, or view the replacement password.
 8. Reset pages are `noindex`, `nofollow`, and `no-referrer`.
 9. An unknown, expired, used, or revoked token receives the same public message.
 10. The reset workflow never changes an account's status or role assignments.
+11. A successful change or reset clears temporary failed-login throttle state.
 
 ## Delivery boundary
 
@@ -115,3 +116,4 @@ correlation ID as their audit events.
 | --- | --- |
 | 2026-09-13 | Implemented self-service password changes, administrator-delivered reset links, transactional session invalidation, and password audit events. |
 | 2026-09-13 | Product owner manually accepted current-password rejection, successful change and sign-out, old/new credential behaviour, administrator reset-link creation, single-use reset, credential restoration, and audit capture. |
+| 2026-09-14 | Password change and recovery now clear temporary login throttling while preserving account status and role assignments. |

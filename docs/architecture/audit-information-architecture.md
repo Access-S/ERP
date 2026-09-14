@@ -86,8 +86,7 @@ the canonical history by target type and target ID.
 
 ## Future implementation order
 
-1. Add rate-limit, account-lockout, session-expiry, and logout events to Security
-   Monitoring.
+1. Add trusted-network/hosting alert inputs after proxy and source-IP policy is accepted.
 2. Add the generic business-audit writer contract and category-scoped permissions.
 3. Adopt Product, Part, BOM, and Customer lifecycle events.
 4. Add record-specific Activity tabs.
@@ -101,3 +100,4 @@ the canonical history by target type and target ID.
 | --- | --- |
 | 2026-09-13 | Defined canonical storage with classified UI views and implemented the security-first category model. |
 | 2026-09-14 | Verified the monitoring dashboard, added post-response view auditing, and made the investigation view resilient to unknown stored event keys. |
+| 2026-09-14 | Added account-throttle activation, explicit logout, and observable absolute-session expiry classifications. |

@@ -113,6 +113,10 @@ export type SecurityAuditEventRecord = Awaited<
 export async function getSecurityAuditDashboard() {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
   const roleAndPermissionTypes = getAuditEventTypesForCategory("ROLES_PERMISSIONS")
+  const failedLoginTypes: SecurityAuditEventType[] = [
+    "auth.login.failed",
+    "auth.login.rate_limited",
+  ]
   const passwordTypes: SecurityAuditEventType[] = [
     "auth.password.changed",
     "auth.password.change_failed",
@@ -130,7 +134,7 @@ export async function getSecurityAuditDashboard() {
     ...categoryEvents
   ] = await Promise.all([
     prisma.securityAuditEvent.count({
-      where: { eventType: "auth.login.failed", occurredAt: { gte: since } },
+      where: { eventType: { in: failedLoginTypes }, occurredAt: { gte: since } },
     }),
     prisma.securityAuditEvent.count({
       where: { eventType: { in: passwordTypes }, occurredAt: { gte: since } },

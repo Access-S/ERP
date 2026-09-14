@@ -117,6 +117,9 @@ export async function changeOwnPassword(
       data: {
         password: passwordHash,
         authVersion: { increment: 1 },
+        failedLoginAttempts: 0,
+        failedLoginWindowStart: null,
+        loginBlockedUntil: null,
         updatedAt: new Date(),
       },
     })
@@ -309,6 +312,9 @@ export async function resetPassword(secret: string, password: string) {
         data: {
           password: passwordHash,
           authVersion: { increment: 1 },
+          failedLoginAttempts: 0,
+          failedLoginWindowStart: null,
+          loginBlockedUntil: null,
           updatedAt: now,
         },
       })

@@ -17,9 +17,9 @@ matrix. Update it in the same commit as implementation work.
 
 | Capability | Status | Evidence or gap |
 | --- | --- | --- |
-| Email/password login | Hardened foundation complete | Redesigned login, normalized identifiers, bounded server input, generic failures, and Auth.js Credentials |
+| Email/password login | Hardened foundation complete | Normalized/bounded credentials, generic failures, account-bound temporary throttling, and Auth.js Credentials |
 | Password hashing | Initial decision complete | bcrypt cost 12; 12-character minimum and 72-byte maximum recorded in ADR 002 |
-| JWT session | Freshness foundation complete | User ID, compatibility role, and `authVersion` are copied into the session |
+| JWT session | Lifetime and freshness controls complete | One-hour idle, 12-hour absolute, server-issued start claim, and `authVersion` invalidation |
 | Page redirect | Prototype complete | Next.js Proxy redirects unauthenticated requests |
 | Mutation authentication | Completed master-data modules protected | Customer, Product, Part, and BOM writes enforce typed permissions |
 | Normalized roles and permissions | Foundation complete | 11 system roles, 74 permissions, 190 standard grants, and existing-user mapping are seeded |
@@ -35,7 +35,7 @@ matrix. Update it in the same commit as implementation work.
 ### Phase 0: Confirm implementation choices
 
 - [x] Confirm password hashing choice for new passwords.
-- [ ] Confirm initial session idle and absolute lifetime.
+- [x] Confirm initial session idle and absolute lifetime.
 - [ ] Confirm who may assign roles.
 - [ ] Confirm whether version 1 is organization-wide or needs site/warehouse
   scope.
@@ -120,9 +120,9 @@ database editing, and an unauthorized user cannot invoke those operations.
 
 - [x] Normalize login identifiers.
 - [x] Add server-side credential validation and maximum lengths.
-- [ ] Configure explicit session lifetimes.
+- [x] Configure explicit session lifetimes.
 - [x] Add session invalidation after password, status, and role changes.
-- [ ] Add rate limiting for authentication attempts.
+- [x] Add account-bound rate limiting for authentication attempts.
 - [x] Add secure invitation tokens with controlled manual delivery.
 - [x] Add password-reset tokens and controlled administrator delivery.
 - [ ] Add production email delivery and public recovery requests.
@@ -205,3 +205,4 @@ verify the mapping, then remove the legacy free-text role in a later migration.
 | 2026-09-13 | Added self-service password changes, administrator-delivered one-hour reset links, password-triggered session invalidation, and password audit events. |
 | 2026-09-13 | Product owner manually accepted the password change, administrator recovery, single-use reset, credential restoration, session invalidation, and audit scenarios. |
 | 2026-09-14 | Completed and automatically verified the classified security-monitoring dashboard, category views, severity prioritisation, investigation filters, and post-response view auditing. |
+| 2026-09-14 | Added and verified one-hour idle/12-hour absolute sessions, five-attempt temporary login throttling, recovery clearing, and logout/expiry/throttle audit events. |

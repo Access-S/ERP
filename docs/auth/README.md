@@ -2,7 +2,7 @@
 
 Status: Active documentation set
 Owner: Product owner / Engineering
-Last updated: 2026-09-12
+Last updated: 2026-09-14
 
 ## Purpose
 
@@ -29,6 +29,7 @@ remain separate responsibilities.
 | [ADR 001: Auth foundation](decisions/001-auth-foundation.md) | Durable record of the initial Auth.js, Prisma, and RBAC decisions | A foundational decision is replaced or amended |
 | [ADR 002: User invitations and passwords](decisions/002-user-invitations-and-passwords.md) | Durable record of invitation-token, delivery, and bcrypt decisions | Password hashing or onboarding security changes |
 | [ADR 003: Password management and recovery](decisions/003-password-management-and-recovery.md) | Durable record of reset-token, administrator-assistance, and session-revocation decisions | Password change or recovery security changes |
+| [ADR 004: Session lifetime and login throttling](decisions/004-session-lifetime-and-login-throttling.md) | Durable record of inactivity/overall expiry, account throttling, recovery, and audit decisions | Session lifetime, login throttling, or network-source controls change |
 
 ## Sources of truth
 

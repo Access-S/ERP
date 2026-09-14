@@ -42,6 +42,8 @@ even if a developer accidentally includes one.
 The following are captured now:
 
 - successful and failed password login attempts;
+- temporary login-throttle activation, explicit logout, and observable absolute
+  session expiry;
 - successful and failed password changes and resets;
 - invitation creation, replacement, cancellation, and acceptance;
 - user creation and account status changes;
@@ -51,8 +53,9 @@ The following are captured now:
 - audit-history views.
 
 Critical account, invitation, role, and successful password events are inserted
-in the same database transaction as the security change. Logout/expiry events
-require the later session-lifecycle increment.
+in the same database transaction as the security change. A stateless JWT that
+has already reached idle expiry cannot provide a newly verified actor identity;
+explicit logout and application-observed absolute expiry are recorded.
 
 ## 3. Minimum event shape
 
@@ -93,8 +96,9 @@ Never store:
 | --- | --- | --- |
 | `auth.login.succeeded` | Success | User ID, correlation ID, session ID hash/reference if supported |
 | `auth.login.failed` | Failure | Normalized identifier snapshot, generic reason category, correlation ID |
-| `auth.logout.succeeded` | Success | User ID and session reference |
-| `auth.session.expired` | Success | User ID and expiry reason when known |
+| `auth.login.rate_limited` | Denied | Target user, failure count, and retry duration; never the password |
+| `auth.logout.succeeded` | Success | User ID; session reference if supported |
+| `auth.session.expired` | Success | User ID, absolute-session age, and expiry reason when observable |
 | `auth.session.revoked` | Success | User ID, initiator, reason, affected session count |
 | `auth.password.changed` | Success | User ID and whether self-service or administrator initiated |
 | `auth.password.change_failed` | Failure | User ID when known and sanitized reason |
@@ -194,6 +198,12 @@ development server for authorized-view, denied-view, and login event capture.
 The route suite deliberately retains its generated records because the database
 correctly prevents historical audit evidence from being deleted.
 
+Run `npm run uat:auth-session-policy` for timeout and throttle-boundary checks.
+Run `npm run uat:auth-session-routes` against the development server for live
+threshold, generic denial, recovery, cookie-expiry, and logout-audit checks. The
+route suite restores the UAT account's temporary throttle fields and retains its
+immutable security evidence.
+
 ## 11. Open decisions
 
 1. Retention period for login failures and source IP addresses.
@@ -214,3 +224,4 @@ correctly prevents historical audit evidence from being deleted.
 | 2026-09-13 | Added allowlisted password change/reset events and correlated session-revocation capture. |
 | 2026-09-13 | Added the typed category/severity registry and security-first monitoring layout. |
 | 2026-09-14 | Verified the dashboard and protected routes, moved view logging to post-response execution, and added safe handling for unknown stored event keys. |
+| 2026-09-14 | Added throttle activation, explicit logout, and observable absolute-session expiry events with live authentication-route verification. |

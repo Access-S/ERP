@@ -1,8 +1,8 @@
 # Authentication and Authorization Architecture
 
-Status: Approved direction; onboarding and core audit foundation implemented
+Status: Approved direction; core authentication and authorization implemented
 Owner: Product owner / Engineering
-Last updated: 2026-09-12
+Last updated: 2026-09-14
 
 ## 1. Purpose
 
@@ -36,7 +36,8 @@ The design applies to:
 
 ## 3. Current implementation
 
-As of 2026-09-09, the application has a working prototype authentication layer:
+As of 2026-09-14, the application has a server-enforced authentication and
+authorization foundation:
 
 - Auth.js/NextAuth v5 beta is configured in `src/auth.ts`.
 - The Credentials provider accepts email and password.
@@ -44,7 +45,7 @@ As of 2026-09-09, the application has a working prototype authentication layer:
 - Password verification uses `bcryptjs.compare`.
 - Auth.js issues JWT-based sessions.
 - The session contains user ID, name, email, the compatibility role, and
-  `authVersion`.
+  `authVersion`; the encrypted token also retains a server-issued session start.
 - `src/proxy.ts` redirects unauthenticated page requests to `/login`.
 - Customer, Product, Part, and BOM mutations enforce typed permissions from the
   normalized RBAC model.
@@ -61,6 +62,12 @@ As of 2026-09-09, the application has a working prototype authentication layer:
   not disclose whether an account exists or is unavailable.
 - Security authentication and access-control events are stored in an append-only
   PostgreSQL table through a server-only, metadata-allowlisted writer.
+- JWT sessions expire after one hour of inactivity and require a fresh login
+  after 12 total hours.
+- Five failed passwords inside 15 minutes activate a 15-minute account-bound
+  throttle without changing the user's `ACTIVE` business status.
+- Self-service password change, administrator-assisted password recovery,
+  explicit logout, and classified security monitoring are implemented.
 
 This provides a useful foundation, but it is not the target authorization
 system.
@@ -72,13 +79,13 @@ system.
   normalized assignments from the database.
 - Future modules and broader application navigation must adopt the normalized
   principal as they are implemented.
-- JWT contents may remain valid after role or account changes.
-- The central guard rejects stale JWTs at protected operations, but a complete
-  logout/revocation experience for already-open pages is not yet implemented.
-- No login throttling, lockout policy, production email delivery, or password
-  reset flow is implemented.
-- Password change/reset and complete logout/session-expiry audit events await
-  those account-security workflows.
+- The central guard rejects stale JWTs at protected operations, but an already
+  open browser page receives the rejection only when it next requests the server.
+- Production email delivery and public recovery requests remain deferred.
+- Account-bound throttling is implemented; trusted proxy/network-source and
+  hosting-edge throttling remain production deployment controls.
+- Stateless idle expiry cannot add a verified user-specific audit event after
+  the token has already expired; explicit logout and absolute expiry are audited.
 - The prototype administrator may still use a development password that must be
   rotated before any shared, staging, or production deployment.
 - Navigation hiding is not yet driven by effective permissions.
@@ -261,7 +268,7 @@ rules:
   record when a secure operation is performed.
 - Increment `authVersion` when a password, account status, or role assignment
   changes, invalidating older sessions.
-- Define explicit idle and absolute session lifetimes before production.
+- Enforce the accepted one-hour idle and 12-hour absolute session lifetimes.
 - Log out by invalidating the browser session; account suspension and privilege
   changes must also invalidate authorization without waiting indefinitely for an
   old JWT to expire.
@@ -285,6 +292,7 @@ sequenceDiagram
     Login->>Auth: Sign-in request
     Auth->>DB: Load normalized account
     DB-->>Auth: Account and password hash
+    Auth->>Auth: Check temporary account throttle
     Auth->>Auth: Check status and verify hash
     alt valid active account
         Auth->>Audit: auth.login.succeeded
@@ -292,12 +300,17 @@ sequenceDiagram
     else invalid credentials or unavailable account
         Auth->>Audit: auth.login.failed
         Auth-->>Login: Generic failure message
+    else failure threshold reached
+        Auth->>DB: Set temporary throttle window
+        Auth->>Audit: auth.login.rate_limited
+        Auth-->>Login: Same generic failure message
     end
 ```
 
 Login handling must apply server-side validation, a reasonable maximum password
-input length, generic failures, and rate limiting by both account identifier and
-network source. Logs must never contain the submitted password.
+input length, generic failures, and account-bound rate limiting. Trusted
+network-source and hosting-edge rate limiting is required before public
+production deployment. Logs must never contain the submitted password.
 
 ## 9. Authorization flow
 
@@ -460,14 +473,12 @@ weakening the server-side permission boundary.
 
 ## 16. Open decisions
 
-1. Select Argon2id or a documented bcrypt configuration for new passwords.
-2. Define invitation delivery for development and production.
-3. Define idle and absolute session timeouts.
-4. Decide whether privilege changes invalidate all sessions immediately.
-5. Decide whether staging requires MFA for administrators.
-6. Define audit retention and who may export security events.
-7. Confirm which role may assign business roles to users.
-8. Confirm whether version 1 requires site or warehouse scope.
+1. Define production invitation and password-recovery delivery.
+2. Decide whether staging requires MFA for administrators.
+3. Define audit retention and who may export security events.
+4. Confirm which role may assign business roles to users.
+5. Confirm whether version 1 requires site or warehouse scope.
+6. Configure the trusted proxy boundary and hosting/network-source throttling.
 
 Open decisions must be resolved before the implementation phase that depends on
 them; they do not block initial RBAC schema and centralized guard work.
@@ -490,3 +501,4 @@ them; they do not block initial RBAC schema and centralized guard work.
 | 2026-09-10 | Protected Product routes and actions, separated operational/commercial editing, and enforced compound BOM permissions for Product lifecycle operations. |
 | 2026-09-10 | Protected BOM routes and actions, separated preparation from activation, and required archive authority for the activation transaction. |
 | 2026-09-10 | Protected Customer routes and actions and split identity, contact, financial, and lifecycle controls by business ownership. |
+| 2026-09-14 | Added one-hour idle and 12-hour absolute JWT expiry, account-bound temporary login throttling, recovery clearing, and logout/expiry/throttle audit events. |

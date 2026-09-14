@@ -75,6 +75,24 @@ export const SECURITY_AUDIT_EVENT_REGISTRY = {
     label: "Sign-in failed",
     description: "A sign-in attempt was rejected or the account was unavailable.",
   },
+  "auth.login.rate_limited": {
+    category: "AUTHENTICATION",
+    severity: "WARNING",
+    label: "Sign-in temporarily limited",
+    description: "Repeated password failures activated a temporary account throttle.",
+  },
+  "auth.logout.succeeded": {
+    category: "AUTHENTICATION",
+    severity: "INFORMATIONAL",
+    label: "Signed out",
+    description: "An authenticated session was explicitly ended.",
+  },
+  "auth.session.expired": {
+    category: "AUTHENTICATION",
+    severity: "NOTICE",
+    label: "Session expired",
+    description: "A session reached its configured absolute lifetime.",
+  },
   "auth.password.changed": {
     category: "AUTHENTICATION",
     severity: "NOTICE",

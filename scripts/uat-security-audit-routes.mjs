@@ -6,6 +6,7 @@ import { PrismaClient } from "@prisma/client"
 const prisma = new PrismaClient()
 const baseUrl = (process.env.UAT_BASE_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "")
 const credentialsPath = resolve(process.cwd(), "Data files", "uat-role-credentials.json")
+let salesThrottleRestore = null
 
 function addResponseCookies(cookieJar, response) {
   for (const cookie of response.headers.getSetCookie()) {
@@ -97,10 +98,23 @@ async function main() {
     }),
     prisma.user.findUnique({
       where: { normalizedEmail: sales.email.toLowerCase() },
-      select: { id: true },
+      select: {
+        id: true,
+        failedLoginAttempts: true,
+        failedLoginWindowStart: true,
+        loginBlockedUntil: true,
+      },
     }),
   ])
   assert.ok(administratorUser && salesUser, "Required UAT users must exist in the database")
+  salesThrottleRestore = {
+    id: salesUser.id,
+    data: {
+      failedLoginAttempts: salesUser.failedLoginAttempts,
+      failedLoginWindowStart: salesUser.failedLoginWindowStart,
+      loginBlockedUntil: salesUser.loginBlockedUntil,
+    },
+  }
 
   const adminCookies = await authenticate(administrator)
   const auditResponse = await fetch(`${baseUrl}/settings/access/audit`, {
@@ -178,5 +192,14 @@ main()
     process.exitCode = 1
   })
   .finally(async () => {
-    await prisma.$disconnect()
+    try {
+      if (salesThrottleRestore) {
+        await prisma.user.update({
+          where: { id: salesThrottleRestore.id },
+          data: salesThrottleRestore.data,
+        })
+      }
+    } finally {
+      await prisma.$disconnect()
+    }
   })

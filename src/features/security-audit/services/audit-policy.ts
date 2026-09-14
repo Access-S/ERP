@@ -1,6 +1,9 @@
 export const SECURITY_AUDIT_EVENT_TYPES = [
   "auth.login.succeeded",
   "auth.login.failed",
+  "auth.login.rate_limited",
+  "auth.logout.succeeded",
+  "auth.session.expired",
   "auth.password.changed",
   "auth.password.change_failed",
   "auth.password_reset.requested",
@@ -37,6 +40,9 @@ export type AuditMetadataValue =
 const ALLOWED_METADATA_KEYS: Record<SecurityAuditEventType, readonly string[]> = {
   "auth.login.succeeded": ["authenticationMethod"],
   "auth.login.failed": [],
+  "auth.login.rate_limited": ["failureCount", "retryAfterSeconds"],
+  "auth.logout.succeeded": [],
+  "auth.session.expired": ["expiryReason", "sessionAgeSeconds"],
   "auth.password.changed": ["operation"],
   "auth.password.change_failed": ["operation"],
   "auth.password_reset.requested": ["operation", "expiresAt"],
