@@ -13,6 +13,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { SensitiveChangeReasonField } from "@/features/security-audit/components/sensitive-change-reason-field"
+import { isSensitiveChangeReasonReady } from "@/features/security-audit/types/sensitive-change-reason"
 import {
   createCustomRoleAction,
   updateCustomRoleAction,
@@ -52,6 +54,7 @@ export function CustomRoleForm({
     () => new Set(initialValues.permissionIds)
   )
   const [search, setSearch] = React.useState("")
+  const [reason, setReason] = React.useState("")
 
   const groupedPermissions = React.useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
@@ -115,7 +118,7 @@ export function CustomRoleForm({
           permissionIds: [...selectedPermissionIds],
         }
         const result = mode === "edit" && roleId
-          ? await updateCustomRoleAction({ roleId, ...values })
+          ? await updateCustomRoleAction({ roleId, ...values, reason })
           : await createCustomRoleAction(values)
 
         if (!result.success || !result.roleId) {
@@ -270,6 +273,15 @@ export function CustomRoleForm({
         </CardContent>
       </Card>
 
+      {mode === "edit" && hasChanged && (
+        <SensitiveChangeReasonField
+          id="custom-role-change-reason"
+          value={reason}
+          onChange={setReason}
+          disabled={isPending}
+        />
+      )}
+
       <div className="flex flex-wrap justify-end gap-2">
         <Button type="button" variant="outline" disabled={isPending} asChild>
           <Link href={roleId ? `/settings/access/roles/${roleId}` : "/settings/access/roles"}>
@@ -279,7 +291,12 @@ export function CustomRoleForm({
         <Button
           type="submit"
           loading={isPending}
-          disabled={!hasChanged || selectedPermissionIds.size === 0 || name.trim().length < 2}
+          disabled={
+            !hasChanged ||
+            selectedPermissionIds.size === 0 ||
+            name.trim().length < 2 ||
+            (mode === "edit" && !isSensitiveChangeReasonReady(reason))
+          }
         >
           {mode === "edit" ? "Save custom role" : "Create custom role"}
         </Button>

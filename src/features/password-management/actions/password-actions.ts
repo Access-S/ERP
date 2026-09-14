@@ -76,7 +76,11 @@ export async function createPasswordResetLinkAction(
     if (!parsed.success) {
       return failure(parsed.error.issues[0]?.message ?? "Invalid user.")
     }
-    const reset = await createPasswordResetLink(parsed.data.userId, principal.userId)
+    const reset = await createPasswordResetLink(
+      parsed.data.userId,
+      principal.userId,
+      parsed.data.reason
+    )
     revalidatePath(`/settings/access/users/${parsed.data.userId}`)
     return {
       success: true,

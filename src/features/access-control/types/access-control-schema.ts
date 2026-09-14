@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { sensitiveChangeReasonSchema } from "../../security-audit/types/sensitive-change-reason.ts"
 
 export const assignUserRolesSchema = z.object({
   userId: z.string().uuid("Invalid user."),
@@ -7,11 +8,13 @@ export const assignUserRolesSchema = z.object({
     .min(1, "Assign at least one role.")
     .max(32, "Too many roles were selected.")
     .transform((roleIds) => [...new Set(roleIds)]),
+  reason: sensitiveChangeReasonSchema,
 })
 
 export const setUserStatusSchema = z.object({
   userId: z.string().uuid("Invalid user."),
   status: z.enum(["ACTIVE", "SUSPENDED", "DISABLED"]),
+  reason: sensitiveChangeReasonSchema,
 })
 
 const normalizedRoleNameSchema = z
@@ -41,11 +44,13 @@ export const createCustomRoleSchema = z.object({
 
 export const updateCustomRoleSchema = createCustomRoleSchema.extend({
   roleId: z.string().uuid("Invalid role."),
+  reason: sensitiveChangeReasonSchema,
 })
 
 export const setCustomRoleActiveSchema = z.object({
   roleId: z.string().uuid("Invalid role."),
   isActive: z.boolean(),
+  reason: sensitiveChangeReasonSchema,
 })
 
 export type AccessControlMutationResult = {

@@ -117,7 +117,8 @@ export async function createCustomRole(values: CustomRoleValues, actingUserId: s
 export async function updateCustomRole(
   roleId: string,
   values: CustomRoleValues,
-  actingUserId: string
+  actingUserId: string,
+  reason: string
 ) {
   return prisma.$transaction(
     async (transaction) => {
@@ -197,7 +198,7 @@ export async function updateCustomRole(
           targetType: "ROLE",
           targetId: role.id,
           correlationId,
-          metadata: { roleKey: role.key, changedFields },
+          metadata: { roleKey: role.key, changedFields, reason },
         },
         transaction
       )
@@ -221,6 +222,7 @@ export async function updateCustomRole(
               metadata: {
                 roleKey: role.key,
                 permissionKey: currentPermissionById.get(permissionId) ?? "UNKNOWN",
+                reason,
               },
             },
             transaction
@@ -239,6 +241,7 @@ export async function updateCustomRole(
               metadata: {
                 roleKey: role.key,
                 permissionKey: nextPermissionById.get(permissionId) ?? "UNKNOWN",
+                reason,
               },
             },
             transaction
@@ -281,7 +284,8 @@ export async function updateCustomRole(
 export async function setCustomRoleActive(
   roleId: string,
   isActive: boolean,
-  actingUserId: string
+  actingUserId: string,
+  reason: string
 ) {
   return prisma.$transaction(
     async (transaction) => {
@@ -338,6 +342,7 @@ export async function setCustomRoleActive(
             roleKey: role.key,
             changedFields: ["isActive"],
             isActive,
+            reason,
           },
         },
         transaction

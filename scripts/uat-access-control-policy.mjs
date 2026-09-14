@@ -10,6 +10,8 @@ import {
   setUserStatusSchema,
   updateCustomRoleSchema,
 } from "../src/features/access-control/types/access-control-schema.ts"
+import { createPasswordResetSchema } from "../src/features/password-management/types/password-management-schema.ts"
+import { reissueInvitationSchema } from "../src/features/user-onboarding/types/user-onboarding-schema.ts"
 
 const baseCheck = {
   targetIsActive: true,
@@ -59,6 +61,7 @@ assert.equal(
 
 const userId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 const roleId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+const changeReason = "Approved access change for UAT coverage"
 
 assert.deepEqual(
   SYSTEM_ROLES
@@ -69,23 +72,42 @@ assert.deepEqual(
 )
 
 assert.equal(
-  assignUserRolesSchema.safeParse({ userId, roleIds: [] }).success,
+  assignUserRolesSchema.safeParse({ userId, roleIds: [], reason: changeReason }).success,
   false,
   "must reject an active account with no selected roles"
 )
 const deduplicated = assignUserRolesSchema.parse({
   userId,
   roleIds: [roleId, roleId],
+  reason: "  Approved   by the security owner  ",
 })
 assert.deepEqual(deduplicated.roleIds, [roleId], "must deduplicate submitted roles")
+assert.equal(
+  deduplicated.reason,
+  "Approved by the security owner",
+  "must normalize the retained access-change reason"
+)
+assert.equal(
+  assignUserRolesSchema.safeParse({ userId, roleIds: [roleId] }).success,
+  false,
+  "must reject a role change without a reason"
+)
+assert.equal(
+  assignUserRolesSchema.safeParse({ userId, roleIds: [roleId], reason: "Too short" })
+    .success,
+  false,
+  "must reject an undersized access-change reason"
+)
 
 assert.equal(
-  setUserStatusSchema.safeParse({ userId, status: "INVITED" }).success,
+  setUserStatusSchema.safeParse({ userId, status: "INVITED", reason: changeReason })
+    .success,
   false,
   "must keep invitation transitions out of the account-status action"
 )
 assert.equal(
-  setUserStatusSchema.safeParse({ userId, status: "SUSPENDED" }).success,
+  setUserStatusSchema.safeParse({ userId, status: "SUSPENDED", reason: changeReason })
+    .success,
   true,
   "must accept supported status transitions"
 )
@@ -111,6 +133,7 @@ assert.equal(
     name: "X",
     description: "",
     permissionIds: [roleId],
+    reason: changeReason,
   }).success,
   false,
   "must reject undersized role names"
@@ -126,9 +149,34 @@ assert.equal(
   "must reject invalid role identifiers"
 )
 assert.equal(
-  setCustomRoleActiveSchema.safeParse({ roleId, isActive: false }).success,
+  setCustomRoleActiveSchema.safeParse({
+    roleId,
+    isActive: false,
+    reason: changeReason,
+  }).success,
   true,
   "must accept archive status input"
 )
 
-console.log("Access Control policy UAT passed (15 checks).")
+assert.equal(
+  createPasswordResetSchema.safeParse({ userId }).success,
+  false,
+  "must reject an administrator password reset without a reason"
+)
+assert.equal(
+  createPasswordResetSchema.safeParse({ userId, reason: changeReason }).success,
+  true,
+  "must accept an administrator password reset with a reason"
+)
+assert.equal(
+  reissueInvitationSchema.safeParse({ userId }).success,
+  false,
+  "must reject activation-link replacement without a reason"
+)
+assert.equal(
+  reissueInvitationSchema.safeParse({ userId, reason: changeReason }).success,
+  true,
+  "must accept activation-link replacement with a reason"
+)
+
+console.log("Access Control policy UAT passed (22 checks).")

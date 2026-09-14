@@ -1,8 +1,8 @@
 # Access Control Administration
 
-Status: Phase 4 user, role, and invitation administration implemented
+Status: Phase 4 user, role, invitation, and sensitive-change reason controls implemented
 Owner: Product owner / Engineering
-Last updated: 2026-09-12
+Last updated: 2026-09-14
 
 ## Purpose
 
@@ -79,6 +79,10 @@ The following safeguards apply:
 9. Security-sensitive account, invitation, role, permission, session-revocation,
    and access-denial events are written by the server; critical change events
    share the database transaction with the change they describe.
+10. Existing-user role changes, account status changes, custom-role edits and
+    lifecycle changes, administrator password-reset links, and replacement
+    activation links require a 10-to-256-character reason. The server validates
+    and retains the reason in the append-only audit history.
 
 `User.role` is temporarily maintained as a compatibility display field, but it
 is not an authorization source. Server authorization resolves normalized
@@ -93,8 +97,8 @@ flowchart TD
     C --> D[Review account status and assigned roles]
     D --> E[Review effective permission union]
     E --> F{Change needed?}
-    F -->|Roles| G[Select one or more approved roles]
-    F -->|Account state| H[Suspend, disable, or reactivate]
+    F -->|Roles| G[Select roles and enter a reason]
+    F -->|Account state| H[Select state and enter a reason]
     G --> I[Server rechecks admin.role.assign]
     H --> J[Server rechecks admin.user.manage]
     I --> K[Validate active roles and last-admin rule]

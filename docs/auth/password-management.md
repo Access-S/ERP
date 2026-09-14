@@ -70,6 +70,8 @@ receive, or view the replacement password.
 9. An unknown, expired, used, or revoked token receives the same public message.
 10. The reset workflow never changes an account's status or role assignments.
 11. A successful change or reset clears temporary failed-login throttle state.
+12. An administrator must enter a retained reason before issuing a password
+    reset link. The reason is audit context and must not contain secrets.
 
 ## Delivery boundary
 
@@ -117,3 +119,4 @@ correlation ID as their audit events.
 | 2026-09-13 | Implemented self-service password changes, administrator-delivered reset links, transactional session invalidation, and password audit events. |
 | 2026-09-13 | Product owner manually accepted current-password rejection, successful change and sign-out, old/new credential behaviour, administrator reset-link creation, single-use reset, credential restoration, and audit capture. |
 | 2026-09-14 | Password change and recovery now clear temporary login throttling while preserving account status and role assignments. |
+| 2026-09-14 | Administrator-issued password reset links now require a server-validated reason retained in the security audit history. |

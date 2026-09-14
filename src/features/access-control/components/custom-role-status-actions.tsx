@@ -6,6 +6,8 @@ import { signOut } from "next-auth/react"
 import { Archive, Copy, Pencil, RotateCcw } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { SensitiveChangeReasonField } from "@/features/security-audit/components/sensitive-change-reason-field"
+import { isSensitiveChangeReasonReady } from "@/features/security-audit/types/sensitive-change-reason"
 import {
   Dialog,
   DialogClose,
@@ -34,6 +36,7 @@ export function CustomRoleStatusActions({
   canManage: boolean
 }) {
   const [open, setOpen] = React.useState(false)
+  const [reason, setReason] = React.useState("")
   const [isPending, startTransition] = React.useTransition()
 
   function updateStatus() {
@@ -42,6 +45,7 @@ export function CustomRoleStatusActions({
         const result = await setCustomRoleActiveAction({
           roleId,
           isActive: !isActive,
+          reason,
         })
         if (!result.success) {
           toast.error(result.message)
@@ -49,6 +53,7 @@ export function CustomRoleStatusActions({
         }
         toast.success(result.message)
         setOpen(false)
+        setReason("")
         if (result.requiresReauthentication) {
           await signOut({ callbackUrl: "/login" })
         }
@@ -79,7 +84,13 @@ export function CustomRoleStatusActions({
           </Button>
         )}
         {!isSystem && (
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog
+            open={open}
+            onOpenChange={(nextOpen) => {
+              setOpen(nextOpen)
+              if (!nextOpen && !isPending) setReason("")
+            }}
+          >
             <DialogTrigger asChild>
               <Button
                 variant={isActive ? "destructive" : "default"}
@@ -104,6 +115,12 @@ export function CustomRoleStatusActions({
                     : "The role becomes available for assignment and grants its saved permissions again."}
                 </DialogDescription>
               </DialogHeader>
+              <SensitiveChangeReasonField
+                id="custom-role-status-reason"
+                value={reason}
+                onChange={setReason}
+                disabled={isPending}
+              />
               <DialogFooter>
                 <DialogClose asChild>
                   <Button variant="outline" disabled={isPending}>Cancel</Button>
@@ -111,6 +128,7 @@ export function CustomRoleStatusActions({
                 <Button
                   variant={isActive ? "destructive" : "default"}
                   loading={isPending}
+                  disabled={!isSensitiveChangeReasonReady(reason)}
                   onClick={updateStatus}
                 >
                   Confirm

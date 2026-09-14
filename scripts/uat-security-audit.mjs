@@ -73,6 +73,15 @@ async function main() {
   )
   assert.equal(
     classifySecurityAuditEvent({
+      eventType: "auth.bootstrap_admin.created",
+      outcome: "SUCCESS",
+      metadata: { environment: "development" },
+    }).severity,
+    "CRITICAL",
+    "bootstrap administrator creation must be critical"
+  )
+  assert.equal(
+    classifySecurityAuditEvent({
       eventType: "auth.login.succeeded",
       outcome: "FAILURE",
       metadata: {},
@@ -100,25 +109,41 @@ async function main() {
     },
     "an unknown stored event must remain visible without breaking monitoring"
   )
-  checks += 6
+  checks += 7
 
   const sanitized = sanitizeAuditMetadata("auth.invitation.created", {
-    operation: "INITIAL",
+    operation: "REISSUED",
     expiresAt: "2026-09-14T00:00:00.000Z",
+    reason: "The intended recipient lost the original link.",
     password: "must-never-be-stored",
     tokenHash: "must-never-be-stored",
     arbitrary: "must-never-be-stored",
   })
   assert.deepEqual(sanitized, {
-    operation: "INITIAL",
+    operation: "REISSUED",
     expiresAt: "2026-09-14T00:00:00.000Z",
+    reason: "The intended recipient lost the original link.",
   })
   assert.equal(JSON.stringify(sanitized).includes("must-never-be-stored"), false)
+  checks += 2
+
+  const bootstrapMetadata = sanitizeAuditMetadata("auth.bootstrap_admin.created", {
+    environment: "development",
+    reason: "Create the first recoverable administrator.",
+    password: "must-never-be-stored",
+    databaseUrl: "must-never-be-stored",
+  })
+  assert.deepEqual(bootstrapMetadata, {
+    environment: "development",
+    reason: "Create the first recoverable administrator.",
+  })
+  assert.equal(JSON.stringify(bootstrapMetadata).includes("must-never-be-stored"), false)
   checks += 2
 
   const passwordResetMetadata = sanitizeAuditMetadata("auth.password_reset.requested", {
     operation: "ADMIN_LINK",
     expiresAt: "2026-09-13T03:00:00.000Z",
+    reason: "Identity verified through the approved support process.",
     password: "must-never-be-stored",
     resetToken: "must-never-be-stored",
     tokenHash: "must-never-be-stored",
@@ -126,6 +151,7 @@ async function main() {
   assert.deepEqual(passwordResetMetadata, {
     operation: "ADMIN_LINK",
     expiresAt: "2026-09-13T03:00:00.000Z",
+    reason: "Identity verified through the approved support process.",
   })
   assert.equal(
     JSON.stringify(passwordResetMetadata).includes("must-never-be-stored"),

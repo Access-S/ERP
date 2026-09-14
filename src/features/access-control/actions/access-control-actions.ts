@@ -85,7 +85,8 @@ export async function assignUserRolesAction(
     const result = await replaceUserRoleAssignments(
       parsed.data.userId,
       parsed.data.roleIds,
-      principal.userId
+      principal.userId,
+      parsed.data.reason
     )
     revalidateAccessControl(parsed.data.userId)
     return {
@@ -111,7 +112,8 @@ export async function setUserStatusAction(
     const result = await changeUserStatus(
       parsed.data.userId,
       parsed.data.status,
-      principal.userId
+      principal.userId,
+      parsed.data.reason
     )
     revalidateAccessControl(parsed.data.userId)
     return {
@@ -154,7 +156,8 @@ export async function updateCustomRoleAction(
     const result = await updateCustomRole(
       parsed.data.roleId,
       parsed.data,
-      principal.userId
+      principal.userId,
+      parsed.data.reason
     )
     revalidateRolePaths(result.id)
     return {
@@ -181,7 +184,8 @@ export async function setCustomRoleActiveAction(
     const result = await setCustomRoleActive(
       parsed.data.roleId,
       parsed.data.isActive,
-      principal.userId
+      principal.userId,
+      parsed.data.reason
     )
     revalidateRolePaths(result.id)
     return {

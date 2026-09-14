@@ -30,6 +30,7 @@ remain separate responsibilities.
 | [ADR 002: User invitations and passwords](decisions/002-user-invitations-and-passwords.md) | Durable record of invitation-token, delivery, and bcrypt decisions | Password hashing or onboarding security changes |
 | [ADR 003: Password management and recovery](decisions/003-password-management-and-recovery.md) | Durable record of reset-token, administrator-assistance, and session-revocation decisions | Password change or recovery security changes |
 | [ADR 004: Session lifetime and login throttling](decisions/004-session-lifetime-and-login-throttling.md) | Durable record of inactivity/overall expiry, account throttling, recovery, and audit decisions | Session lifetime, login throttling, or network-source controls change |
+| [ADR 005: Sensitive access change reasons](decisions/005-sensitive-access-change-reasons.md) | Defines which administrator actions require a retained explanation | A sensitive account, role, or credential-control workflow changes |
 
 ## Sources of truth
 
@@ -81,3 +82,4 @@ When adding or changing a protected operation:
 - [OWASP Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html)
 - [OWASP Session Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
 - [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
+- [OWASP Logging Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html)

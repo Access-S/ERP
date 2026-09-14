@@ -397,8 +397,8 @@ who approve sensitive operations.
 
 ## 11. Bootstrap administrator
 
-The first System Administrator must be created through an explicit, recoverable,
-non-public process:
+The first System Administrator is created through the implemented explicit,
+recoverable, non-public process:
 
 1. A command or seed reads credentials from protected environment input, never
    source code.
@@ -407,6 +407,13 @@ non-public process:
 4. It assigns only the technical System Administrator role by default.
 5. It records `auth.bootstrap_admin.created`.
 6. Re-running it cannot silently elevate another account.
+
+The command additionally requires an explicit environment confirmation, an
+expected database-host match, repeated administrator email, and a retained
+reason. It refuses reserved test identities and refuses to create another
+bootstrap account when a recoverable active System Administrator already
+exists. The creation and critical audit event share one serializable database
+transaction.
 
 Prototype credentials are no longer displayed on the login page or embedded in
 the bootstrap script. Any existing development password must still be rotated

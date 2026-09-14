@@ -4,6 +4,8 @@ import { KeyRound } from "lucide-react"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { SensitiveChangeReasonField } from "@/features/security-audit/components/sensitive-change-reason-field"
+import { isSensitiveChangeReasonReady } from "@/features/security-audit/types/sensitive-change-reason"
 import {
   Dialog,
   DialogClose,
@@ -19,13 +21,14 @@ import { PasswordResetLinkPanel } from "./password-reset-link-panel"
 
 export function PasswordResetActions({ userId }: { userId: string }) {
   const [open, setOpen] = useState(false)
+  const [reason, setReason] = useState("")
   const [isPending, startTransition] = useTransition()
   const [reset, setReset] = useState<{ resetPath: string; expiresAt: string } | null>(null)
 
   function createLink() {
     startTransition(async () => {
       try {
-        const result = await createPasswordResetLinkAction({ userId })
+        const result = await createPasswordResetLinkAction({ userId, reason })
         if (!result.success) {
           toast.error(result.message)
           return
@@ -36,6 +39,7 @@ export function PasswordResetActions({ userId }: { userId: string }) {
         }
         setReset({ resetPath: result.resetPath, expiresAt: result.expiresAt })
         setOpen(false)
+        setReason("")
         toast.success("Password reset link created")
       } catch (error) {
         console.error("Password reset link response failed", error)
@@ -47,7 +51,13 @@ export function PasswordResetActions({ userId }: { userId: string }) {
   return (
     <div className="space-y-4">
       {reset && <PasswordResetLinkPanel {...reset} />}
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(nextOpen) => {
+          setOpen(nextOpen)
+          if (!nextOpen && !isPending) setReason("")
+        }}
+      >
         <DialogTrigger asChild>
           <Button type="button" variant="outline">
             <KeyRound />
@@ -62,11 +72,23 @@ export function PasswordResetActions({ userId }: { userId: string }) {
               link expires after one hour and must be shared privately.
             </DialogDescription>
           </DialogHeader>
+          <SensitiveChangeReasonField
+            id="password-reset-reason"
+            value={reason}
+            onChange={setReason}
+            disabled={isPending}
+          />
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="outline" disabled={isPending}>Cancel</Button>
             </DialogClose>
-            <Button loading={isPending} onClick={createLink}>Create secure link</Button>
+            <Button
+              loading={isPending}
+              disabled={!isSensitiveChangeReasonReady(reason)}
+              onClick={createLink}
+            >
+              Create secure link
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

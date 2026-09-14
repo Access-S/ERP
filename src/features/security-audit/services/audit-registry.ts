@@ -219,6 +219,12 @@ export const SECURITY_AUDIT_EVENT_REGISTRY = {
     label: "Audit history viewed",
     description: "An authorised user opened or filtered security audit history.",
   },
+  "auth.bootstrap_admin.created": {
+    category: "USER_LIFECYCLE",
+    severity: "CRITICAL",
+    label: "Bootstrap administrator created",
+    description: "The recovery-only bootstrap procedure created the first System Administrator.",
+  },
 } as const satisfies Record<SecurityAuditEventType, SecurityAuditEventDefinition>
 
 export function getAuditEventTypesForCategory(category: SecurityAuditCategory) {

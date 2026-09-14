@@ -164,7 +164,11 @@ export async function changeOwnPassword(
   })
 }
 
-export async function createPasswordResetLink(userId: string, createdById: string) {
+export async function createPasswordResetLink(
+  userId: string,
+  createdById: string,
+  reason: string
+) {
   const secret = generateResetSecret()
   const tokenHash = hashResetSecret(secret)
   const expiresAt = resetExpiry()
@@ -200,6 +204,7 @@ export async function createPasswordResetLink(userId: string, createdById: strin
           metadata: {
             operation: "ADMIN_LINK",
             expiresAt: expiresAt.toISOString(),
+            reason,
           },
         },
         transaction

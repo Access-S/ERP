@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { sensitiveChangeReasonSchema } from "../../security-audit/types/sensitive-change-reason.ts"
 
 export const INVITATION_TTL_HOURS = 48
 export const MIN_PASSWORD_LENGTH = 12
@@ -58,6 +59,7 @@ export const inviteUserSchema = z.object({
 
 export const reissueInvitationSchema = z.object({
   userId: z.string().uuid("Invalid user."),
+  reason: sensitiveChangeReasonSchema,
 })
 
 export const activateAccountSchema = z

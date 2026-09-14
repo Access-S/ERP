@@ -153,7 +153,8 @@ async function countOtherActiveAdministrators(
 export async function replaceUserRoleAssignments(
   targetUserId: string,
   requestedRoleIds: readonly string[],
-  assignedById: string
+  assignedById: string,
+  reason: string
 ) {
   return prisma.$transaction(
     async (transaction) => {
@@ -262,7 +263,10 @@ export async function replaceUserRoleAssignments(
             targetType: "USER",
             targetId: targetUserId,
             correlationId,
-            metadata: { roleKey: currentRoleById.get(roleId) ?? "UNKNOWN" },
+            metadata: {
+              roleKey: currentRoleById.get(roleId) ?? "UNKNOWN",
+              reason,
+            },
           },
           transaction
         )
@@ -276,7 +280,10 @@ export async function replaceUserRoleAssignments(
             targetType: "USER",
             targetId: targetUserId,
             correlationId,
-            metadata: { roleKey: nextRoleById.get(roleId) ?? "UNKNOWN" },
+            metadata: {
+              roleKey: nextRoleById.get(roleId) ?? "UNKNOWN",
+              reason,
+            },
           },
           transaction
         )
@@ -309,7 +316,8 @@ export async function replaceUserRoleAssignments(
 export async function changeUserStatus(
   targetUserId: string,
   nextStatus: Exclude<UserStatus, "INVITED">,
-  actingUserId: string
+  actingUserId: string,
+  reason: string
 ) {
   if (targetUserId === actingUserId) {
     throw new AccessControlWorkflowError(
@@ -376,7 +384,7 @@ export async function changeUserStatus(
           targetType: "USER",
           targetId: targetUserId,
           correlationId,
-          metadata: { previousStatus: target.status, nextStatus },
+          metadata: { previousStatus: target.status, nextStatus, reason },
         },
         transaction
       )
@@ -412,7 +420,7 @@ export async function changeUserStatus(
               targetType: "USER",
               targetId: targetUserId,
               correlationId,
-              metadata: { operation: "CANCELLED" },
+              metadata: { operation: "CANCELLED", reason },
             },
             transaction
           )

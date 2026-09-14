@@ -46,11 +46,18 @@ The following are captured now:
   session expiry;
 - successful and failed password changes and resets;
 - invitation creation, replacement, cancellation, and acceptance;
+- first-administrator bootstrap creation;
 - user creation and account status changes;
 - role assignment/revocation, custom-role changes, and permission changes;
 - session invalidation caused by role or account-state changes;
 - sensitive server-operation access denials; and
 - audit-history views.
+
+Sensitive administrator actions retain a normalized plain-language reason when
+changing an existing user's roles or status, editing a custom role, controlling
+a custom role's lifecycle, issuing a password-reset link, or replacing an
+activation link. The reason is bounded to 256 characters and must not contain
+secrets or unnecessary personal information.
 
 Critical account, invitation, role, and successful password events are inserted
 in the same database transaction as the security change. A stateless JWT that
@@ -102,13 +109,13 @@ Never store:
 | `auth.session.revoked` | Success | User ID, initiator, reason, affected session count |
 | `auth.password.changed` | Success | User ID and whether self-service or administrator initiated |
 | `auth.password.change_failed` | Failure | User ID when known and sanitized reason |
-| `auth.password_reset.requested` | Success | Identifier snapshot; client response remains generic |
+| `auth.password_reset.requested` | Success | Target user, administrator, expiry, and required reason |
 | `auth.password_reset.completed` | Success | User ID; never the token |
 | `auth.password_reset.failed` | Failure | Sanitized reason such as expired or already used |
-| `auth.invitation.created` | Success | Target user ID, inviter ID, expiry; never the token |
+| `auth.invitation.created` | Success | Target user ID, inviter ID, expiry, and replacement reason where applicable; never the token |
 | `auth.invitation.accepted` | Success | Target user ID |
-| `auth.invitation.revoked` | Success | Target user ID and administrator ID |
-| `auth.bootstrap_admin.created` | Success | Created user ID and execution correlation ID |
+| `auth.invitation.revoked` | Success | Target user ID, administrator ID, and reason when cancelled or replaced |
+| `auth.bootstrap_admin.created` | Success | Created user ID, environment, required reason, and execution correlation ID |
 
 Reason categories for login failures should be specific enough for internal
 monitoring but must not be returned directly to the user. Examples include
@@ -124,12 +131,12 @@ monitoring but must not be returned directly to the user. Examples include
 | `auth.user.reactivated` | Success | Actor, target, and reason |
 | `auth.user.disabled` | Success | Actor, target, and required reason |
 | `auth.user.email_changed` | Success | Actor, target, old/new normalized identifiers with retention controls |
-| `auth.role.assigned` | Success | Actor, target user, and role key |
-| `auth.role.revoked` | Success | Actor, target user, and role key |
+| `auth.role.assigned` | Success | Actor, target user, role key, and reason for existing-user changes |
+| `auth.role.revoked` | Success | Actor, target user, role key, and required reason |
 | `auth.role.created` | Success | Actor and role key |
-| `auth.role.updated` | Success | Actor, role key, and changed field names |
-| `auth.role.permission_added` | Success | Actor, role key, and permission key |
-| `auth.role.permission_removed` | Success | Actor, role key, and permission key |
+| `auth.role.updated` | Success | Actor, role key, changed fields, and required reason |
+| `auth.role.permission_added` | Success | Actor, role key, permission key, and required reason |
+| `auth.role.permission_removed` | Success | Actor, role key, permission key, and required reason |
 
 Role changes should also increment the target user's session/auth version and
 record the resulting session revocation where applicable.
@@ -225,3 +232,5 @@ immutable security evidence.
 | 2026-09-13 | Added the typed category/severity registry and security-first monitoring layout. |
 | 2026-09-14 | Verified the dashboard and protected routes, moved view logging to post-response execution, and added safe handling for unknown stored event keys. |
 | 2026-09-14 | Added throttle activation, explicit logout, and observable absolute-session expiry events with live authentication-route verification. |
+| 2026-09-14 | Added allowlisted reasons for sensitive account, role, password-reset, and activation-link administration actions. |
+| 2026-09-14 | Implemented the critical bootstrap-administrator creation event and environment/reason metadata allowlist. |

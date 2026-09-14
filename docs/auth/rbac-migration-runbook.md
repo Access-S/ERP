@@ -1,8 +1,8 @@
 # RBAC Foundation Migration Runbook
 
-Status: Development procedure verified
+Status: Environment-safe bootstrap and development migration procedure verified
 Owner: Engineering
-Last updated: 2026-09-10
+Last updated: 2026-09-14
 
 ## 1. Purpose
 
@@ -115,16 +115,35 @@ Run the bootstrap only after the role seed and provide values through protected
 environment configuration:
 
 ```powershell
-$env:BOOTSTRAP_ADMIN_EMAIL="authorised-address@example.com"
+$env:BOOTSTRAP_ADMIN_ENVIRONMENT="development"
+$env:BOOTSTRAP_ADMIN_EXPECTED_DATABASE_HOST="your-confirmed-database-host"
+$env:BOOTSTRAP_ADMIN_EMAIL="authorised-address@your-company.test"
+$env:BOOTSTRAP_ADMIN_CONFIRM_EMAIL="authorised-address@your-company.test"
 $env:BOOTSTRAP_ADMIN_NAME="Authorised Administrator"
 $env:BOOTSTRAP_ADMIN_PASSWORD="use-a-password-manager-generated-secret"
-npm run bootstrap:admin
+$env:BOOTSTRAP_ADMIN_REASON="Create the first recoverable administrator"
+npm run bootstrap:admin -- --confirm-environment=development
 ```
 
-Do not put those variables into Git-tracked files or command screenshots. The
-script refuses the old prototype password and refuses to elevate an existing
-non-administrator account. Re-running it for an existing System Administrator
-does not replace the password.
+Replace `development` with `staging` or `production` only when that is the
+verified target. Copy only the hostname portion of `DATABASE_URL` into
+`BOOTSTRAP_ADMIN_EXPECTED_DATABASE_HOST`; never copy the password or complete
+URL into documentation or screenshots.
+
+Do not put these values into Git-tracked files or command screenshots. The
+script requires an exact environment flag, database-host match, repeated email,
+12-to-72-byte password, and retained reason. It refuses reserved example.com
+accounts, refuses to elevate an existing non-administrator, and refuses to
+create a second bootstrap administrator when a recoverable active System
+Administrator already exists. Re-running it for the same recoverable System
+Administrator does not replace the password.
+
+Creation writes the critical `auth.bootstrap_admin.created` event in the same
+transaction. Run the non-database preflight tests with:
+
+```powershell
+npm run uat:bootstrap-admin
+```
 
 ## 8. Verification record
 

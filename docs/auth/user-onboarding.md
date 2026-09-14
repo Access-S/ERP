@@ -1,8 +1,8 @@
 # User Onboarding and Account Activation
 
-Status: Implemented for administrator-delivered links; email delivery deferred
+Status: Implemented for administrator-delivered links with audited replacement reasons; email delivery deferred
 Owner: Product owner / Engineering
-Last updated: 2026-09-12
+Last updated: 2026-09-14
 
 ## Purpose
 
@@ -57,6 +57,8 @@ Routes:
    suspended, disabled, or incorrectly authenticated accounts.
 9. Activation pages are marked `noindex`, `nofollow`, and `no-referrer`.
 10. Administrators cannot choose or view a user's password.
+11. Replacing an activation link requires a server-validated reason retained on
+    the corresponding revocation and replacement audit events.
 
 ## Password decision
 

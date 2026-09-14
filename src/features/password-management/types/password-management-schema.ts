@@ -1,5 +1,6 @@
 import { z } from "zod"
-import { passwordSchema } from "@/features/user-onboarding/types/user-onboarding-schema"
+import { sensitiveChangeReasonSchema } from "../../security-audit/types/sensitive-change-reason.ts"
+import { passwordSchema } from "../../user-onboarding/types/user-onboarding-schema.ts"
 
 export const PASSWORD_RESET_TTL_HOURS = 1
 
@@ -18,6 +19,7 @@ export const passwordResetTokenSchema = z
 
 export const createPasswordResetSchema = z.object({
   userId: z.string().uuid("Invalid user."),
+  reason: sensitiveChangeReasonSchema,
 })
 
 export const changePasswordSchema = z

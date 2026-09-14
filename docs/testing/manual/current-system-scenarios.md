@@ -138,11 +138,24 @@ and both administrator actions appear in the audit history.
 Expected: The administrator can inspect events without seeing passwords or
 tokens. A normal business user cannot access the page.
 
+### MT-13 - Sensitive change reason
+
+1. Start an account, role, password-reset, or activation-link change as an
+   authorized administrator.
+2. Leave the reason empty or enter fewer than 10 characters.
+3. Confirm the change cannot be submitted.
+4. Enter a clear reason and complete the change.
+5. Find the resulting event in Security Monitoring.
+
+Expected: The server rejects a missing or short reason, the valid change
+succeeds, and the exact normalized reason appears in the audit event without
+passwords, links, or tokens.
+
 ## Test result record
 
 | Date | Environment | Tester | Scenarios | Result | Defect or notes |
 | --- | --- | --- | --- | --- | --- |
-|  |  |  | MT-01 to MT-12 |  |  |
+|  |  |  | MT-01 to MT-13 |  |  |
 
 For a failure, record the scenario number, role, page, expected result, actual
 result, and a screenshot if safe. Never include credentials, session cookies,

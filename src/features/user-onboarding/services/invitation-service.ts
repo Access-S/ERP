@@ -144,7 +144,11 @@ export async function createInvitedUser(
   }
 }
 
-export async function reissueUserInvitation(userId: string, createdById: string) {
+export async function reissueUserInvitation(
+  userId: string,
+  createdById: string,
+  reason: string
+) {
   const secret = generateInvitationSecret()
   const tokenHash = hashInvitationSecret(secret)
   const expiresAt = invitationExpiry()
@@ -179,7 +183,7 @@ export async function reissueUserInvitation(userId: string, createdById: string)
             targetType: "USER",
             targetId: userId,
             correlationId,
-            metadata: { operation: "REISSUED" },
+            metadata: { operation: "REISSUED", reason },
           },
           transaction
         )
@@ -204,6 +208,7 @@ export async function reissueUserInvitation(userId: string, createdById: string)
           metadata: {
             operation: "REISSUED",
             expiresAt: expiresAt.toISOString(),
+            reason,
           },
         },
         transaction

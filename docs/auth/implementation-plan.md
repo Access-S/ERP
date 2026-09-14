@@ -1,6 +1,6 @@
 # Authentication and Authorization Implementation Plan
 
-Status: In progress; classified security monitoring implemented
+Status: Development security foundation complete; deployment decisions remain
 Owner: Product owner / Engineering
 Last updated: 2026-09-14
 
@@ -103,7 +103,7 @@ the server and pass deny-path tests.
 ### Phase 4: User lifecycle and administration
 
 - [x] Remove prototype credentials from the login screen and bootstrap script.
-- [ ] Add an environment-safe bootstrap administrator procedure.
+- [x] Add an environment-safe bootstrap administrator procedure.
 - [x] Add user creation/invitation.
 - [x] Add activation/password setup.
 - [x] Add suspend, reactivate, and disable operations for existing users.
@@ -111,7 +111,7 @@ the server and pass deny-path tests.
 - [x] Add create, duplicate, edit, archive, and reactivate workflows for custom roles.
 - [x] Keep system roles locked and custom permissions constrained to the catalogue.
 - [x] Prevent accidental removal of the last recoverable administrator.
-- [ ] Require reasons for sensitive access changes where defined.
+- [x] Require reasons for sensitive access changes where defined.
 
 Exit gate: an authorized administrator can manage accounts without direct
 database editing, and an unauthorized user cannot invoke those operations.
@@ -206,3 +206,5 @@ verify the mapping, then remove the legacy free-text role in a later migration.
 | 2026-09-13 | Product owner manually accepted the password change, administrator recovery, single-use reset, credential restoration, session invalidation, and audit scenarios. |
 | 2026-09-14 | Completed and automatically verified the classified security-monitoring dashboard, category views, severity prioritisation, investigation filters, and post-response view auditing. |
 | 2026-09-14 | Added and verified one-hour idle/12-hour absolute sessions, five-attempt temporary login throttling, recovery clearing, and logout/expiry/throttle audit events. |
+| 2026-09-14 | Required server-validated, allowlisted audit reasons for sensitive account, role, password-reset, and activation-link changes. |
+| 2026-09-14 | Hardened the first-administrator bootstrap with environment, database-host, email, credential, single-admin, and audit safeguards. |

@@ -6,6 +6,8 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+import { SensitiveChangeReasonField } from "@/features/security-audit/components/sensitive-change-reason-field"
+import { isSensitiveChangeReasonReady } from "@/features/security-audit/types/sensitive-change-reason"
 import { assignUserRolesAction } from "../actions/access-control-actions"
 
 type RoleOption = {
@@ -26,6 +28,7 @@ export function RoleAssignmentForm({
   initialRoleIds: readonly string[]
 }) {
   const [isPending, startTransition] = React.useTransition()
+  const [reason, setReason] = React.useState("")
   const [selectedRoleIds, setSelectedRoleIds] = React.useState(
     () => new Set(initialRoleIds)
   )
@@ -49,6 +52,7 @@ export function RoleAssignmentForm({
         const result = await assignUserRolesAction({
           userId,
           roleIds: [...selectedRoleIds],
+          reason,
         })
         if (!result.success) {
           toast.error(result.message)
@@ -56,6 +60,7 @@ export function RoleAssignmentForm({
         }
 
         toast.success(result.message)
+        setReason("")
         if (result.requiresReauthentication) {
           await signOut({ callbackUrl: "/login" })
         }
@@ -102,6 +107,15 @@ export function RoleAssignmentForm({
         })}
       </div>
 
+      {hasChanged && (
+        <SensitiveChangeReasonField
+          id="role-assignment-reason"
+          value={reason}
+          onChange={setReason}
+          disabled={isPending}
+        />
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
         <p className="text-xs text-muted-foreground">
           Permissions from every selected role are combined. At least one role is required.
@@ -109,7 +123,11 @@ export function RoleAssignmentForm({
         <Button
           type="submit"
           loading={isPending}
-          disabled={!hasChanged || selectedRoleIds.size === 0}
+          disabled={
+            !hasChanged ||
+            selectedRoleIds.size === 0 ||
+            !isSensitiveChangeReasonReady(reason)
+          }
         >
           Save role assignments
         </Button>

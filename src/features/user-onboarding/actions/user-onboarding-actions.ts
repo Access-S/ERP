@@ -87,7 +87,11 @@ export async function reissueInvitationAction(
       return failure(parsed.error.issues[0]?.message ?? "Invalid user.")
     }
 
-    const invitation = await reissueUserInvitation(parsed.data.userId, principal.userId)
+    const invitation = await reissueUserInvitation(
+      parsed.data.userId,
+      principal.userId,
+      parsed.data.reason
+    )
     revalidatePath("/settings/access/users")
     revalidatePath(`/settings/access/users/${parsed.data.userId}`)
     return {

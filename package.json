@@ -30,6 +30,7 @@
     "uat:password-management-routes": "node --env-file=.env scripts/uat-password-management-routes.mjs",
     "uat:auth-session-policy": "node --no-warnings --experimental-strip-types scripts/uat-auth-session-policy.mjs",
     "uat:auth-session-routes": "node --no-warnings --experimental-strip-types --env-file=.env scripts/uat-auth-session-routes.mjs",
+    "uat:bootstrap-admin": "node --no-warnings --experimental-strip-types scripts/uat-bootstrap-admin-policy.mjs",
     "import:bom:dry-run": "node --env-file=.env scripts/dry-run-customer-bom-import.mjs \"Data files/All customer Bom - cleaned.xlsx\"",
     "import:bom:apply": "node --env-file=.env scripts/import-customer-boms.mjs \"Data files/All customer Bom - cleaned.xlsx\""
   },
