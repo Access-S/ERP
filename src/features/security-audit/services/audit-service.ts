@@ -7,6 +7,13 @@ import {
   sanitizeAuditMetadata,
   type SecurityAuditEventType,
 } from "./audit-policy"
+import {
+  classifySecurityAuditEvent,
+  getAuditEventTypesForCategory,
+  getSecurityAuditSeverityPriority,
+  SECURITY_AUDIT_CATEGORIES,
+  type SecurityAuditCategory,
+} from "./audit-registry"
 
 type AuditWriteClient = Pick<Prisma.TransactionClient, "securityAuditEvent">
 
@@ -56,33 +63,116 @@ export async function writeSecurityAuditEvent(
 
 export async function getSecurityAuditEvents(filters?: {
   eventType?: SecurityAuditEventType
+  eventTypes?: readonly SecurityAuditEventType[]
   outcome?: AuditOutcome
   take?: number
 }) {
   const events = await prisma.securityAuditEvent.findMany({
     where: {
-      ...(filters?.eventType ? { eventType: filters.eventType } : {}),
+      ...(filters?.eventType
+        ? { eventType: filters.eventType }
+        : filters?.eventTypes
+          ? { eventType: { in: [...filters.eventTypes] } }
+          : {}),
       ...(filters?.outcome ? { outcome: filters.outcome } : {}),
     },
     orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
     take: Math.min(Math.max(filters?.take ?? 100, 1), 200),
   })
 
-  const actorIds = [
+  const userIds = [
     ...new Set(
-      events.flatMap((event) => (event.actorUserId ? [event.actorUserId] : []))
+      events.flatMap((event) => [
+        ...(event.actorUserId ? [event.actorUserId] : []),
+        ...(event.targetType === "USER" && event.targetId ? [event.targetId] : []),
+      ])
     ),
   ]
-  const actors = actorIds.length
+  const users = userIds.length
     ? await prisma.user.findMany({
-        where: { id: { in: actorIds } },
+        where: { id: { in: userIds } },
         select: { id: true, name: true, email: true },
       })
     : []
-  const actorById = new Map(actors.map((actor) => [actor.id, actor]))
+  const userById = new Map(users.map((user) => [user.id, user]))
 
   return events.map((event) => ({
     ...event,
-    actor: event.actorUserId ? actorById.get(event.actorUserId) ?? null : null,
+    actor: event.actorUserId ? userById.get(event.actorUserId) ?? null : null,
+    targetUser:
+      event.targetType === "USER" && event.targetId
+        ? userById.get(event.targetId) ?? null
+        : null,
   }))
+}
+
+export type SecurityAuditEventRecord = Awaited<
+  ReturnType<typeof getSecurityAuditEvents>
+>[number]
+
+export async function getSecurityAuditDashboard() {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
+  const roleAndPermissionTypes = getAuditEventTypesForCategory("ROLES_PERMISSIONS")
+  const passwordTypes: SecurityAuditEventType[] = [
+    "auth.password.changed",
+    "auth.password.change_failed",
+    "auth.password_reset.requested",
+    "auth.password_reset.completed",
+    "auth.password_reset.failed",
+  ]
+
+  const [
+    failedLogins,
+    credentialEvents,
+    accessDenials,
+    privilegedChanges,
+    sessionRevocations,
+    ...categoryEvents
+  ] = await Promise.all([
+    prisma.securityAuditEvent.count({
+      where: { eventType: "auth.login.failed", occurredAt: { gte: since } },
+    }),
+    prisma.securityAuditEvent.count({
+      where: { eventType: { in: passwordTypes }, occurredAt: { gte: since } },
+    }),
+    prisma.securityAuditEvent.count({
+      where: { eventType: "auth.access.denied", occurredAt: { gte: since } },
+    }),
+    prisma.securityAuditEvent.count({
+      where: { eventType: { in: roleAndPermissionTypes }, occurredAt: { gte: since } },
+    }),
+    prisma.securityAuditEvent.count({
+      where: { eventType: "auth.session.revoked", occurredAt: { gte: since } },
+    }),
+    ...SECURITY_AUDIT_CATEGORIES.map((category) =>
+      getSecurityAuditEvents({
+        eventTypes: getAuditEventTypesForCategory(category),
+        take: 40,
+      })
+    ),
+  ])
+
+  return {
+    since,
+    indicators: {
+      failedLogins,
+      credentialEvents,
+      accessDenials,
+      privilegedChanges,
+      sessionRevocations,
+    },
+    categories: Object.fromEntries(
+      SECURITY_AUDIT_CATEGORIES.map((category, index) => [
+        category,
+        [...(categoryEvents[index] ?? [])]
+          .sort((left, right) => {
+            const severityDifference =
+              getSecurityAuditSeverityPriority(classifySecurityAuditEvent(right).severity) -
+              getSecurityAuditSeverityPriority(classifySecurityAuditEvent(left).severity)
+            return severityDifference || right.occurredAt.getTime() - left.occurredAt.getTime()
+          })
+          .slice(0, 8),
+      ])
+    ) as Record<SecurityAuditCategory, SecurityAuditEventRecord[]>,
+  }
 }

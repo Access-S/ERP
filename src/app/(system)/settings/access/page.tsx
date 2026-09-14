@@ -106,14 +106,14 @@ export default async function AccessControlPage() {
           <Card>
             <CardHeader>
               <History className="mb-2 h-5 w-5 text-primary" />
-              <CardTitle>Security audit history</CardTitle>
+              <CardTitle>Security monitoring</CardTitle>
               <CardDescription>
-                Review immutable sign-in, invitation, account, role, and access-denial events.
+                See prioritised sign-in, credential, account, role, and access-denial activity.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button variant="outline" asChild>
-                <Link href="/settings/access/audit">View audit history</Link>
+                <Link href="/settings/access/audit">Open security monitoring</Link>
               </Button>
             </CardContent>
           </Card>

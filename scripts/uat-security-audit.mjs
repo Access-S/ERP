@@ -6,6 +6,12 @@ import {
   SECURITY_AUDIT_EVENT_TYPES,
   sanitizeAuditMetadata,
 } from "../src/features/security-audit/services/audit-policy.ts"
+import {
+  classifySecurityAuditEvent,
+  getSecurityAuditSeverityPriority,
+  SECURITY_AUDIT_CATEGORIES,
+  SECURITY_AUDIT_EVENT_REGISTRY,
+} from "../src/features/security-audit/services/audit-registry.ts"
 
 const prisma = new PrismaClient()
 const rollback = new Error("ROLLBACK_SECURITY_AUDIT_UAT")
@@ -43,6 +49,58 @@ async function main() {
     "event type catalogue must not contain duplicates"
   )
   checks += 1
+
+  assert.deepEqual(
+    Object.keys(SECURITY_AUDIT_EVENT_REGISTRY).sort(),
+    [...SECURITY_AUDIT_EVENT_TYPES].sort(),
+    "every event type must have exactly one classification"
+  )
+  assert.equal(
+    Object.values(SECURITY_AUDIT_EVENT_REGISTRY).every((definition) =>
+      SECURITY_AUDIT_CATEGORIES.includes(definition.category)
+    ),
+    true,
+    "every event classification must use a registered category"
+  )
+  assert.equal(
+    classifySecurityAuditEvent({
+      eventType: "auth.role.assigned",
+      outcome: "SUCCESS",
+      metadata: { roleKey: "SYSTEM_ADMIN" },
+    }).severity,
+    "CRITICAL",
+    "System Administrator assignment must be critical"
+  )
+  assert.equal(
+    classifySecurityAuditEvent({
+      eventType: "auth.login.succeeded",
+      outcome: "FAILURE",
+      metadata: {},
+    }).severity,
+    "WARNING",
+    "failed outcomes must be elevated for administrator attention"
+  )
+  assert.ok(
+    getSecurityAuditSeverityPriority("CRITICAL") >
+      getSecurityAuditSeverityPriority("WARNING"),
+    "critical events must sort ahead of warnings"
+  )
+  assert.deepEqual(
+    classifySecurityAuditEvent({
+      eventType: "auth.future.event",
+      outcome: "SUCCESS",
+      metadata: {},
+    }),
+    {
+      category: "SECURITY_OVERSIGHT",
+      severity: "WARNING",
+      label: "Unclassified security event",
+      description:
+        "A stored event is not yet present in this application's security registry.",
+    },
+    "an unknown stored event must remain visible without breaking monitoring"
+  )
+  checks += 6
 
   const sanitized = sanitizeAuditMetadata("auth.invitation.created", {
     operation: "INITIAL",

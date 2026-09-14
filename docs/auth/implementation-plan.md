@@ -1,8 +1,8 @@
 # Authentication and Authorization Implementation Plan
 
-Status: In progress; core security-audit foundation implemented
+Status: In progress; classified security monitoring implemented
 Owner: Product owner / Engineering
-Last updated: 2026-09-12
+Last updated: 2026-09-14
 
 ## 1. Objective
 
@@ -26,7 +26,7 @@ matrix. Update it in the same commit as implementation work.
 | Server-side permission enforcement | Four master-data modules complete | Central typed guard is adopted by Customers, Parts, Products, and BOMs |
 | Account administration | User and role lifecycle complete | Invitation, activation, status, assignment, effective access, and custom-role UI exist |
 | Session invalidation after access change | Implemented for current administration flows | Status, assignment, and active custom-role permission changes increment `authVersion` |
-| Auth security audit log | Core foundation complete | Append-only PostgreSQL storage, allowlisted writer, protected viewer, and login/access/password administration events |
+| Auth security audit log | Classified monitoring foundation complete | Append-only storage, allowlisted writer, category/severity registry, security-first dashboard, and login/access/password administration events |
 | Password management | Complete and manually accepted | Self-service changes, one-hour administrator reset links, session invalidation, and audit capture |
 | Authorization tests | Core complete | Pure policy and live database UAT cover unauthenticated, stale, inactive, multi-role, allowed, denied, and System Administrator separation paths |
 
@@ -134,6 +134,10 @@ the login/session security scenarios.
 
 ### Phase 6: Security audit trail
 
+Development increment status: complete. Production retention, archival, and
+alert-delivery policy remains an explicit release gate rather than an unfinished
+dashboard feature.
+
 - [x] Add append-only security audit storage.
 - [x] Add a server-only event writer with allowlisted metadata.
 - [x] Record login, account-state, password, role, and access-denied events.
@@ -200,3 +204,4 @@ verify the mapping, then remove the legacy free-text role in a later migration.
 | 2026-09-12 | Added append-only security-audit storage, a typed allowlisted writer, transactional account/role/invitation events, login and access-denial capture, a protected audit viewer, and rollback-safe integrity/privacy UAT. |
 | 2026-09-13 | Added self-service password changes, administrator-delivered one-hour reset links, password-triggered session invalidation, and password audit events. |
 | 2026-09-13 | Product owner manually accepted the password change, administrator recovery, single-use reset, credential restoration, session invalidation, and audit scenarios. |
+| 2026-09-14 | Completed and automatically verified the classified security-monitoring dashboard, category views, severity prioritisation, investigation filters, and post-response view auditing. |

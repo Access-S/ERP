@@ -28,7 +28,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/settings/access": "Access Control",
   "/settings/access/users": "Users",
   "/settings/access/roles": "Roles & Permissions",
-  "/settings/access/audit": "Security Audit",
+  "/settings/access/audit": "Security Monitoring",
 }
 
 function labelForPath(path: string, segment: string): string {

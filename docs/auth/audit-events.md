@@ -1,8 +1,8 @@
 # Authentication and Authorization Audit Events
 
-Status: Core security-audit storage, writer, event capture, and viewer implemented
+Status: Classified security-monitoring foundation implemented and verified
 Owner: Product owner / Engineering
-Last updated: 2026-09-12
+Last updated: 2026-09-14
 
 ## 1. Purpose
 
@@ -152,8 +152,16 @@ role management, exports, approvals, or repeated suspicious behaviour.
 - Export requires a separate permission if exports are implemented.
 - Audit queries must avoid returning authentication metadata that the viewer
   does not need.
-- `/settings/access/audit` requires `admin.audit.view`, provides read-only
-  event/outcome filtering, and returns at most 100 newest matching records.
+- `/settings/access/audit` requires `admin.audit.view`, leads with 24-hour
+  security indicators, separates events into Authentication, User Lifecycle,
+  Roles & Permissions, and Security Oversight, and retains a filterable view of
+  the 100 newest matching records.
+- Audit-view evidence is scheduled with Next.js `after()` once the response is
+  complete, avoiding a database mutation during Server Component rendering.
+  A failed view-log write is reported to server operations without replacing
+  the already-authorized response.
+- The broader category and future operational-audit direction is maintained in
+  [Audit information architecture](../architecture/audit-information-architecture.md).
 - Actor IDs deliberately remain scalar snapshots rather than foreign keys, so
   later identity retention changes cannot rewrite an historical event.
 - Retention, archival, and legal hold rules must be decided before production.
@@ -204,3 +212,5 @@ correctly prevents historical audit evidence from being deleted.
 | 2026-09-09 | Created the initial auth, account administration, and authorization event catalogue. |
 | 2026-09-12 | Implemented append-only PostgreSQL storage, the allowlisted server writer, security event capture, protected audit viewer, and integrity/privacy UAT. |
 | 2026-09-13 | Added allowlisted password change/reset events and correlated session-revocation capture. |
+| 2026-09-13 | Added the typed category/severity registry and security-first monitoring layout. |
+| 2026-09-14 | Verified the dashboard and protected routes, moved view logging to post-response execution, and added safe handling for unknown stored event keys. |

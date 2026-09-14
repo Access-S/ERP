@@ -55,6 +55,30 @@ async function authenticate(account) {
   return result.cookies
 }
 
+async function loadGeneratedAuditEvents(startedAt) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const events = await prisma.securityAuditEvent.findMany({
+      where: { occurredAt: { gte: startedAt } },
+      orderBy: { occurredAt: "asc" },
+    })
+
+    if (
+      events.some((event) => event.eventType === "auth.audit.viewed") &&
+      events.some((event) => event.eventType === "auth.access.denied") &&
+      events.some((event) => event.eventType === "auth.login.failed")
+    ) {
+      return events
+    }
+
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 100))
+  }
+
+  return prisma.securityAuditEvent.findMany({
+    where: { occurredAt: { gte: startedAt } },
+    orderBy: { occurredAt: "asc" },
+  })
+}
+
 async function main() {
   let checks = 0
   const startedAt = new Date()
@@ -83,8 +107,16 @@ async function main() {
     headers: { cookie: adminCookies },
   })
   assert.equal(auditResponse.status, 200)
-  assert.match(await auditResponse.text(), /Security audit history/)
-  checks += 2
+  const auditHtml = await auditResponse.text()
+  assert.match(auditHtml, /Security monitoring/)
+  assert.match(auditHtml, /Authentication &amp; sessions/)
+  assert.match(auditHtml, /Roles &amp; permissions/)
+  assert.match(auditHtml, /User lifecycle/)
+  assert.match(auditHtml, /Security oversight/)
+  assert.match(auditHtml, /Failed sign-ins/)
+  assert.match(auditHtml, /All security activity/)
+  assert.match(auditHtml, /Investigation filters/)
+  checks += 9
 
   const salesCookies = await authenticate(sales)
   const deniedResponse = await fetch(`${baseUrl}/settings/access/audit`, {
@@ -102,10 +134,7 @@ async function main() {
   assert.match(failedLogin.response.headers.get("location") ?? "", /error=/)
   checks += 2
 
-  const events = await prisma.securityAuditEvent.findMany({
-    where: { occurredAt: { gte: startedAt } },
-    orderBy: { occurredAt: "asc" },
-  })
+  const events = await loadGeneratedAuditEvents(startedAt)
   assert.ok(
     events.some(
       (event) =>
