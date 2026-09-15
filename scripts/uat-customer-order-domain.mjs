@@ -9,7 +9,10 @@ import {
   validateCustomerOrderRelease,
 } from "../src/features/customer-orders/services/customer-order-validation.ts"
 import {
+  addBlanketAmendmentInputSchema,
   cancelCustomerOrderInputSchema,
+  createBlanketCustomerOrderInputSchema,
+  createBlanketReleaseInputSchema,
   createStandardCustomerOrderInputSchema,
 } from "../src/features/customer-orders/types/customer-order-schema.ts"
 
@@ -213,5 +216,52 @@ assert.equal(
   false
 )
 pass("Form boundaries reject impossible dates, excess money precision, and weak cancellation reasons")
+
+const validBlanketHeader = {
+  customerId: validFormInput.customerId,
+  customerPoNumber: "UAT-BLANKET-001",
+  originalAuthorizedValue: "60000.00",
+  receivedDate: "2026-09-15",
+  validFrom: "2026-09-15",
+  validTo: "2027-09-14",
+}
+assert.equal(createBlanketCustomerOrderInputSchema.safeParse(validBlanketHeader).success, true)
+assert.equal(
+  createBlanketCustomerOrderInputSchema.safeParse({
+    ...validBlanketHeader,
+    originalAuthorizedValue: "0",
+  }).success,
+  false
+)
+assert.equal(
+  createBlanketCustomerOrderInputSchema.safeParse({
+    ...validBlanketHeader,
+    validTo: "2026-09-14",
+  }).success,
+  false
+)
+assert.equal(
+  createBlanketReleaseInputSchema.safeParse({
+    orderId: validFormInput.customerId,
+    receivedDate: validFormInput.receivedDate,
+    customerReleaseReference: "",
+    defaultRequestedDeliveryDate: validFormInput.defaultRequestedDeliveryDate,
+    customerNetTotal: validFormInput.customerNetTotal,
+    lines: validFormInput.lines,
+  }).success,
+  true
+)
+assert.equal(
+  addBlanketAmendmentInputSchema.safeParse({
+    orderId: validFormInput.customerId,
+    valueDelta: "10000.00",
+    customerReference: "UAT-TOP-UP-1",
+    receivedDate: "2026-09-15",
+    effectiveDate: "2026-09-15",
+    reason: "Customer increased the annual PO authority.",
+  }).success,
+  true
+)
+pass("Blanket header, release, and positive top-up form boundaries are enforced")
 
 console.log("\nCustomer Order domain validation passed without database writes.")

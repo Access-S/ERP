@@ -37,5 +37,18 @@ assert.deepEqual(
   }
 )
 
-console.log("Customer Order audit policy UAT passed.")
+assert.deepEqual(
+  sanitizeCustomerOrderAuditMetadata("customer_order.release.cancelled", {
+    previousStatus: "READY_FOR_PLANNING",
+    nextStatus: "CANCELLED",
+    reason: "Customer cancelled this release by email.",
+    customerEmail: "must-not-be-recorded@example.com",
+  }),
+  {
+    previousStatus: "READY_FOR_PLANNING",
+    nextStatus: "CANCELLED",
+    reason: "Customer cancelled this release by email.",
+  }
+)
 
+console.log("Customer Order audit policy UAT passed.")

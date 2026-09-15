@@ -3,6 +3,7 @@ import { Prisma, PrismaClient } from "@prisma/client"
 
 import { allocateCustomerOrderNumber } from "../src/features/customer-orders/services/customer-order-numbering.ts"
 import { commitCustomerOrderReleaseInTransaction } from "../src/features/customer-orders/services/customer-order-commitment-policy.ts"
+import { calculateBlanketBalance } from "../src/features/customer-orders/services/blanket-balance.ts"
 
 const prisma = new PrismaClient()
 const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -148,6 +149,30 @@ async function testReversibleWorkflow() {
       assert.equal(stored.releases[0].lines.length, 1)
       assert.equal(stored.releases[0].revisions.length, 1)
       assert.equal(stored.releases[0].lines[0].calculatedShippers.toFixed(), "100")
+
+      await tx.customerOrderRelease.update({
+        where: { id: release.id },
+        data: {
+          status: "CANCELLED",
+          cancelledAt: new Date("2026-09-15T00:00:00.000Z"),
+          revisionNumber: 2,
+        },
+      })
+      await tx.customerOrderReleaseRevision.create({
+        data: {
+          releaseId: release.id,
+          revision: 2,
+          snapshot: { status: "CANCELLED", committedValue: "1000.00" },
+          changeReason: "UAT release cancellation",
+        },
+      })
+      const restoredBalance = calculateBlanketBalance({
+        originalAuthorizedValue: order.originalAuthorizedValue,
+        amendmentValues: stored.amendments.map((amendment) => amendment.valueDelta),
+        committedReleaseValues: [],
+      })
+      assert.equal(restoredBalance.currentAuthorizedValue.toFixed(2), "70000.00")
+      assert.equal(restoredBalance.availableValue.toFixed(2), "70000.00")
 
       const poCheckReleaseNumber = await allocateCustomerOrderNumber(tx, "RELEASE")
       const poCheckRelease = await tx.customerOrderRelease.create({

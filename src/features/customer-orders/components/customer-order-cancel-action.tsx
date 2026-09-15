@@ -18,16 +18,21 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { cancelStandardCustomerOrderAction } from "../actions/customer-order-actions"
+import {
+  cancelBlanketReleaseAction,
+  cancelStandardCustomerOrderAction,
+} from "../actions/customer-order-actions"
 
 export function CustomerOrderCancelAction({
   orderId,
   releaseId,
   customerPoNumber,
+  mode = "STANDARD_ORDER",
 }: {
   orderId: string
   releaseId: string
   customerPoNumber: string
+  mode?: "STANDARD_ORDER" | "BLANKET_RELEASE"
 }) {
   const router = useRouter()
   const [open, setOpen] = React.useState(false)
@@ -36,7 +41,9 @@ export function CustomerOrderCancelAction({
 
   function cancel() {
     startTransition(async () => {
-      const result = await cancelStandardCustomerOrderAction({ orderId, releaseId, reason })
+      const result = mode === "BLANKET_RELEASE"
+        ? await cancelBlanketReleaseAction({ orderId, releaseId, reason })
+        : await cancelStandardCustomerOrderAction({ orderId, releaseId, reason })
       if (!result.success) {
         toast.error(result.message)
         return
@@ -50,13 +57,20 @@ export function CustomerOrderCancelAction({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline"><Ban className="mr-2 h-4 w-4" />Cancel PO</Button>
+        <Button variant="outline">
+          <Ban className="mr-2 h-4 w-4" />
+          {mode === "BLANKET_RELEASE" ? "Cancel release" : "Cancel PO"}
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Cancel Customer PO {customerPoNumber}?</DialogTitle>
+          <DialogTitle>
+            Cancel {mode === "BLANKET_RELEASE" ? "release from" : "Customer PO"} {customerPoNumber}?
+          </DialogTitle>
           <DialogDescription>
-            The order will be locked and removed from ready demand. Its revisions and audit history remain available.
+            {mode === "BLANKET_RELEASE"
+              ? "The release will be removed from ready demand and eligible committed value will return to the Blanket PO. Its history remains available."
+              : "The order will be locked and removed from ready demand. Its revisions and audit history remain available."}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
@@ -72,7 +86,11 @@ export function CustomerOrderCancelAction({
           />
         </div>
         <DialogFooter>
-          <DialogClose asChild><Button variant="outline" disabled={isPending}>Keep PO</Button></DialogClose>
+          <DialogClose asChild>
+            <Button variant="outline" disabled={isPending}>
+              Keep {mode === "BLANKET_RELEASE" ? "release" : "PO"}
+            </Button>
+          </DialogClose>
           <Button variant="destructive" onClick={cancel} disabled={isPending || reason.trim().length < 10}>
             {isPending ? "Cancelling..." : "Confirm cancellation"}
           </Button>

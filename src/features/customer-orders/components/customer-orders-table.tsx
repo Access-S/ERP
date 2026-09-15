@@ -39,7 +39,7 @@ export function CustomerOrdersTable({ orders }: { orders: readonly CustomerOrder
             <TableHead>Customer</TableHead>
             <TableHead>Type</TableHead>
             <TableHead>Received</TableHead>
-            <TableHead>Release</TableHead>
+            <TableHead>Latest release</TableHead>
             <TableHead>Expected value</TableHead>
             <TableHead>Status</TableHead>
           </TableRow>
@@ -61,15 +61,24 @@ export function CustomerOrdersTable({ orders }: { orders: readonly CustomerOrder
               </TableCell>
               <TableCell><Badge variant="outline">{statusLabel(order.type)}</Badge></TableCell>
               <TableCell>{dateFormatter.format(new Date(order.receivedDate))}</TableCell>
-              <TableCell>{order.latestRelease?.internalReleaseNumber ?? `${order.releaseCount} releases`}</TableCell>
+              <TableCell>
+                {order.latestRelease ? (
+                  <div className="space-y-1">
+                    <div>{order.latestRelease.internalReleaseNumber}</div>
+                    <Badge variant={statusVariant(order.latestRelease.status)}>
+                      {statusLabel(order.latestRelease.status)}
+                    </Badge>
+                  </div>
+                ) : `${order.releaseCount} releases`}
+              </TableCell>
               <TableCell className="tabular-nums">
                 {order.latestRelease?.expectedNetTotal === null || !order.latestRelease
                   ? "—"
                   : `${order.currency} ${Number(order.latestRelease.expectedNetTotal).toFixed(2)}`}
               </TableCell>
               <TableCell>
-                <Badge variant={statusVariant(order.latestRelease?.status ?? order.status)}>
-                  {statusLabel(order.latestRelease?.status ?? order.status)}
+                <Badge variant={statusVariant(order.status)}>
+                  {statusLabel(order.status)}
                 </Badge>
               </TableCell>
             </ClickableTableRow>

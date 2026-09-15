@@ -1,13 +1,13 @@
 # Customer Orders and Production Planning Manual Tests
 
-Status: **Partially ready for browser UAT** - Standard PO scenarios ready; Blanket and Planning pending
+Status: **Partially ready for browser UAT** - Customer Order scenarios ready; Production Planning pending
 Owner: Product owner / Customer Service / Production Planning
-Last updated: 2026-09-14
+Last updated: 2026-09-15
 
 Use these scenarios only after the relevant implementation phase is marked
 ready. Use dummy Customer PO and SKU references beginning with `UAT-`.
 
-Current ready scope: `COPP-01` to `COPP-05` and `COPP-16`.
+Current ready scope: `COPP-01` to `COPP-12` and `COPP-16`.
 
 ## Customer Order entry
 
@@ -156,8 +156,8 @@ lines, revisions, and cancellation reason remain visible in history.
 
 | Date | Environment | Tester | Scenarios | Result | Defect or notes |
 | --- | --- | --- | --- | --- | --- |
-|  |  |  | COPP-01 to COPP-05, COPP-16 | Ready | Standard PO workflow |
-|  |  |  | COPP-06 to COPP-15 | Not ready | Blanket and Planning implementation pending |
+|  |  |  | COPP-01 to COPP-12, COPP-16 | Ready | Standard and Blanket Customer Order workflows |
+|  |  |  | COPP-13 to COPP-15 | Not ready | Production Planning implementation pending |
 
 Do not record customer documents, real prices, credentials, or personal details
 in this file or in screenshots attached to defects.

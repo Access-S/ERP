@@ -18,7 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
+  createBlanketReleaseAction,
   createStandardCustomerOrderAction,
+  updateBlanketReleaseAction,
   updateStandardCustomerOrderAction,
 } from "../actions/customer-order-actions"
 import type { CustomerOrderCreateOptions } from "../services/customer-order-service"
@@ -104,6 +106,9 @@ export function StandardCustomerOrderForm({
   orderId,
   releaseId,
   initialValues,
+  workflow = "STANDARD",
+  parentOrderId,
+  fixedCustomerId,
 }: {
   options: CustomerOrderCreateOptions
   today: string
@@ -111,10 +116,15 @@ export function StandardCustomerOrderForm({
   orderId?: string
   releaseId?: string
   initialValues?: StandardCustomerOrderFormValues
+  workflow?: "STANDARD" | "BLANKET_RELEASE"
+  parentOrderId?: string
+  fixedCustomerId?: string
 }) {
   const router = useRouter()
   const [isPending, startTransition] = React.useTransition()
-  const [customerId, setCustomerId] = React.useState(initialValues?.customerId ?? "")
+  const [customerId, setCustomerId] = React.useState(
+    initialValues?.customerId ?? fixedCustomerId ?? ""
+  )
   const [customerPoNumber, setCustomerPoNumber] = React.useState(initialValues?.customerPoNumber ?? "")
   const [receivedDate, setReceivedDate] = React.useState(initialValues?.receivedDate ?? today)
   const [customerReleaseReference, setCustomerReleaseReference] = React.useState(initialValues?.customerReleaseReference ?? "")
@@ -151,9 +161,7 @@ export function StandardCustomerOrderForm({
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     startTransition(async () => {
-      const payload = {
-        customerId,
-        customerPoNumber,
+      const releasePayload = {
         receivedDate,
         customerReleaseReference,
         defaultRequestedDeliveryDate,
@@ -166,9 +174,23 @@ export function StandardCustomerOrderForm({
           customerLineValue: line.customerLineValue,
         })),
       }
-      const result = mode === "edit" && orderId && releaseId
-        ? await updateStandardCustomerOrderAction({ ...payload, orderId, releaseId })
-        : await createStandardCustomerOrderAction(payload)
+      const result = workflow === "BLANKET_RELEASE" && parentOrderId
+        ? mode === "edit" && releaseId
+          ? await updateBlanketReleaseAction({ ...releasePayload, orderId: parentOrderId, releaseId })
+          : await createBlanketReleaseAction({ ...releasePayload, orderId: parentOrderId })
+        : mode === "edit" && orderId && releaseId
+          ? await updateStandardCustomerOrderAction({
+              ...releasePayload,
+              customerId,
+              customerPoNumber,
+              orderId,
+              releaseId,
+            })
+          : await createStandardCustomerOrderAction({
+              ...releasePayload,
+              customerId,
+              customerPoNumber,
+            })
       if (!result.success || !result.orderId) {
         toast.error(result.message)
         return
@@ -184,15 +206,21 @@ export function StandardCustomerOrderForm({
     <form className="space-y-6" onSubmit={handleSubmit}>
       <Card>
         <CardHeader>
-          <CardTitle>Customer PO</CardTitle>
+          <CardTitle>{workflow === "BLANKET_RELEASE" ? "Blanket release" : "Customer PO"}</CardTitle>
           <CardDescription>
-            Record the Customer document exactly as received. All values below exclude GST.
+            {workflow === "BLANKET_RELEASE"
+              ? "Record this call-off against the existing Blanket PO. All values below exclude GST."
+              : "Record the Customer document exactly as received. All values below exclude GST."}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           <div className="space-y-2 lg:col-span-2">
             <Label htmlFor="customer">Customer</Label>
-            <Select value={customerId} onValueChange={handleCustomerChange} disabled={isPending || mode === "edit"}>
+            <Select
+              value={customerId}
+              onValueChange={handleCustomerChange}
+              disabled={isPending || mode === "edit" || workflow === "BLANKET_RELEASE"}
+            >
               <SelectTrigger id="customer" className="w-full">
                 <SelectValue placeholder="Select a Customer" />
               </SelectTrigger>
@@ -209,17 +237,19 @@ export function StandardCustomerOrderForm({
             <Label htmlFor="currency">Currency</Label>
             <Input id="currency" value={customer?.currency ?? "Select Customer"} disabled />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="customer-po-number">Customer PO number</Label>
-            <Input
-              id="customer-po-number"
-              value={customerPoNumber}
-              onChange={(event) => setCustomerPoNumber(event.target.value)}
-              maxLength={100}
-              required
-              disabled={isPending}
-            />
-          </div>
+          {workflow === "STANDARD" && (
+            <div className="space-y-2">
+              <Label htmlFor="customer-po-number">Customer PO number</Label>
+              <Input
+                id="customer-po-number"
+                value={customerPoNumber}
+                onChange={(event) => setCustomerPoNumber(event.target.value)}
+                maxLength={100}
+                required
+                disabled={isPending}
+              />
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="received-date">Received date</Label>
             <Input
@@ -252,7 +282,9 @@ export function StandardCustomerOrderForm({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="customer-net-total">Customer PO total (ex GST)</Label>
+            <Label htmlFor="customer-net-total">
+              Customer {workflow === "BLANKET_RELEASE" ? "release" : "PO"} total (ex GST)
+            </Label>
             <Input
               id="customer-net-total"
               type="number"
@@ -422,7 +454,13 @@ export function StandardCustomerOrderForm({
         <Button
           type="button"
           variant="outline"
-          onClick={() => router.push(mode === "edit" && orderId ? `/customer-orders/${orderId}` : "/customer-orders")}
+          onClick={() => router.push(
+            workflow === "BLANKET_RELEASE" && parentOrderId
+              ? `/customer-orders/${parentOrderId}`
+              : mode === "edit" && orderId
+                ? `/customer-orders/${orderId}`
+                : "/customer-orders"
+          )}
           disabled={isPending}
         >
           Cancel
@@ -432,7 +470,9 @@ export function StandardCustomerOrderForm({
             ? "Validating and saving..."
             : mode === "edit"
               ? "Save and revalidate"
-              : "Create Customer PO"}
+              : workflow === "BLANKET_RELEASE"
+                ? "Create Blanket release"
+                : "Create Customer PO"}
         </Button>
       </div>
     </form>

@@ -107,8 +107,13 @@ export async function commitCustomerOrderReleaseInTransaction(
     if (order.status !== "ACTIVE") {
       throw new CustomerOrderCommitmentError("BLANKET_NOT_ACTIVE", "The blanket PO is not active.")
     }
-    const today = dateOnly(now)
-    if (!order.validFrom || !order.validTo || today < dateOnly(order.validFrom) || today > dateOnly(order.validTo)) {
+    const releaseDate = dateOnly(release.receivedDate)
+    if (
+      !order.validFrom ||
+      !order.validTo ||
+      releaseDate < dateOnly(order.validFrom) ||
+      releaseDate > dateOnly(order.validTo)
+    ) {
       throw new CustomerOrderCommitmentError(
         "BLANKET_OUTSIDE_VALIDITY",
         "The blanket PO is outside its validity period."

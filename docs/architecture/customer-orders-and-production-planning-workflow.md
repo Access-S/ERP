@@ -328,7 +328,7 @@ A line or release becomes `PO_CHECK` when any applicable condition exists:
 - missing customer-stated line or release value;
 - line price variance exceeds tolerance;
 - release-total variance exceeds tolerance;
-- expired or not-yet-active Blanket PO; or
+- release received date outside the Blanket PO validity period; or
 - expected release value exceeds available Blanket PO value.
 
 The UI must show a plain-language issue beside the affected line and a summary
@@ -629,11 +629,20 @@ Migration rules:
 
 ### Phase 3 - Blanket POs and releases
 
-- Blanket header, validity period, authorised value, and balance.
-- Multiple releases with optional customer references.
-- Atomic value commitment.
-- Append-only top-up amendments.
-- Cancellation and balance restoration rules.
+- **Implemented 2026-09-15.** Added Blanket header creation with Customer,
+  original GST-exclusive authority, received date, and validity period.
+- Added visible original, top-up, committed, and available balances.
+- Added multiple independently validated releases with optional Customer
+  references, generated internal numbers, and current Product snapshots.
+- Release commitment uses the existing serializable parent-row lock, so two
+  concurrent releases cannot spend the same available value.
+- Added append-only positive top-up amendments that preserve original,
+  previous, and resulting authority.
+- Added pre-planning release correction and cancellation. Eligible committed
+  value returns to the Blanket balance while all revision and audit history is
+  retained.
+- Added Standard-vs-Blanket creation choice, Blanket release pages, role-aware
+  actions, and authenticated route coverage.
 
 ### Phase 4 - Production Planning foundation
 
@@ -654,10 +663,10 @@ Migration rules:
 
 ## 21. Current implementation goal
 
-Phases 1 and 2 are complete. The current goal is **Phase 3: Blanket POs and
-releases**. It will add blanket authority, validity, balance, top-up,
-multi-release, and release-cancellation behaviour on the existing atomic
-commitment boundary.
+Phases 1 through 3 are complete. The current goal is **Phase 4: Production
+Planning foundation**. It will turn `READY_FOR_PLANNING` release lines into
+controlled draft plans, support quantity splitting and dates, and add the
+supervisor release boundary without changing Customer Service price ownership.
 
 ## 22. Open future decisions
 

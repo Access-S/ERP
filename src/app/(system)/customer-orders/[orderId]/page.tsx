@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client"
-import { AlertTriangle, ArrowLeft, Ban, CheckCircle2, Pencil } from "lucide-react"
+import { AlertTriangle, ArrowLeft, Ban, CheckCircle2, Pencil, Plus } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
@@ -20,6 +20,8 @@ import { getCurrentPrincipal } from "@/features/auth/services/authorization-serv
 import { hasCustomerOrderPermission } from "@/features/customer-orders/services/customer-order-authorization"
 import { getCustomerOrderById } from "@/features/customer-orders/services/customer-order-service"
 import { CustomerOrderCancelAction } from "@/features/customer-orders/components/customer-order-cancel-action"
+import { BlanketTopUpAction } from "@/features/customer-orders/components/blanket-top-up-action"
+import { getBlanketBalanceForDisplay } from "@/features/customer-orders/services/blanket-customer-order-service"
 
 export const dynamic = "force-dynamic"
 
@@ -78,6 +80,18 @@ export default async function CustomerOrderDetailsPage({
     editableRelease &&
     ["DRAFT", "PO_CHECK", "READY_FOR_PLANNING"].includes(editableRelease.status) &&
     hasCustomerOrderPermission(principal, "cancel")
+  const blanketBalance = order.type === "BLANKET"
+    ? getBlanketBalanceForDisplay(order)
+    : null
+  const canCreateRelease =
+    order.type === "BLANKET" &&
+    !["CANCELLED", "CLOSED", "EXPIRED"].includes(order.status) &&
+    hasCustomerOrderPermission(principal, "createRelease")
+  const canAmendBlanket =
+    order.type === "BLANKET" &&
+    ["ACTIVE", "EXHAUSTED"].includes(order.status) &&
+    hasCustomerOrderPermission(principal, "amendBlanket")
+  const today = new Date().toISOString().slice(0, 10)
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -112,6 +126,20 @@ export default async function CustomerOrderDetailsPage({
               customerPoNumber={order.customerPoNumber}
             />
           )}
+          {canAmendBlanket && (
+            <BlanketTopUpAction
+              orderId={order.id}
+              customerPoNumber={order.customerPoNumber}
+              today={today}
+            />
+          )}
+          {canCreateRelease && (
+            <Button asChild>
+              <Link href={`/customer-orders/${order.id}/releases/new`}>
+                <Plus className="mr-2 h-4 w-4" />New release
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -122,8 +150,69 @@ export default async function CustomerOrderDetailsPage({
         <Card><CardHeader><CardDescription>Releases</CardDescription><CardTitle className="text-2xl">{order.releases.length}</CardTitle></CardHeader></Card>
       </div>
 
+      {blanketBalance && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card><CardHeader><CardDescription>Original authority</CardDescription><CardTitle className="text-xl tabular-nums">{money(order.currency, blanketBalance.originalAuthorizedValue)}</CardTitle></CardHeader></Card>
+          <Card><CardHeader><CardDescription>Top-ups</CardDescription><CardTitle className="text-xl tabular-nums">{money(order.currency, blanketBalance.amendmentValue)}</CardTitle></CardHeader></Card>
+          <Card><CardHeader><CardDescription>Committed releases</CardDescription><CardTitle className="text-xl tabular-nums">{money(order.currency, blanketBalance.committedValue)}</CardTitle></CardHeader></Card>
+          <Card><CardHeader><CardDescription>Available value</CardDescription><CardTitle className="text-xl tabular-nums">{money(order.currency, blanketBalance.availableValue)}</CardTitle></CardHeader></Card>
+        </div>
+      )}
+
+      {order.type === "BLANKET" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Blanket authority and amendments</CardTitle>
+            <CardDescription>
+              Valid {order.validFrom ? dateFormatter.format(order.validFrom) : "—"} to {order.validTo ? dateFormatter.format(order.validTo) : "—"}. Original authority is never overwritten.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {order.amendments.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No top-ups recorded.</p>
+            ) : (
+              <div className="space-y-2">
+                {order.amendments.map((amendment) => (
+                  <div key={amendment.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm">
+                    <div>
+                      <div>
+                        <span className="font-medium">+{money(order.currency, amendment.valueDelta)}</span>
+                        <span className="text-muted-foreground"> · {amendment.customerReference ?? "No customer reference"}</span>
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {amendment.reason ?? "No reason recorded"}
+                      </div>
+                    </div>
+                    <div className="text-right text-muted-foreground">
+                      <div>{dateFormatter.format(amendment.effectiveDate)}</div>
+                      <div>Authority: {money(order.currency, amendment.resultingAuthorizedValue)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {order.type === "BLANKET" && order.releases.length === 0 && (
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-muted-foreground">
+            No releases yet. The Blanket PO itself does not create production demand.
+          </CardContent>
+        </Card>
+      )}
+
       {order.releases.map((release) => {
         const releaseIssues = issues(release.validationIssues)
+        const canEditBlanketRelease =
+          order.type === "BLANKET" &&
+          ["DRAFT", "PO_CHECK", "READY_FOR_PLANNING"].includes(release.status) &&
+          hasCustomerOrderPermission(principal, "editRelease")
+        const canCancelBlanketRelease =
+          order.type === "BLANKET" &&
+          ["DRAFT", "PO_CHECK", "READY_FOR_PLANNING"].includes(release.status) &&
+          hasCustomerOrderPermission(principal, "cancel")
         return (
           <Card key={release.id}>
             <CardHeader>
@@ -139,9 +228,26 @@ export default async function CustomerOrderDetailsPage({
                     Customer release: {release.customerReleaseReference ?? "Not supplied"} · Revision {release.revisionNumber}
                   </CardDescription>
                 </div>
-                <div className="text-right text-sm">
-                  <p className="text-muted-foreground">Expected net total</p>
-                  <p className="text-xl font-semibold tabular-nums">{money(order.currency, release.expectedNetTotal)}</p>
+                <div className="flex flex-wrap items-start gap-2">
+                  <div className="mr-2 text-right text-sm">
+                    <p className="text-muted-foreground">Expected net total</p>
+                    <p className="text-xl font-semibold tabular-nums">{money(order.currency, release.expectedNetTotal)}</p>
+                  </div>
+                  {canEditBlanketRelease && (
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/customer-orders/${order.id}/releases/${release.id}/edit`}>
+                        <Pencil className="mr-2 h-4 w-4" />Correct release
+                      </Link>
+                    </Button>
+                  )}
+                  {canCancelBlanketRelease && (
+                    <CustomerOrderCancelAction
+                      mode="BLANKET_RELEASE"
+                      orderId={order.id}
+                      releaseId={release.id}
+                      customerPoNumber={order.customerPoNumber}
+                    />
+                  )}
                 </div>
               </div>
             </CardHeader>

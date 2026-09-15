@@ -72,9 +72,15 @@ async function main() {
   assert.match(customerServiceList, /New Customer PO/)
   assert.doesNotMatch(customerServiceList, /Access restricted/)
   const createPage = await getPage("/customer-orders/new", customerServiceCookies)
-  assert.match(createPage, /New Standard Customer PO/)
-  assert.match(createPage, /Record the Customer document exactly as received/)
-  checks += 5
+  assert.match(createPage, /Standard Customer PO/)
+  assert.match(createPage, /Blanket Customer PO/)
+  const standardPage = await getPage("/customer-orders/new/standard", customerServiceCookies)
+  assert.match(standardPage, /New Standard Customer PO/)
+  assert.match(standardPage, /Record the Customer document exactly as received/)
+  const blanketPage = await getPage("/customer-orders/new/blanket", customerServiceCookies)
+  assert.match(blanketPage, /New Blanket Customer PO/)
+  assert.match(blanketPage, /Blanket PO authority/)
+  checks += 9
 
   const plannerCookies = await authenticate(findAccount("PRODUCTION_PLANNER"))
   const plannerList = await getPage("/customer-orders", plannerCookies)
@@ -82,7 +88,9 @@ async function main() {
   assert.doesNotMatch(plannerList, /New Customer PO/)
   const plannerCreatePage = await getPage("/customer-orders/new", plannerCookies)
   assert.match(plannerCreatePage, /Access restricted/)
-  checks += 3
+  const plannerBlanketPage = await getPage("/customer-orders/new/blanket", plannerCookies)
+  assert.match(plannerBlanketPage, /Access restricted/)
+  checks += 4
 
   const financeCookies = await authenticate(findAccount("FINANCE_ACCOUNTS"))
   const financeList = await getPage("/customer-orders", financeCookies)

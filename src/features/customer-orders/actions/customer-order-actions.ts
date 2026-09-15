@@ -9,20 +9,165 @@ import {
   runAuthorizedCustomerOrderOperation,
 } from "../services/customer-order-authorization"
 import {
+  addBlanketAmendment,
+  cancelBlanketRelease,
+  createBlanketCustomerOrder,
+  createBlanketRelease,
+  updateBlanketRelease,
+} from "../services/blanket-customer-order-service"
+import {
   createStandardCustomerOrder,
   cancelStandardCustomerOrder,
   CustomerOrderWorkflowError,
   updateStandardCustomerOrder,
 } from "../services/customer-order-service"
 import {
+  addBlanketAmendmentInputSchema,
+  createBlanketCustomerOrderInputSchema,
+  createBlanketReleaseInputSchema,
   createStandardCustomerOrderInputSchema,
   cancelCustomerOrderInputSchema,
+  updateBlanketReleaseInputSchema,
   updateStandardCustomerOrderInputSchema,
   type CustomerOrderMutationResult,
 } from "../types/customer-order-schema"
 
 function failure(message: string): CustomerOrderMutationResult {
   return { success: false, message }
+}
+
+function revalidateCustomerOrder(orderId: string) {
+  revalidatePath("/customer-orders")
+  revalidatePath(`/customer-orders/${orderId}`)
+  revalidatePath(`/customer-orders/${orderId}/releases/new`)
+}
+
+export async function createBlanketCustomerOrderAction(
+  input: unknown
+): Promise<CustomerOrderMutationResult> {
+  try {
+    const principal = await requireUser()
+    assertCustomerOrderPermission(principal, "create")
+    const parsed = createBlanketCustomerOrderInputSchema.safeParse(input)
+    if (!parsed.success) {
+      return failure(parsed.error.issues[0]?.message ?? "Invalid Blanket PO.")
+    }
+    return runAuthorizedCustomerOrderOperation(principal, "create", async () => {
+      const result = await createBlanketCustomerOrder(parsed.data, principal)
+      revalidateCustomerOrder(result.orderId)
+      return {
+        success: true,
+        message: "Blanket PO created and ready to receive releases.",
+        ...result,
+      }
+    })
+  } catch (error) {
+    return mutationFailure(error)
+  }
+}
+
+export async function addBlanketAmendmentAction(
+  input: unknown
+): Promise<CustomerOrderMutationResult> {
+  try {
+    const principal = await requireUser()
+    assertCustomerOrderPermission(principal, "amendBlanket")
+    const parsed = addBlanketAmendmentInputSchema.safeParse(input)
+    if (!parsed.success) {
+      return failure(parsed.error.issues[0]?.message ?? "Invalid Blanket PO top-up.")
+    }
+    return runAuthorizedCustomerOrderOperation(principal, "amendBlanket", async () => {
+      const result = await addBlanketAmendment(parsed.data, principal)
+      revalidateCustomerOrder(result.orderId)
+      return {
+        success: true,
+        message: "Blanket PO top-up recorded without changing the original authority.",
+        orderId: result.orderId,
+        status: result.status,
+      }
+    })
+  } catch (error) {
+    return mutationFailure(error)
+  }
+}
+
+export async function createBlanketReleaseAction(
+  input: unknown
+): Promise<CustomerOrderMutationResult> {
+  try {
+    const principal = await requireUser()
+    assertCustomerOrderPermission(principal, "createRelease")
+    const parsed = createBlanketReleaseInputSchema.safeParse(input)
+    if (!parsed.success) {
+      return failure(parsed.error.issues[0]?.message ?? "Invalid Blanket release.")
+    }
+    return runAuthorizedCustomerOrderOperation(principal, "createRelease", async () => {
+      const result = await createBlanketRelease(parsed.data, principal)
+      revalidateCustomerOrder(result.orderId)
+      return {
+        success: true,
+        message: result.status === "READY_FOR_PLANNING"
+          ? "Blanket release created, committed, and ready for planning."
+          : "Blanket release saved with checks that require correction.",
+        ...result,
+      }
+    })
+  } catch (error) {
+    return mutationFailure(error)
+  }
+}
+
+export async function updateBlanketReleaseAction(
+  input: unknown
+): Promise<CustomerOrderMutationResult> {
+  try {
+    const principal = await requireUser()
+    assertCustomerOrderPermission(principal, "editRelease")
+    const parsed = updateBlanketReleaseInputSchema.safeParse(input)
+    if (!parsed.success) {
+      return failure(parsed.error.issues[0]?.message ?? "Invalid Blanket release.")
+    }
+    return runAuthorizedCustomerOrderOperation(principal, "editRelease", async () => {
+      const result = await updateBlanketRelease(parsed.data, principal)
+      revalidateCustomerOrder(result.orderId)
+      revalidatePath(`/customer-orders/${result.orderId}/releases/${result.releaseId}/edit`)
+      return {
+        success: true,
+        message: result.status === "READY_FOR_PLANNING"
+          ? "Blanket release corrected, committed, and ready for planning."
+          : "Blanket release saved, but checks still require correction.",
+        ...result,
+      }
+    })
+  } catch (error) {
+    return mutationFailure(error)
+  }
+}
+
+export async function cancelBlanketReleaseAction(
+  input: unknown
+): Promise<CustomerOrderMutationResult> {
+  try {
+    const principal = await requireUser()
+    assertCustomerOrderPermission(principal, "cancel")
+    const parsed = cancelCustomerOrderInputSchema.safeParse(input)
+    if (!parsed.success) {
+      return failure(parsed.error.issues[0]?.message ?? "Invalid release cancellation request.")
+    }
+    return runAuthorizedCustomerOrderOperation(principal, "cancel", async () => {
+      const result = await cancelBlanketRelease(parsed.data, principal)
+      revalidateCustomerOrder(result.orderId)
+      return {
+        success: true,
+        message: "Blanket release cancelled and eligible committed value returned.",
+        orderId: result.orderId,
+        releaseId: result.releaseId,
+        status: result.status,
+      }
+    })
+  } catch (error) {
+    return mutationFailure(error)
+  }
 }
 
 export async function updateStandardCustomerOrderAction(

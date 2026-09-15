@@ -1,12 +1,11 @@
 import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, CalendarRange, FileText } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { PermissionDenied } from "@/features/auth/components/permission-denied"
 import { getCurrentPrincipal } from "@/features/auth/services/authorization-service"
-import { StandardCustomerOrderForm } from "@/features/customer-orders/components/standard-customer-order-form"
 import { hasCustomerOrderPermission } from "@/features/customer-orders/services/customer-order-authorization"
-import { getCustomerOrderCreateOptions } from "@/features/customer-orders/services/customer-order-service"
 
 export const dynamic = "force-dynamic"
 
@@ -22,14 +21,6 @@ export default async function NewCustomerOrderPage() {
     )
   }
 
-  const options = await getCustomerOrderCreateOptions()
-  const now = new Date()
-  const today = [
-    now.getFullYear(),
-    String(now.getMonth() + 1).padStart(2, "0"),
-    String(now.getDate()).padStart(2, "0"),
-  ].join("-")
-
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="space-y-2">
@@ -37,13 +28,38 @@ export default async function NewCustomerOrderPage() {
           <Link href="/customer-orders"><ArrowLeft className="mr-2 h-4 w-4" />Customer Orders</Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">New Standard Customer PO</h1>
+          <h1 className="text-2xl font-bold tracking-tight">New Customer PO</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            The system validates every line and the complete PO before releasing it to planning.
+            Choose whether the Customer sent a defined order or a value authority for future releases.
           </p>
         </div>
       </div>
-      <StandardCustomerOrderForm options={options} today={today} />
+      <div className="grid max-w-4xl gap-5 md:grid-cols-2">
+        <Card className="flex flex-col">
+          <CardHeader>
+            <FileText className="mb-2 h-8 w-8 text-primary" />
+            <CardTitle>Standard Customer PO</CardTitle>
+            <CardDescription>
+              Use when the Customer has ordered defined SKUs, quantities, values, and delivery dates now.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="mt-auto">
+            <Button asChild className="w-full"><Link href="/customer-orders/new/standard">Create Standard PO</Link></Button>
+          </CardContent>
+        </Card>
+        <Card className="flex flex-col">
+          <CardHeader>
+            <CalendarRange className="mb-2 h-8 w-8 text-primary" />
+            <CardTitle>Blanket Customer PO</CardTitle>
+            <CardDescription>
+              Use when the Customer authorises a total value and will call off separate releases over time.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="mt-auto">
+            <Button asChild className="w-full"><Link href="/customer-orders/new/blanket">Create Blanket PO</Link></Button>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

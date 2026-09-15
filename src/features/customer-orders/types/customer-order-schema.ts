@@ -28,6 +28,9 @@ const nonNegativeMoney = (label: string) =>
     `${label} must be zero or greater with no more than 2 decimal places.`
   )
 
+const positiveMoney = (label: string) =>
+  nonNegativeMoney(label).refine((value) => Number(value) > 0, `${label} must be greater than zero.`)
+
 export const standardCustomerOrderLineInputSchema = z.object({
   productId: z.string().uuid("Select a valid Product."),
   orderUom: z.enum(["UNIT", "SHIPPER"]),
@@ -57,12 +60,61 @@ export const updateStandardCustomerOrderInputSchema =
     releaseId: z.string().uuid("Invalid Customer Order release."),
   })
 
+export const createBlanketCustomerOrderInputSchema = z.object({
+  customerId: z.string().uuid("Select a valid Customer."),
+  customerPoNumber: z.string().trim()
+    .min(1, "Customer PO number is required.")
+    .max(100, "Customer PO number must be 100 characters or fewer."),
+  originalAuthorizedValue: positiveMoney("Authorised value"),
+  receivedDate: calendarDate("Received date"),
+  validFrom: calendarDate("Valid-from date"),
+  validTo: calendarDate("Expiry date"),
+}).refine((value) => value.validTo >= value.validFrom, {
+  path: ["validTo"],
+  message: "Expiry date must be on or after the valid-from date.",
+})
+
+export const createBlanketReleaseInputSchema = z.object({
+  orderId: z.string().uuid("Invalid Blanket PO."),
+  receivedDate: calendarDate("Received date"),
+  customerReleaseReference: z.string().trim()
+    .max(100, "Customer release reference must be 100 characters or fewer."),
+  defaultRequestedDeliveryDate: optionalCalendarDate("Default requested delivery date"),
+  customerNetTotal: nonNegativeMoney("Customer release total"),
+  lines: z.array(standardCustomerOrderLineInputSchema)
+    .min(1, "Add at least one Product line.")
+    .max(100, "A Customer release can contain at most 100 lines."),
+})
+
+export const updateBlanketReleaseInputSchema =
+  createBlanketReleaseInputSchema.extend({
+    releaseId: z.string().uuid("Invalid Customer Order release."),
+  })
+
+export const addBlanketAmendmentInputSchema = z.object({
+  orderId: z.string().uuid("Invalid Blanket PO."),
+  valueDelta: positiveMoney("Top-up value"),
+  customerReference: z.string().trim()
+    .max(100, "Customer reference must be 100 characters or fewer."),
+  receivedDate: calendarDate("Received date"),
+  effectiveDate: calendarDate("Effective date"),
+  reason: z.string().trim()
+    .min(10, "Top-up reason must be at least 10 characters.")
+    .max(500, "Top-up reason must be 500 characters or fewer."),
+})
+
 export const customerOrderMutationResultSchema = z.object({
   success: z.boolean(),
   message: z.string(),
   orderId: z.string().uuid().optional(),
   releaseId: z.string().uuid().optional(),
-  status: z.enum(["PO_CHECK", "READY_FOR_PLANNING", "CANCELLED"]).optional(),
+  status: z.enum([
+    "ACTIVE",
+    "EXHAUSTED",
+    "PO_CHECK",
+    "READY_FOR_PLANNING",
+    "CANCELLED",
+  ]).optional(),
   issueCodes: z.array(z.string()).optional(),
 })
 
@@ -75,6 +127,12 @@ export const cancelCustomerOrderInputSchema = z.object({
 })
 
 export type CancelCustomerOrderInput = z.infer<typeof cancelCustomerOrderInputSchema>
+export type CreateBlanketCustomerOrderInput = z.infer<
+  typeof createBlanketCustomerOrderInputSchema
+>
+export type CreateBlanketReleaseInput = z.infer<typeof createBlanketReleaseInputSchema>
+export type UpdateBlanketReleaseInput = z.infer<typeof updateBlanketReleaseInputSchema>
+export type AddBlanketAmendmentInput = z.infer<typeof addBlanketAmendmentInputSchema>
 
 export type StandardCustomerOrderLineInput = z.infer<
   typeof standardCustomerOrderLineInputSchema

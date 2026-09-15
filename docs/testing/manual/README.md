@@ -2,7 +2,7 @@
 
 Status: Active
 Owner: Product owner / Engineering
-Last updated: 2026-09-14
+Last updated: 2026-09-15
 
 ## Purpose
 
@@ -29,7 +29,7 @@ Whenever a feature or permission materially changes:
 | File | Use |
 | --- | --- |
 | [Current System Scenarios](current-system-scenarios.md) | Main browser checklist for functionality currently ready to test |
-| [Customer Orders and Production Planning](customer-orders-production-planning.md) | Standard PO scenarios are ready; Blanket PO and Production Planning scenarios remain deferred |
+| [Customer Orders and Production Planning](customer-orders-production-planning.md) | Standard and Blanket Customer Order scenarios are ready; Production Planning scenarios remain deferred |
 
 ## Related detailed checks
 

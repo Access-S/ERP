@@ -5,6 +5,7 @@ export const CUSTOMER_ORDER_AUDIT_EVENT_TYPES = [
   "customer_order.cancelled",
   "customer_order.blanket.amended",
   "customer_order.release.created",
+  "customer_order.release.cancelled",
   "customer_order.release.revised",
   "customer_order.release.validation_failed",
   "customer_order.release.validation_passed",
@@ -34,6 +35,7 @@ const ALLOWED_METADATA_KEYS: Record<CustomerOrderAuditEventType, readonly string
     "resultingAuthorizedValue",
   ],
   "customer_order.release.created": ["internalReleaseNumber", "orderType"],
+  "customer_order.release.cancelled": ["previousStatus", "nextStatus", "reason"],
   "customer_order.release.revised": ["revision", "changedFields", "reason"],
   "customer_order.release.validation_failed": ["revision", "issueCodes"],
   "customer_order.release.validation_passed": ["revision", "expectedNetTotal"],
@@ -76,4 +78,3 @@ export function sanitizeCustomerOrderAuditMetadata(
 
   return sanitized
 }
-
