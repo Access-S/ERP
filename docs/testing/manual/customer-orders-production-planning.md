@@ -7,7 +7,7 @@ Last updated: 2026-09-15
 Use these scenarios only after the relevant implementation phase is marked
 ready. Use dummy Customer PO and SKU references beginning with `UAT-`.
 
-Current ready scope: `COPP-01` to `COPP-12`, `COPP-16`, and `COPP-17`.
+Current ready scope: `COPP-01` to `COPP-12` and `COPP-16` to `COPP-18`.
 
 ## Customer Order entry
 
@@ -163,11 +163,22 @@ Expected: The migrated order is visible and linked to its historical source.
 It cannot enter planning until Customer Service supplies the missing information
 and the normal validation passes.
 
+### COPP-18 - Customer Order table navigation
+
+1. Open **Customer Orders** and use search, Type/Status filters, column controls,
+   and pagination.
+2. Click an empty area within a Customer Order row.
+3. Confirm the PO detail opens, then inspect its release-line table.
+
+Expected: The list follows the same shared table layout and controls as Products
+and BOMs. The complete row is navigable, and the detail line table keeps aligned
+headers, consistent spacing, and horizontal scrolling when space is limited.
+
 ## Result record
 
 | Date | Environment | Tester | Scenarios | Result | Defect or notes |
 | --- | --- | --- | --- | --- | --- |
-|  |  |  | COPP-01 to COPP-12, COPP-16 to COPP-17 | Ready | Standard, Blanket, and legacy Customer Order workflows |
+|  |  |  | COPP-01 to COPP-12, COPP-16 to COPP-18 | Ready | Standard, Blanket, legacy, and table-navigation workflows |
 |  |  |  | COPP-13 to COPP-15 | Not ready | Production Planning implementation pending |
 
 Do not record customer documents, real prices, credentials, or personal details

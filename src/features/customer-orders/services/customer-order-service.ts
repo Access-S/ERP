@@ -2,11 +2,17 @@ import "server-only"
 
 import { Prisma } from "@prisma/client"
 
+import type {
+  DataTableRequest,
+  DataTableResponseData,
+  FilterItem,
+} from "@/components/shared/data-table/types"
 import { prisma } from "@/lib/db"
 import type { AuthorizationPrincipal } from "@/features/auth/services/authorization-policy"
 import type {
   CancelCustomerOrderInput,
   CreateStandardCustomerOrderInput,
+  CustomerOrderListItem,
   UpdateStandardCustomerOrderInput,
 } from "../types/customer-order-schema"
 import { allocateCustomerOrderNumber } from "./customer-order-numbering"
@@ -696,22 +702,30 @@ export async function getCustomerOrderStats() {
   return { total, poCheck, readyForPlanning }
 }
 
-export async function getCustomerOrders(search = "") {
-  const normalizedSearch = search.trim().slice(0, 100)
+function mapCustomerOrderListItem(order: Awaited<ReturnType<typeof loadCustomerOrderList>>[number]): CustomerOrderListItem {
+  const latestRelease = order.releases[0] ?? null
+  return {
+    id: order.id,
+    internalOrderNumber: order.internalOrderNumber,
+    customerPoNumber: order.customerPoNumber,
+    type: order.type,
+    status: order.status,
+    customerCode: order.customer.customer_code,
+    customerName: order.customer.trading_name ?? order.customer.legal_name,
+    currency: order.currency,
+    receivedDate: order.receivedDate.toISOString(),
+    releaseCount: order._count.releases,
+    latestReleaseNumber: latestRelease?.internalReleaseNumber ?? null,
+    latestReleaseStatus: latestRelease?.status ?? null,
+    expectedNetTotal: latestRelease?.expectedNetTotal === null || !latestRelease
+      ? null
+      : Number(latestRelease.expectedNetTotal),
+  }
+}
+
+async function loadCustomerOrderList() {
   const orders = await prisma.customerPurchaseOrder.findMany({
-    where: normalizedSearch
-      ? {
-          OR: [
-            { internalOrderNumber: { contains: normalizedSearch, mode: "insensitive" } },
-            { customerPoNumber: { contains: normalizedSearch, mode: "insensitive" } },
-            { customer: { customer_code: { contains: normalizedSearch, mode: "insensitive" } } },
-            { customer: { legal_name: { contains: normalizedSearch, mode: "insensitive" } } },
-            { customer: { trading_name: { contains: normalizedSearch, mode: "insensitive" } } },
-          ],
-        }
-      : undefined,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    take: 200,
     include: {
       customer: { select: { customer_code: true, legal_name: true, trading_name: true } },
       releases: {
@@ -728,26 +742,161 @@ export async function getCustomerOrders(search = "") {
       _count: { select: { releases: true } },
     },
   })
+  return orders
+}
 
-  return orders.map((order) => ({
-    id: order.id,
-    internalOrderNumber: order.internalOrderNumber,
-    customerPoNumber: order.customerPoNumber,
-    type: order.type,
-    status: order.status,
-    customerCode: order.customer.customer_code,
-    customerName: order.customer.trading_name ?? order.customer.legal_name,
-    currency: order.currency,
-    receivedDate: order.receivedDate.toISOString(),
-    releaseCount: order._count.releases,
-    latestRelease: order.releases[0]
-      ? {
-          ...order.releases[0],
-          customerNetTotal: order.releases[0].customerNetTotal?.toString() ?? null,
-          expectedNetTotal: order.releases[0].expectedNetTotal?.toString() ?? null,
-        }
-      : null,
-  }))
+function matchesText(source: string | null, filter: FilterItem): boolean {
+  const text = source?.toLocaleLowerCase() ?? ""
+  const term = filter.value == null ? "" : String(filter.value).toLocaleLowerCase()
+  switch (filter.operator) {
+    case "iLike":
+    case "contains": return text.includes(term)
+    case "notILike":
+    case "notContains": return !text.includes(term)
+    case "equals": return text === term
+    case "notEquals": return text !== term
+    case "startsWith": return text.startsWith(term)
+    case "endsWith": return text.endsWith(term)
+    case "isEmpty": return text.length === 0
+    case "isNotEmpty": return text.length > 0
+    default: return true
+  }
+}
+
+function matchesFacet(source: string | null, filter: FilterItem): boolean {
+  if (filter.operator === "contains" && Array.isArray(filter.value)) {
+    return source !== null && filter.value.map(String).includes(source)
+  }
+  if (filter.operator === "notContains" && Array.isArray(filter.value)) {
+    return source === null || !filter.value.map(String).includes(source)
+  }
+  return matchesText(source, filter)
+}
+
+function matchesNumber(source: number | null, filter: FilterItem): boolean {
+  if (filter.operator === "isEmpty") return source === null
+  if (filter.operator === "isNotEmpty") return source !== null
+  if (source === null) return false
+  const value = Number(filter.value)
+  switch (filter.operator) {
+    case "equals": return source === value
+    case "notEquals": return source !== value
+    case "gt": return source > value
+    case "gte": return source >= value
+    case "lt": return source < value
+    case "lte": return source <= value
+    case "isBetween":
+      return Array.isArray(filter.value) && filter.value.length === 2
+        ? source >= Number(filter.value[0]) && source <= Number(filter.value[1])
+        : true
+    default: return true
+  }
+}
+
+function matchesDate(source: string, filter: FilterItem): boolean {
+  const sourceTime = new Date(source).getTime()
+  const inputTime = Number(filter.value)
+  const dayStart = new Date(inputTime)
+  dayStart.setHours(0, 0, 0, 0)
+  const dayEnd = new Date(inputTime)
+  dayEnd.setHours(23, 59, 59, 999)
+  switch (filter.operator) {
+    case "equals": return sourceTime >= dayStart.getTime() && sourceTime <= dayEnd.getTime()
+    case "notEquals": return sourceTime < dayStart.getTime() || sourceTime > dayEnd.getTime()
+    case "gt": return sourceTime > inputTime
+    case "gte": return sourceTime >= inputTime
+    case "lt": return sourceTime < inputTime
+    case "lte": return sourceTime <= inputTime
+    case "isBetween":
+      return Array.isArray(filter.value) && filter.value.length === 2
+        ? sourceTime >= Number(filter.value[0]) && sourceTime <= Number(filter.value[1])
+        : true
+    default: return true
+  }
+}
+
+function matchesCustomerOrderFilter(order: CustomerOrderListItem, filter: FilterItem): boolean {
+  switch (filter.id) {
+    case "internalOrderNumber": return matchesText(order.internalOrderNumber, filter)
+    case "customerPoNumber": return matchesText(order.customerPoNumber, filter)
+    case "customerName": return matchesText(order.customerName, filter)
+    case "type": return matchesFacet(order.type, filter)
+    case "receivedDate": return matchesDate(order.receivedDate, filter)
+    case "latestReleaseNumber": return matchesText(order.latestReleaseNumber, filter)
+    case "expectedNetTotal": return matchesNumber(order.expectedNetTotal, filter)
+    case "status": return matchesFacet(order.status, filter)
+    default: return true
+  }
+}
+
+const CUSTOMER_ORDER_SORT_COLUMNS = new Set<keyof CustomerOrderListItem>([
+  "internalOrderNumber",
+  "customerPoNumber",
+  "customerName",
+  "type",
+  "receivedDate",
+  "latestReleaseNumber",
+  "expectedNetTotal",
+  "status",
+])
+
+function compareCustomerOrderValues(left: unknown, right: unknown): number {
+  if (left == null && right == null) return 0
+  if (left == null) return 1
+  if (right == null) return -1
+  if (typeof left === "number" && typeof right === "number") return left - right
+  return String(left).localeCompare(String(right), undefined, { numeric: true, sensitivity: "base" })
+}
+
+export async function getCustomerOrdersPage(
+  params: DataTableRequest
+): Promise<DataTableResponseData<CustomerOrderListItem>> {
+  const records = (await loadCustomerOrderList()).map(mapCustomerOrderListItem)
+  const search = params.search?.trim().toLocaleLowerCase()
+  const filtered = records.filter((order) => {
+    const matchesSearch = !search || [
+      order.internalOrderNumber,
+      order.customerPoNumber,
+      order.customerCode,
+      order.customerName,
+      order.latestReleaseNumber,
+    ].some((value) => value?.toLocaleLowerCase().includes(search))
+    if (!matchesSearch || params.filters.length === 0) return matchesSearch
+    const results = params.filters.map((filter) => matchesCustomerOrderFilter(order, filter))
+    return params.joinOperator === "or" ? results.some(Boolean) : results.every(Boolean)
+  })
+
+  const sorts = params.sorts.filter((sort) =>
+    CUSTOMER_ORDER_SORT_COLUMNS.has(sort.id as keyof CustomerOrderListItem)
+  )
+  const effectiveSorts = sorts.length > 0 ? sorts : [{ id: "receivedDate", desc: true }]
+  const sorted = [...filtered].sort((left, right) => {
+    for (const sort of effectiveSorts) {
+      const key = sort.id as keyof CustomerOrderListItem
+      const result = compareCustomerOrderValues(left[key], right[key])
+      if (result !== 0) return sort.desc ? -result : result
+    }
+    return left.internalOrderNumber.localeCompare(right.internalOrderNumber, undefined, { numeric: true })
+  })
+  const start = (params.page - 1) * params.pageSize
+  return {
+    data: sorted.slice(start, start + params.pageSize),
+    pageCount: Math.max(1, Math.ceil(filtered.length / params.pageSize)),
+    totalCount: filtered.length,
+  }
+}
+
+export async function getCustomerOrders(search = "") {
+  const response = await getCustomerOrdersPage({
+    page: 1,
+    pageSize: 200,
+    sorts: [],
+    filters: [],
+    joinOperator: "and",
+    search,
+  })
+
+  return response.data
 }
 
 export async function getCustomerOrderById(orderId: string) {

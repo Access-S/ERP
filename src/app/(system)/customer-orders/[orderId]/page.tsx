@@ -7,19 +7,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { PermissionDenied } from "@/features/auth/components/permission-denied"
 import { getCurrentPrincipal } from "@/features/auth/services/authorization-service"
 import { hasCustomerOrderPermission } from "@/features/customer-orders/services/customer-order-authorization"
 import { getCustomerOrderById } from "@/features/customer-orders/services/customer-order-service"
 import { CustomerOrderCancelAction } from "@/features/customer-orders/components/customer-order-cancel-action"
+import { CustomerOrderLinesTable } from "@/features/customer-orders/components/customer-order-lines-table"
 import { BlanketTopUpAction } from "@/features/customer-orders/components/blanket-top-up-action"
 import { getBlanketBalanceForDisplay } from "@/features/customer-orders/services/blanket-customer-order-service"
 
@@ -296,43 +289,26 @@ export default async function CustomerOrderDetailsPage({
                 <div><p className="text-muted-foreground">Default delivery</p><p className="font-medium">{release.defaultRequestedDeliveryDate ? dateFormatter.format(release.defaultRequestedDeliveryDate) : "Per line"}</p></div>
               </div>
 
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead>Line</TableHead><TableHead>Product</TableHead><TableHead>Ordered</TableHead>
-                      <TableHead>Shippers</TableHead><TableHead>Price / shipper</TableHead>
-                      <TableHead>Customer value</TableHead><TableHead>Expected value</TableHead>
-                      <TableHead>Delivery</TableHead><TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {release.lines.map((line) => {
-                      const lineIssues = issues(line.validationIssues)
-                      return (
-                        <TableRow key={line.id}>
-                          <TableCell>{line.position}</TableCell>
-                          <TableCell>
-                            <div className="font-medium">{line.productCodeSnapshot}</div>
-                            <div className="max-w-56 truncate text-xs text-muted-foreground" title={line.productDescriptionSnapshot ?? undefined}>{line.productDescriptionSnapshot ?? "—"}</div>
-                          </TableCell>
-                          <TableCell className="tabular-nums">{line.orderedQuantity.toFixed()} {label(line.orderUom)}</TableCell>
-                          <TableCell className="tabular-nums">{line.calculatedShippers?.toFixed() ?? "—"}</TableCell>
-                          <TableCell className="tabular-nums">{money(order.currency, line.pricePerShipperSnapshot)}</TableCell>
-                          <TableCell className="tabular-nums">{money(order.currency, line.customerLineValue)}</TableCell>
-                          <TableCell className="tabular-nums">{money(order.currency, line.expectedLineValue)}</TableCell>
-                          <TableCell>{line.requestedDeliveryDate ? dateFormatter.format(line.requestedDeliveryDate) : "Missing"}</TableCell>
-                          <TableCell>
-                            <Badge variant={line.validationStatus === "VALID" ? "secondary" : "destructive"} title={lineIssues.map((issue) => issue.message).join(" · ")}>
-                              {label(line.validationStatus)}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+              <CustomerOrderLinesTable
+                currency={order.currency}
+                lines={release.lines.map((line) => ({
+                  id: line.id,
+                  position: line.position,
+                  productCode: line.productCodeSnapshot,
+                  productDescription: line.productDescriptionSnapshot,
+                  orderedQuantity: line.orderedQuantity.toFixed(),
+                  orderUom: line.orderUom,
+                  calculatedShippers: line.calculatedShippers?.toFixed() ?? null,
+                  pricePerShipper: line.pricePerShipperSnapshot?.toFixed(2) ?? null,
+                  customerValue: line.customerLineValue.toFixed(2),
+                  expectedValue: line.expectedLineValue?.toFixed(2) ?? null,
+                  requestedDeliveryDate: line.requestedDeliveryDate?.toISOString() ?? null,
+                  validationStatus: line.validationStatus,
+                  validationIssueText: issues(line.validationIssues)
+                    .map((issue) => issue.message)
+                    .join(" · "),
+                }))}
+              />
 
               <div>
                 <h3 className="text-sm font-semibold">Revision history</h3>

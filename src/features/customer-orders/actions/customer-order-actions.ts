@@ -2,6 +2,11 @@
 
 import { revalidatePath } from "next/cache"
 
+import {
+  dataTableRequestSchema,
+  type DataTableRequest,
+  type DataTableResponseData,
+} from "@/components/shared/data-table/types"
 import { requireUser } from "@/features/auth/services/authorization-service"
 import { isAuthorizationError } from "@/features/auth/services/authorization-policy"
 import {
@@ -19,6 +24,7 @@ import {
   createStandardCustomerOrder,
   cancelStandardCustomerOrder,
   CustomerOrderWorkflowError,
+  getCustomerOrdersPage,
   updateStandardCustomerOrder,
 } from "../services/customer-order-service"
 import {
@@ -30,6 +36,7 @@ import {
   updateBlanketReleaseInputSchema,
   updateStandardCustomerOrderInputSchema,
   type CustomerOrderMutationResult,
+  type CustomerOrderListItem,
 } from "../types/customer-order-schema"
 
 function failure(message: string): CustomerOrderMutationResult {
@@ -40,6 +47,16 @@ function revalidateCustomerOrder(orderId: string) {
   revalidatePath("/customer-orders")
   revalidatePath(`/customer-orders/${orderId}`)
   revalidatePath(`/customer-orders/${orderId}/releases/new`)
+}
+
+export async function fetchCustomerOrdersPage(
+  params: DataTableRequest
+): Promise<DataTableResponseData<CustomerOrderListItem>> {
+  const principal = await requireUser()
+  return runAuthorizedCustomerOrderOperation(principal, "view", () => {
+    const validated = dataTableRequestSchema.parse(params)
+    return getCustomerOrdersPage(validated)
+  })
 }
 
 export async function createBlanketCustomerOrderAction(

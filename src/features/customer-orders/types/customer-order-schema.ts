@@ -1,5 +1,42 @@
 import { z } from "zod"
 
+export const customerOrderTypeSchema = z.enum(["STANDARD", "BLANKET"])
+export const customerOrderStatusSchema = z.enum([
+  "DRAFT",
+  "PO_CHECK",
+  "ACTIVE",
+  "EXHAUSTED",
+  "EXPIRED",
+  "CLOSED",
+  "CANCELLED",
+])
+export const customerOrderReleaseStatusSchema = z.enum([
+  "DRAFT",
+  "PO_CHECK",
+  "READY_FOR_PLANNING",
+  "PLANNING",
+  "PLANNED",
+  "IN_PRODUCTION",
+  "COMPLETED",
+  "CANCELLED",
+])
+
+export const customerOrderListItemSchema = z.object({
+  id: z.string().uuid(),
+  internalOrderNumber: z.string(),
+  customerPoNumber: z.string(),
+  type: customerOrderTypeSchema,
+  status: customerOrderStatusSchema,
+  customerCode: z.string(),
+  customerName: z.string(),
+  currency: z.string(),
+  receivedDate: z.string().datetime(),
+  releaseCount: z.number().int().nonnegative(),
+  latestReleaseNumber: z.string().nullable(),
+  latestReleaseStatus: customerOrderReleaseStatusSchema.nullable(),
+  expectedNetTotal: z.number().nullable(),
+})
+
 const decimalPattern = /^\d{1,16}(?:\.\d{1,6})?$/
 const moneyPattern = /^\d{1,16}(?:\.\d{1,2})?$/
 
@@ -146,3 +183,4 @@ export type UpdateStandardCustomerOrderInput = z.infer<
 export type CustomerOrderMutationResult = z.infer<
   typeof customerOrderMutationResultSchema
 >
+export type CustomerOrderListItem = z.infer<typeof customerOrderListItemSchema>

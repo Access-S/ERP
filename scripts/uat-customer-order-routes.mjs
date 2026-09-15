@@ -71,10 +71,7 @@ async function main() {
   assert.match(customerServiceList, /Customer Orders/)
   assert.match(customerServiceList, /New Customer PO/)
   assert.doesNotMatch(customerServiceList, /Access restricted/)
-  if (process.env.UAT_EXPECT_LEGACY_CUSTOMER_ORDERS === "true") {
-    assert.match(customerServiceList, /LEGACY-PO-/)
-    checks += 1
-  }
+  assert.match(customerServiceList, /Search Customer Orders/)
   const createPage = await getPage("/customer-orders/new", customerServiceCookies)
   assert.match(createPage, /Standard Customer PO/)
   assert.match(createPage, /Blanket Customer PO/)
@@ -84,7 +81,7 @@ async function main() {
   const blanketPage = await getPage("/customer-orders/new/blanket", customerServiceCookies)
   assert.match(blanketPage, /New Blanket Customer PO/)
   assert.match(blanketPage, /Blanket PO authority/)
-  checks += 9
+  checks += 10
 
   const plannerCookies = await authenticate(findAccount("PRODUCTION_PLANNER"))
   const plannerList = await getPage("/customer-orders", plannerCookies)
