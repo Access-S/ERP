@@ -71,6 +71,10 @@ async function main() {
   assert.match(customerServiceList, /Customer Orders/)
   assert.match(customerServiceList, /New Customer PO/)
   assert.doesNotMatch(customerServiceList, /Access restricted/)
+  if (process.env.UAT_EXPECT_LEGACY_CUSTOMER_ORDERS === "true") {
+    assert.match(customerServiceList, /LEGACY-PO-/)
+    checks += 1
+  }
   const createPage = await getPage("/customer-orders/new", customerServiceCookies)
   assert.match(createPage, /Standard Customer PO/)
   assert.match(createPage, /Blanket Customer PO/)

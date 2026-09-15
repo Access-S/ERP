@@ -8,6 +8,20 @@ import {
 assert.equal(new Set(CUSTOMER_ORDER_AUDIT_EVENT_TYPES).size, CUSTOMER_ORDER_AUDIT_EVENT_TYPES.length)
 
 assert.deepEqual(
+  sanitizeCustomerOrderAuditMetadata("customer_order.legacy_imported", {
+    legacyPurchaseOrderId: "018f53ce-42a8-7000-8000-000000000001",
+    legacyStatus: "Open",
+    internalOrderNumber: "LEGACY-PO-45001",
+    customerEmail: "must-not-be-recorded@example.com",
+  }),
+  {
+    legacyPurchaseOrderId: "018f53ce-42a8-7000-8000-000000000001",
+    legacyStatus: "Open",
+    internalOrderNumber: "LEGACY-PO-45001",
+  }
+)
+
+assert.deepEqual(
   sanitizeCustomerOrderAuditMetadata("customer_order.release.revised", {
     revision: 2,
     changedFields: ["orderedQuantity", "requestedDeliveryDate"],

@@ -7,7 +7,7 @@ Last updated: 2026-09-15
 Use these scenarios only after the relevant implementation phase is marked
 ready. Use dummy Customer PO and SKU references beginning with `UAT-`.
 
-Current ready scope: `COPP-01` to `COPP-12` and `COPP-16`.
+Current ready scope: `COPP-01` to `COPP-12`, `COPP-16`, and `COPP-17`.
 
 ## Customer Order entry
 
@@ -152,11 +152,22 @@ entered as a new release.
 Expected: The order becomes `Cancelled`, can no longer be edited, and its
 lines, revisions, and cancellation reason remain visible in history.
 
+### COPP-17 - Preserved legacy Customer Order
+
+1. Open **Customer Orders** and search for `LEGACY-PO-`.
+2. Open one result and review its Customer, SKU, quantities, values, and history.
+3. Confirm an old `Open` record shows `PO Check` and explains that its requested
+   delivery date is missing.
+
+Expected: The migrated order is visible and linked to its historical source.
+It cannot enter planning until Customer Service supplies the missing information
+and the normal validation passes.
+
 ## Result record
 
 | Date | Environment | Tester | Scenarios | Result | Defect or notes |
 | --- | --- | --- | --- | --- | --- |
-|  |  |  | COPP-01 to COPP-12, COPP-16 | Ready | Standard and Blanket Customer Order workflows |
+|  |  |  | COPP-01 to COPP-12, COPP-16 to COPP-17 | Ready | Standard, Blanket, and legacy Customer Order workflows |
 |  |  |  | COPP-13 to COPP-15 | Not ready | Production Planning implementation pending |
 
 Do not record customer documents, real prices, credentials, or personal details

@@ -1,5 +1,6 @@
 export const CUSTOMER_ORDER_AUDIT_EVENT_TYPES = [
   "customer_order.created",
+  "customer_order.legacy_imported",
   "customer_order.activated",
   "customer_order.closed",
   "customer_order.cancelled",
@@ -26,6 +27,11 @@ export type BusinessAuditMetadataValue =
 
 const ALLOWED_METADATA_KEYS: Record<CustomerOrderAuditEventType, readonly string[]> = {
   "customer_order.created": ["orderType", "internalOrderNumber"],
+  "customer_order.legacy_imported": [
+    "legacyPurchaseOrderId",
+    "legacyStatus",
+    "internalOrderNumber",
+  ],
   "customer_order.activated": ["previousStatus", "nextStatus"],
   "customer_order.closed": ["previousStatus", "nextStatus", "reason"],
   "customer_order.cancelled": ["previousStatus", "nextStatus", "reason"],

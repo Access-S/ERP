@@ -572,8 +572,9 @@ Development database findings on 2026-09-14:
   `Despatched/ Completed`.
 - Every row links to a Product.
 - No row has a Customer foreign key.
-- 84 Customer links can likely be derived safely from the related Product.
-- 8 Customer links require manual review.
+- 84 Customer links are derived safely from the related Product.
+- The remaining 8 rows all contain the legacy Customer name `Kenvue`, which has
+  one exact normalized match to Customer code `KENV`.
 - No row has a requested delivery date.
 - The current unique PO-number design permits only one Product row per PO.
 - There are 92 legacy status-history rows.
@@ -586,8 +587,11 @@ Migration rules:
 2. Build a read-only dry-run report that maps every legacy row and reports every
    ambiguity.
 3. Preserve the legacy row ID/reference on migrated records.
-4. Derive Customer only when the Product relationship is unambiguous.
-5. Route the other 8 rows to a manual mapping file or review screen.
+4. Derive Customer from the Product relationship when it is unambiguous, or
+   from a single exact normalized Customer-name match when no relationship is
+   available.
+5. Block the complete import if any row is unmapped, ambiguously mapped, or
+   conflicts with an existing normalized Customer PO.
 6. Do not automatically mark legacy `Open` rows ready for planning because they
    have no requested delivery dates and have not passed the new validation.
 7. Map legacy `PO Check` to `PO_CHECK`, cancelled to `CANCELLED`, and completed
@@ -597,6 +601,17 @@ Migration rules:
 9. Do not reuse `po_counters` without first proving its numbering rules suit
    Customer PO headers and releases.
 10. Remove or archive legacy structures only in a later approved migration.
+
+Migration result on 2026-09-15:
+
+- The read-only rehearsal reported 92 ready, 0 blocked, and 0 existing targets.
+- The additive transaction created 92 Customer PO headers, 92 releases, and 92
+  release lines, with a unique reference back to every legacy row.
+- A second import created 0 rows, proving that the operation is idempotent.
+- All 92 legacy rows remain in `purchase_orders`.
+- The 55 legacy `Open` or `PO Check` records are normalized as `PO_CHECK`
+  because they lack requested delivery dates. The 4 cancelled and 33 completed
+  records retain their historical lifecycle status.
 
 ## 20. Implementation sequence
 
