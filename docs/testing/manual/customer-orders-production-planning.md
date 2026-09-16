@@ -2,7 +2,7 @@
 
 Status: **Partially ready for browser UAT** - Customer Order scenarios ready; Production Planning pending
 Owner: Product owner / Customer Service / Production Planning
-Last updated: 2026-09-15
+Last updated: 2026-09-16
 
 Use these scenarios only after the relevant implementation phase is marked
 ready. Use dummy Customer PO and SKU references beginning with `UAT-`.
@@ -213,6 +213,7 @@ actions make no Customer Order workflow or data changes.
 
 | Date | Environment | Tester | Scenarios | Result | Defect or notes |
 | --- | --- | --- | --- | --- | --- |
+| 2026-09-16 | Local Next.js + Supabase | Codex browser UAT | COPP-01, COPP-02, COPP-05, COPP-16, COPP-19 | Pass | Created Standard PO `00093`, verified Ready for Planning, forced an incomplete-shipper PO Check, corrected it, and confirmed revisions 1-4. The UAT PO was then cancelled so it cannot enter planning. Domain, authorization, audit, numbering, database rollback, and authenticated route suites also passed. |
 |  |  |  | COPP-01 to COPP-12, COPP-16 to COPP-20 | Ready | Standard, Blanket, legacy, table-navigation, numbering, PO Amount, and ERP table workflows |
 |  |  |  | COPP-13 to COPP-15 | Not ready | Production Planning implementation pending |
 

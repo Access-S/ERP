@@ -34,6 +34,10 @@ type LineValues = {
   customerLineValue: string
 }
 
+const quantityFormatter = new Intl.NumberFormat("en-AU", {
+  maximumFractionDigits: 6,
+})
+
 export type StandardCustomerOrderFormValues = {
   customerId: string
   customerPoNumber: string
@@ -422,7 +426,10 @@ export function StandardCustomerOrderForm({
                 <div className="mt-4 grid gap-3 rounded-md bg-muted/40 p-3 text-sm sm:grid-cols-2 lg:grid-cols-5">
                   <div><span className="text-muted-foreground">Units/shipper:</span> {product?.unitsPerShipper ?? "Missing"}</div>
                   <div><span className="text-muted-foreground">Price/shipper:</span> {product?.pricePerShipper ?? "Missing"}</div>
-                  <div><span className="text-muted-foreground">Calculated shippers:</span> {preview.shippers ?? "—"}</div>
+                  <div>
+                    <span className="text-muted-foreground">Calculated shippers:</span>{" "}
+                    {preview.shippers === null ? "—" : quantityFormatter.format(preview.shippers)}
+                  </div>
                   <div><span className="text-muted-foreground">Expected value:</span> {preview.expectedValue === null ? "—" : preview.expectedValue.toFixed(2)}</div>
                   <div><span className="text-muted-foreground">Active BOM:</span> {product?.activeBomRevision ? `Rev ${product.activeBomRevision}` : "Missing"}</div>
                 </div>
