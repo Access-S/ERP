@@ -199,8 +199,8 @@ release information are available in context on the detail page.
 2. Search or apply a Status filter while watching the table refresh.
 3. Sort two columns, change the row density and rows per page, and open an order
    from anywhere on its row.
-4. Narrow the browser or scroll horizontally and confirm the Order and open-row
-   edge columns remain visible.
+4. Narrow the browser or scroll horizontally and confirm the Order column
+   remains visible.
 
 Expected: The table border, toolbar, headers, column widths, and footer stay in
 place during refresh while cell-shaped skeletons replace only the row content.

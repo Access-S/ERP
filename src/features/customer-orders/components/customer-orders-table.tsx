@@ -256,18 +256,6 @@ const columns: ColumnDef<CustomerOrderListItem>[] = [
       </Badge>
     ),
   },
-  {
-    id: "open",
-    enableHiding: false,
-    enableSorting: false,
-    header: () => <span className="sr-only">Open order</span>,
-    cell: () => (
-      <ChevronRight
-        className="size-4 text-muted-foreground/40 transition-colors group-hover:text-foreground"
-        aria-hidden="true"
-      />
-    ),
-  },
 ]
 
 const columnWidths: Record<string, string> = {
@@ -279,7 +267,6 @@ const columnWidths: Record<string, string> = {
   primarySkuDescription: "min-w-[240px]",
   poAmount: "w-[145px]",
   status: "w-[118px]",
-  open: "w-10",
 }
 
 function skeletonWidth(columnId: string): string {
@@ -500,7 +487,7 @@ export function CustomerOrdersTable({
         >
           {isLoading && <div className="h-full w-1/3 animate-pulse bg-primary" />}
         </div>
-        <Table role="grid" className="min-w-[1120px] border-separate border-spacing-0 text-sm">
+        <Table role="grid" className="min-w-[1080px] border-separate border-spacing-0 text-sm">
           <TableHeader className="sticky top-0 z-20 bg-card shadow-[0_1px_0_0_var(--border)]">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} role="row" className="hover:bg-transparent">
@@ -512,8 +499,7 @@ export function CustomerOrdersTable({
                       "h-11 border-b border-border px-3 text-left align-middle",
                       columnWidths[header.column.id],
                       header.column.id === "poAmount" && "text-right",
-                      header.column.id === "internalOrderNumber" && "sticky left-0 z-30 border-r border-border bg-card",
-                      header.column.id === "open" && "sticky right-0 z-30 border-l border-border bg-card"
+                      header.column.id === "internalOrderNumber" && "sticky left-0 z-30 border-r border-border bg-card"
                     )}
                   >
                     {header.isPlaceholder
@@ -534,8 +520,7 @@ export function CustomerOrdersTable({
                       className={cn(
                         "border-b border-border/65 px-3 align-middle",
                         columnWidths[column.id],
-                        column.id === "internalOrderNumber" && "sticky left-0 z-10 border-r border-border/70 bg-card",
-                        column.id === "open" && "sticky right-0 z-10 border-l border-border/70 bg-card"
+                        column.id === "internalOrderNumber" && "sticky left-0 z-10 border-r border-border/70 bg-card"
                       )}
                     >
                       <Skeleton className={cn("h-3.5", skeletonWidth(column.id))} />
@@ -581,8 +566,7 @@ export function CustomerOrdersTable({
                         cell.column.id === "poAmount" && "text-right",
                         cellIndex === 0 && "border-l-2",
                         cellIndex === 0 && rowAccent(row.original.status),
-                        cell.column.id === "internalOrderNumber" && "sticky left-0 z-10 border-r border-border/70 bg-card group-hover:bg-accent/30 group-focus-visible:bg-accent/40",
-                        cell.column.id === "open" && "sticky right-0 z-10 border-l border-border/70 bg-card group-hover:bg-accent/30 group-focus-visible:bg-accent/40"
+                        cell.column.id === "internalOrderNumber" && "sticky left-0 z-10 border-r border-border/70 bg-card group-hover:bg-accent/30 group-focus-visible:bg-accent/40"
                       )}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
