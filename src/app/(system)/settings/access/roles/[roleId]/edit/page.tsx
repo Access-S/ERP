@@ -50,7 +50,7 @@ export default async function EditCustomRolePage({
             {role.name}
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight">Edit custom role</h1>
+        <h1 className="sr-only">Edit custom role</h1>
         <p className="text-sm text-muted-foreground">
           Permission changes affect every assigned user and invalidate their existing sessions.
         </p>

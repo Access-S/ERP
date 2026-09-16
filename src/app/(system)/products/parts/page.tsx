@@ -41,10 +41,7 @@ export default async function PartsPage() {
               All BOMs
             </Link>
           </Button>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight">Parts Library</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Reusable component master records shared across Product BOMs.
-          </p>
+          <h1 className="sr-only">Parts Library</h1>
         </div>
         {hasPartPermission(principal, "create") && (
           <Button asChild>

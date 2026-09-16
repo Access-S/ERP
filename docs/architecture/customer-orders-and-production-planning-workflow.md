@@ -1,8 +1,8 @@
 # Customer Orders and Production Planning Workflow
 
-Status: Phase 1 domain and database foundation implemented; UI not started
+Status: Customer Order entry implemented; Production Planning foundation pending
 Owner: Product owner / Customer Service / Production Planning
-Last updated: 2026-09-14
+Last updated: 2026-09-15
 
 ## 1. Purpose
 
@@ -56,6 +56,8 @@ for purchase orders sent to suppliers.
 20. Completed releases are locked. Further demand is entered as a new release.
 21. The rollout tolerance defaults to `0%` until an authorised administrator
     deliberately configures another percentage.
+22. Every Customer PO receives a system-generated five-digit ERP Order No.,
+    starting at `00001`. The Customer PO number remains the customer's reference.
 
 ## 3. Terminology
 
@@ -557,8 +559,20 @@ copied into event metadata.
 - `/production-planning/[planId]` - plan details, demand snapshot, dates,
   quantities, and lifecycle actions.
 
-The first UI should use searchable tables with whole-row navigation, consistent
-with Customers, Products, Parts, and BOMs.
+The Customer Orders list uses the shared searchable table and whole-row
+navigation used by Customers, Products, Parts, and BOMs. Its primary columns are
+Order No., Customer PO, Customer, Received, SKU Code, Description, PO Amount,
+and Status. When an order contains multiple unique SKUs, the list shows the
+first SKU plus an additional-SKU count; complete release and line information
+stays on the detail page. Long descriptions are truncated in the list. Type and
+release details are shown on the detail page instead of consuming list columns.
+The Customer Order register keeps its toolbar, header, column geometry, and
+footer mounted while cell-level skeletons show a refresh. It supports compact
+and comfortable density, keeps the edge navigation columns visible during
+horizontal scrolling, and retains the chosen density in the current browser.
+For a Standard PO, PO Amount is the customer-entered release total. For a
+Blanket PO, it is the current customer-authorised amount: original value plus
+recorded top-ups. It is not the system-expected value.
 
 ## 19. Legacy data audit and migration boundary
 
@@ -609,6 +623,9 @@ Migration result on 2026-09-15:
   release lines, with a unique reference back to every legacy row.
 - A second import created 0 rows, proving that the operation is idempotent.
 - All 92 legacy rows remain in `purchase_orders`.
+- The normalized Customer Orders were assigned five-digit internal numbers
+  `00001` through `00092`; the transactional counter is `92`, so the next order
+  will receive `00093`.
 - The 55 legacy `Open` or `PO Check` records are normalized as `PO_CHECK`
   because they lack requested delivery dates. The 4 cancelled and 33 completed
   records retain their historical lifecycle status.

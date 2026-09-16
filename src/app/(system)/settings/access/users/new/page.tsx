@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ArrowLeft, MailPlus } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getAccessControlRoles } from "@/features/access-control/services/access-control-service"
@@ -31,13 +31,7 @@ export default async function InviteUserPage() {
             Users
           </Link>
         </Button>
-        <div className="flex items-center gap-2">
-          <MailPlus className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">Invite user</h1>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Create an inactive account, assign its initial responsibilities, and issue a secure setup link.
-        </p>
+        <h1 className="sr-only">Invite user</h1>
       </div>
 
       <Card>

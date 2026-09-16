@@ -7,7 +7,7 @@ Last updated: 2026-09-15
 Use these scenarios only after the relevant implementation phase is marked
 ready. Use dummy Customer PO and SKU references beginning with `UAT-`.
 
-Current ready scope: `COPP-01` to `COPP-12` and `COPP-16` to `COPP-18`.
+Current ready scope: `COPP-01` to `COPP-12` and `COPP-16` to `COPP-20`.
 
 ## Customer Order entry
 
@@ -154,18 +154,19 @@ lines, revisions, and cancellation reason remain visible in history.
 
 ### COPP-17 - Preserved legacy Customer Order
 
-1. Open **Customer Orders** and search for `LEGACY-PO-`.
+1. Open **Customer Orders** and search for a known migrated Customer PO number.
 2. Open one result and review its Customer, SKU, quantities, values, and history.
 3. Confirm an old `Open` record shows `PO Check` and explains that its requested
    delivery date is missing.
 
-Expected: The migrated order is visible and linked to its historical source.
-It cannot enter planning until Customer Service supplies the missing information
-and the normal validation passes.
+Expected: The migrated order has a unique five-digit ERP Order No. and remains
+linked to its historical source in the audit evidence. It cannot enter planning
+until Customer Service supplies the missing information and the normal validation
+passes.
 
 ### COPP-18 - Customer Order table navigation
 
-1. Open **Customer Orders** and use search, Type/Status filters, column controls,
+1. Open **Customer Orders** and use search, the Status filter, column controls,
    and pagination.
 2. Click an empty area within a Customer Order row.
 3. Confirm the PO detail opens, then inspect its release-line table.
@@ -174,11 +175,45 @@ Expected: The list follows the same shared table layout and controls as Products
 and BOMs. The complete row is navigable, and the detail line table keeps aligned
 headers, consistent spacing, and horizontal scrolling when space is limited.
 
+### COPP-19 - Order number and PO Amount
+
+1. Open **Customer Orders** and confirm every Order No. has exactly five digits.
+2. Open a Standard PO and compare its list-page PO Amount with the
+   customer-entered PO total on its release.
+3. Open a Blanket PO and compare its list-page PO Amount with the original
+   authorised value plus recorded top-ups.
+4. Confirm the Standard/Blanket type remains visible on the detail page even
+   though it is not a column on the list page.
+5. Confirm the list shows the first SKU Code and a truncated Description. For
+   a multi-SKU order, confirm a `+N more` indicator appears and the complete
+   release lines remain available on the detail page.
+
+Expected: Order numbers are unique five-digit internal references. PO Amount
+shows the customer's current GST-exclusive authority, not the system-calculated
+expected amount. SKU information is compact on the list, while Type and complete
+release information are available in context on the detail page.
+
+### COPP-20 - ERP Customer Order table behaviour
+
+1. Open **Customer Orders**.
+2. Search or apply a Status filter while watching the table refresh.
+3. Sort two columns, change the row density and rows per page, and open an order
+   from anywhere on its row.
+4. Narrow the browser or scroll horizontally and confirm the Order and open-row
+   edge columns remain visible.
+
+Expected: The table border, toolbar, headers, column widths, and footer stay in
+place during refresh while cell-shaped skeletons replace only the row content.
+The table remains dense and scannable, long descriptions truncate, status is
+easy to identify without overpowering the row, and navigation remains
+keyboard-accessible. Density preference is retained in that browser. Table UI
+actions make no Customer Order workflow or data changes.
+
 ## Result record
 
 | Date | Environment | Tester | Scenarios | Result | Defect or notes |
 | --- | --- | --- | --- | --- | --- |
-|  |  |  | COPP-01 to COPP-12, COPP-16 to COPP-18 | Ready | Standard, Blanket, legacy, and table-navigation workflows |
+|  |  |  | COPP-01 to COPP-12, COPP-16 to COPP-20 | Ready | Standard, Blanket, legacy, table-navigation, numbering, PO Amount, and ERP table workflows |
 |  |  |  | COPP-13 to COPP-15 | Not ready | Production Planning implementation pending |
 
 Do not record customer documents, real prices, credentials, or personal details

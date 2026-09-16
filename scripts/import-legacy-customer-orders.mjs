@@ -20,6 +20,13 @@ function internalNumber(prefix, order) {
   return readable.length <= 40 ? readable : `${prefix}${order.id.replaceAll("-", "").slice(0, 40 - prefix.length)}`
 }
 
+function numericOrderNumber(sequence) {
+  if (sequence < 1 || sequence > 99_999) {
+    throw new Error("The five-digit Customer Order number range is exhausted.")
+  }
+  return String(sequence).padStart(5, "0")
+}
+
 async function main() {
   const before = await loadLegacyCustomerOrderMigrationPlan(prisma)
   if (before.blockedRows.length > 0) {
@@ -38,13 +45,32 @@ async function main() {
   }
 
   const imported = await prisma.$transaction(async (tx) => {
+    const [counter, existingNumbers] = await Promise.all([
+      tx.customerOrderNumberCounter.upsert({
+        where: { key: "CUSTOMER_ORDER" },
+        update: {},
+        create: { key: "CUSTOMER_ORDER", lastSequence: 0 },
+        select: { lastSequence: true },
+      }),
+      tx.customerPurchaseOrder.findMany({ select: { internalOrderNumber: true } }),
+    ])
+    const highestStoredNumber = existingNumbers.reduce((highest, item) => {
+      return /^\d{5}$/.test(item.internalOrderNumber)
+        ? Math.max(highest, Number(item.internalOrderNumber))
+        : highest
+    }, 0)
+    const startingSequence = Math.max(Number(counter.lastSequence), highestStoredNumber)
+    if (startingSequence + before.readyRows.length > 99_999) {
+      throw new Error("The five-digit Customer Order number range cannot fit this import.")
+    }
+
     let count = 0
     for (const row of before.readyRows) {
       const { order, product, customer, statuses } = row
       const receivedDate = importDate(order)
       const issues = legacyValidationIssues(row)
       const releaseStatus = statuses.releaseStatus
-      const orderNumber = internalNumber("LEGACY-PO-", order)
+      const orderNumber = numericOrderNumber(startingSequence + count + 1)
       const releaseNumber = internalNumber("LEGACY-REL-", order)
       const completed = releaseStatus === "COMPLETED"
       const cancelled = releaseStatus === "CANCELLED"
@@ -134,6 +160,10 @@ async function main() {
       })
       count += 1
     }
+    await tx.customerOrderNumberCounter.update({
+      where: { key: "CUSTOMER_ORDER" },
+      data: { lastSequence: BigInt(startingSequence + count) },
+    })
     return count
   }, {
     isolationLevel: Prisma.TransactionIsolationLevel.Serializable,

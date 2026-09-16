@@ -94,7 +94,7 @@ export default async function CustomerOrderDetailsPage({
             <Link href="/customer-orders"><ArrowLeft className="mr-2 h-4 w-4" />Customer Orders</Link>
           </Button>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">{order.internalOrderNumber}</h1>
+            <h1 className="sr-only">{order.internalOrderNumber}</h1>
             <Badge variant={order.status === "PO_CHECK" ? "destructive" : "default"}>
               {label(order.status)}
             </Badge>

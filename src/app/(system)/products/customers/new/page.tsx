@@ -29,10 +29,7 @@ export default async function NewCustomerPage() {
             Customers
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight">Create Customer</h1>
-        <p className="text-sm text-muted-foreground">
-          Add a Customer account for Products, orders, and commercial defaults.
-        </p>
+        <h1 className="sr-only">Create Customer</h1>
       </div>
       <div className="max-w-5xl">
         <CustomerForm

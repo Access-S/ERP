@@ -14,9 +14,15 @@ export function formatCustomerOrderNumber(
   date: Date = new Date()
 ): string {
   if (sequence <= BigInt(0)) throw new RangeError("Customer Order sequence must be positive.")
-  const prefix = kind === "ORDER" ? "CO" : "COR"
+  if (kind === "ORDER") {
+    if (sequence > BigInt(99_999)) {
+      throw new RangeError("The five-digit Customer Order number range is exhausted.")
+    }
+    return sequence.toString().padStart(5, "0")
+  }
+
   const year = date.getUTCFullYear()
-  return `${prefix}-${year}-${sequence.toString().padStart(6, "0")}`
+  return `COR-${year}-${sequence.toString().padStart(6, "0")}`
 }
 
 export async function allocateCustomerOrderNumber(

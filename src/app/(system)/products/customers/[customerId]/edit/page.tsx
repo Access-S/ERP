@@ -54,10 +54,7 @@ export default async function EditCustomerPage({
             {customer.customer_code}
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight">Edit Customer</h1>
-        <p className="text-sm text-muted-foreground">
-          Update the master data for {customer.trading_name ?? customer.legal_name}.
-        </p>
+        <h1 className="sr-only">Edit Customer</h1>
       </div>
       <div className="max-w-5xl">
         <CustomerForm

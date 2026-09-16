@@ -46,10 +46,7 @@ export default async function AccessControlUsersPage() {
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">Users</h1>
-          <p className="text-sm text-muted-foreground">
-            Open a user to review and manage their combined role access.
-          </p>
+          <h1 className="sr-only">Users</h1>
         </div>
         {canInviteUsers && (
           <Button asChild>

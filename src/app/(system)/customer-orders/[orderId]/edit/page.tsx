@@ -84,10 +84,7 @@ export default async function EditCustomerOrderPage({
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Correct Customer PO</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Saving creates revision {release.revisionNumber + 1} and reruns every trusted server check.
-          </p>
+          <h1 className="sr-only">Correct Customer PO</h1>
         </div>
       </div>
       <StandardCustomerOrderForm

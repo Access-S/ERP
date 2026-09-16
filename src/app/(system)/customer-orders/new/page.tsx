@@ -28,10 +28,7 @@ export default async function NewCustomerOrderPage() {
           <Link href="/customer-orders"><ArrowLeft className="mr-2 h-4 w-4" />Customer Orders</Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">New Customer PO</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Choose whether the Customer sent a defined order or a value authority for future releases.
-          </p>
+          <h1 className="sr-only">New Customer PO</h1>
         </div>
       </div>
       <div className="grid max-w-4xl gap-5 md:grid-cols-2">

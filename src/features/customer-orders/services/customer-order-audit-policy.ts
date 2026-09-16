@@ -1,6 +1,7 @@
 export const CUSTOMER_ORDER_AUDIT_EVENT_TYPES = [
   "customer_order.created",
   "customer_order.legacy_imported",
+  "customer_order.internal_number_reassigned",
   "customer_order.activated",
   "customer_order.closed",
   "customer_order.cancelled",
@@ -30,6 +31,10 @@ const ALLOWED_METADATA_KEYS: Record<CustomerOrderAuditEventType, readonly string
   "customer_order.legacy_imported": [
     "legacyPurchaseOrderId",
     "legacyStatus",
+    "internalOrderNumber",
+  ],
+  "customer_order.internal_number_reassigned": [
+    "previousInternalOrderNumber",
     "internalOrderNumber",
   ],
   "customer_order.activated": ["previousStatus", "nextStatus"],

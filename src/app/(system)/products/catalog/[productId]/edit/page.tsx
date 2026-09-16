@@ -67,10 +67,7 @@ export default async function EditProductPage({
             {product.product_code}
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight">Edit Product</h1>
-        <p className="text-sm text-muted-foreground">
-          Update the master data for {product.product_code}.
-        </p>
+        <h1 className="sr-only">Edit Product</h1>
       </div>
       <div className="max-w-5xl">
         <ProductForm

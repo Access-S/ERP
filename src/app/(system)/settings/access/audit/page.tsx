@@ -4,7 +4,6 @@ import { after } from "next/server"
 import {
   ArrowLeft,
   Fingerprint,
-  History,
   KeyRound,
   Search,
   ShieldAlert,
@@ -199,13 +198,7 @@ export default async function SecurityAuditPage({
             Access Control
           </Link>
         </Button>
-        <div className="flex items-center gap-2">
-          <History className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">Security monitoring</h1>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Review prioritised authentication and access activity. Times are shown in Sydney time.
-        </p>
+        <h1 className="sr-only">Security monitoring</h1>
       </div>
 
       <section className="space-y-4" aria-labelledby="security-overview-heading">

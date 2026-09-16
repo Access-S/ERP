@@ -30,10 +30,7 @@ export default async function NewBlanketCustomerOrderPage() {
           <Link href="/customer-orders/new"><ArrowLeft className="mr-2 h-4 w-4" />Choose PO type</Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">New Blanket Customer PO</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Create the value envelope first; Product demand is recorded as separate releases.
-          </p>
+          <h1 className="sr-only">New Blanket Customer PO</h1>
         </div>
       </div>
       <BlanketCustomerOrderForm options={options} today={today} />

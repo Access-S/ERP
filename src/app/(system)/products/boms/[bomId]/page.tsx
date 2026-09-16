@@ -57,7 +57,7 @@ export default async function BomWorkspacePage({
           </Button>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight">{bom.product_code}</h1>
+              <h1 className="sr-only">{bom.product_code}</h1>
               <Badge variant={bom.status === "ACTIVE" ? "default" : "secondary"}>
                 {formatStatus(bom.status)}
               </Badge>

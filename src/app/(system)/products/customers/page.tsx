@@ -41,7 +41,7 @@ export default async function CustomersPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Customers</h1>
+          <h1 className="sr-only">Customers</h1>
         </div>
         {hasCustomerPermission(principal, "create") && (
           <Button asChild>

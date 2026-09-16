@@ -70,7 +70,7 @@ export default async function CustomerDetailsPage({
             </Link>
           </Button>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">
+            <h1 className="sr-only">
               {customer.trading_name ?? customer.legal_name}
             </h1>
             <Badge variant={customer.is_active ? "default" : "outline"}>

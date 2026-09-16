@@ -60,7 +60,7 @@ export default async function PartDetailsPage({
             </Link>
           </Button>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">{part.part_code}</h1>
+            <h1 className="sr-only">{part.part_code}</h1>
             <Badge variant={part.is_active ? "secondary" : "outline"}>
               {part.is_active ? "Active" : "Inactive"}
             </Badge>

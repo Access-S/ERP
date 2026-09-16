@@ -34,10 +34,7 @@ export default async function NewProductPage() {
             Product Catalog
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight">Create Product</h1>
-        <p className="text-sm text-muted-foreground">
-          Add a finished good and begin its first draft BOM.
-        </p>
+        <h1 className="sr-only">Create Product</h1>
       </div>
       <div className="max-w-5xl">
         <ProductForm

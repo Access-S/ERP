@@ -36,10 +36,7 @@ export default async function ProductCatalogPage() {
               Products &amp; BOM
             </Link>
           </Button>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight">Product Catalog</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Finished goods and customer SKUs, with their active BOM configuration.
-          </p>
+          <h1 className="sr-only">Product Catalog</h1>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" asChild>

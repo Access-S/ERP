@@ -74,7 +74,7 @@ export default async function ProductDetailsPage({
           </Button>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight">{product.product_code}</h1>
+              <h1 className="sr-only">{product.product_code}</h1>
               <Badge variant={product.is_active ? "default" : "outline"}>
                 {product.is_active ? "Active" : "Inactive"}
               </Badge>

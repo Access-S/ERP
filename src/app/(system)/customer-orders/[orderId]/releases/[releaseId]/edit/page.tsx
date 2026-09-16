@@ -78,10 +78,7 @@ export default async function EditBlanketReleasePage({
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Correct Blanket release</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Saving creates revision {release.revisionNumber + 1}, reloads current Product data, and checks available Blanket value again.
-          </p>
+          <h1 className="sr-only">Correct Blanket release</h1>
         </div>
       </div>
       <StandardCustomerOrderForm

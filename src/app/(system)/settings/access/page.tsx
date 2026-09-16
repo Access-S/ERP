@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { History, KeyRound, ShieldCheck, Users } from "lucide-react"
+import { History, KeyRound, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { PermissionDenied } from "@/features/auth/components/permission-denied"
@@ -25,15 +25,7 @@ export default async function AccessControlPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="space-y-1">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">Access Control</h1>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Manage who can use the ERP and understand the access granted by each role.
-        </p>
-      </div>
+      <h1 className="sr-only">Access Control</h1>
 
       {overview && <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card>

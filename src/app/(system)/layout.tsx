@@ -37,13 +37,13 @@ export default async function AppLayout({
         canViewCustomerOrders={canViewCustomerOrders}
         accessLabel={accessLabel}
       />
-      <SidebarInset>
+      <SidebarInset className="min-w-0">
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <AppBreadcrumb />
         </header>
-        <main className="flex-1 p-6">
+        <main className="min-w-0 flex-1 p-6">
           {children}
         </main>
       </SidebarInset>

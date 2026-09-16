@@ -39,10 +39,7 @@ export default async function EditPartPage({
             {part.part_code}
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight">Edit Part</h1>
-        <p className="text-sm text-muted-foreground">
-          Update the master data for {part.part_code}.
-        </p>
+        <h1 className="sr-only">Edit Part</h1>
       </div>
       <div className="max-w-4xl">
         <PartForm

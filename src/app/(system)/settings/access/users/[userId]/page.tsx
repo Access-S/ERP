@@ -78,7 +78,7 @@ export default async function AccessControlUserPage({
           </Button>
           <div className="flex flex-wrap items-center gap-2">
             <UserRound className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight">{user.name}</h1>
+            <h1 className="sr-only">{user.name}</h1>
             <Badge variant={user.status === "ACTIVE" ? "default" : "outline"}>
               {user.status}
             </Badge>

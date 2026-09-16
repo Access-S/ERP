@@ -30,10 +30,7 @@ export default async function NewStandardCustomerOrderPage() {
           <Link href="/customer-orders/new"><ArrowLeft className="mr-2 h-4 w-4" />Choose PO type</Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">New Standard Customer PO</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            The system validates every line and the complete PO before releasing it to planning.
-          </p>
+          <h1 className="sr-only">New Standard Customer PO</h1>
         </div>
       </div>
       <StandardCustomerOrderForm options={options} today={today} />

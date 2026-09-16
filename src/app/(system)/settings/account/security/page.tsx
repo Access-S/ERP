@@ -1,4 +1,4 @@
-import { KeyRound, ShieldCheck } from "lucide-react"
+import { KeyRound } from "lucide-react"
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChangePasswordForm } from "@/features/password-management/components/change-password-form"
@@ -12,15 +12,7 @@ export default async function AccountSecurityPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">Account security</h1>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Manage your own sign-in credentials. Passwords are never visible to administrators.
-        </p>
-      </div>
+      <h1 className="sr-only">Account security</h1>
 
       <Card>
         <CardHeader>

@@ -41,12 +41,9 @@ export default async function NewCustomRolePage({
             Roles
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight">
+        <h1 className="sr-only">
           {sourceRole ? "Duplicate role" : "New custom role"}
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Build a company-specific role from the controlled permission catalogue.
-        </p>
       </div>
 
       <CustomRoleForm

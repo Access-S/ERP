@@ -31,10 +31,10 @@ export const customerOrderListItemSchema = z.object({
   customerName: z.string(),
   currency: z.string(),
   receivedDate: z.string().datetime(),
-  releaseCount: z.number().int().nonnegative(),
-  latestReleaseNumber: z.string().nullable(),
-  latestReleaseStatus: customerOrderReleaseStatusSchema.nullable(),
-  expectedNetTotal: z.number().nullable(),
+  primarySkuCode: z.string().nullable(),
+  primarySkuDescription: z.string().nullable(),
+  additionalSkuCount: z.number().int().nonnegative(),
+  poAmount: z.number().nullable(),
 })
 
 const decimalPattern = /^\d{1,16}(?:\.\d{1,6})?$/

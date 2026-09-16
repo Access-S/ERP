@@ -704,6 +704,25 @@ export async function getCustomerOrderStats() {
 
 function mapCustomerOrderListItem(order: Awaited<ReturnType<typeof loadCustomerOrderList>>[number]): CustomerOrderListItem {
   const latestRelease = order.releases[0] ?? null
+  const uniqueSkus = new Map<string, { code: string; description: string | null }>()
+  for (const release of order.releases) {
+    for (const line of release.lines) {
+      if (!uniqueSkus.has(line.productCodeSnapshot)) {
+        uniqueSkus.set(line.productCodeSnapshot, {
+          code: line.productCodeSnapshot,
+          description: line.productDescriptionSnapshot,
+        })
+      }
+    }
+  }
+  const [primarySku] = uniqueSkus.values()
+  const blanketTopUps = order.amendments.reduce(
+    (total, amendment) => total.plus(amendment.valueDelta),
+    new Prisma.Decimal(0)
+  )
+  const poAmount = order.type === "BLANKET"
+    ? order.originalAuthorizedValue.plus(blanketTopUps)
+    : latestRelease?.customerNetTotal ?? null
   return {
     id: order.id,
     internalOrderNumber: order.internalOrderNumber,
@@ -714,12 +733,10 @@ function mapCustomerOrderListItem(order: Awaited<ReturnType<typeof loadCustomerO
     customerName: order.customer.trading_name ?? order.customer.legal_name,
     currency: order.currency,
     receivedDate: order.receivedDate.toISOString(),
-    releaseCount: order._count.releases,
-    latestReleaseNumber: latestRelease?.internalReleaseNumber ?? null,
-    latestReleaseStatus: latestRelease?.status ?? null,
-    expectedNetTotal: latestRelease?.expectedNetTotal === null || !latestRelease
-      ? null
-      : Number(latestRelease.expectedNetTotal),
+    primarySkuCode: primarySku?.code ?? null,
+    primarySkuDescription: primarySku?.description ?? null,
+    additionalSkuCount: Math.max(0, uniqueSkus.size - 1),
+    poAmount: poAmount === null ? null : Number(poAmount),
   }
 }
 
@@ -728,18 +745,20 @@ async function loadCustomerOrderList() {
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     include: {
       customer: { select: { customer_code: true, legal_name: true, trading_name: true } },
+      amendments: { select: { valueDelta: true } },
       releases: {
         orderBy: { createdAt: "desc" },
-        take: 1,
         select: {
-          id: true,
-          internalReleaseNumber: true,
-          status: true,
           customerNetTotal: true,
-          expectedNetTotal: true,
+          lines: {
+            orderBy: { position: "asc" },
+            select: {
+              productCodeSnapshot: true,
+              productDescriptionSnapshot: true,
+            },
+          },
         },
       },
-      _count: { select: { releases: true } },
     },
   })
   return orders
@@ -822,8 +841,9 @@ function matchesCustomerOrderFilter(order: CustomerOrderListItem, filter: Filter
     case "customerName": return matchesText(order.customerName, filter)
     case "type": return matchesFacet(order.type, filter)
     case "receivedDate": return matchesDate(order.receivedDate, filter)
-    case "latestReleaseNumber": return matchesText(order.latestReleaseNumber, filter)
-    case "expectedNetTotal": return matchesNumber(order.expectedNetTotal, filter)
+    case "primarySkuCode": return matchesText(order.primarySkuCode, filter)
+    case "primarySkuDescription": return matchesText(order.primarySkuDescription, filter)
+    case "poAmount": return matchesNumber(order.poAmount, filter)
     case "status": return matchesFacet(order.status, filter)
     default: return true
   }
@@ -835,8 +855,9 @@ const CUSTOMER_ORDER_SORT_COLUMNS = new Set<keyof CustomerOrderListItem>([
   "customerName",
   "type",
   "receivedDate",
-  "latestReleaseNumber",
-  "expectedNetTotal",
+  "primarySkuCode",
+  "primarySkuDescription",
+  "poAmount",
   "status",
 ])
 
@@ -859,7 +880,8 @@ export async function getCustomerOrdersPage(
       order.customerPoNumber,
       order.customerCode,
       order.customerName,
-      order.latestReleaseNumber,
+      order.primarySkuCode,
+      order.primarySkuDescription,
     ].some((value) => value?.toLocaleLowerCase().includes(search))
     if (!matchesSearch || params.filters.length === 0) return matchesSearch
     const results = params.filters.map((filter) => matchesCustomerOrderFilter(order, filter))

@@ -56,7 +56,7 @@ export default async function AccessControlRolePage({
           </Button>
           <div className="flex flex-wrap items-center gap-2">
             <LockKeyhole className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight">{role.name}</h1>
+            <h1 className="sr-only">{role.name}</h1>
             <Badge variant="secondary">{role.isSystem ? "Standard" : "Custom"}</Badge>
             <Badge variant={role.isActive ? "default" : "outline"}>
               {role.isActive ? "Active" : "Archived"}

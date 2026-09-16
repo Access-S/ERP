@@ -54,10 +54,7 @@ export default async function NewBlanketReleasePage({
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">New Blanket release</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Customer PO {order.customerPoNumber}. Only a valid release commits Blanket value.
-          </p>
+          <h1 className="sr-only">New Blanket release</h1>
         </div>
       </div>
       <StandardCustomerOrderForm
