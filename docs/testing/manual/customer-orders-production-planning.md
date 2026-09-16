@@ -214,6 +214,7 @@ actions make no Customer Order workflow or data changes.
 | Date | Environment | Tester | Scenarios | Result | Defect or notes |
 | --- | --- | --- | --- | --- | --- |
 | 2026-09-16 | Local Next.js + Supabase | Codex browser UAT | COPP-01, COPP-02, COPP-05, COPP-16, COPP-19 | Pass | Created Standard PO `00093`, verified Ready for Planning, forced an incomplete-shipper PO Check, corrected it, and confirmed revisions 1-4. The UAT PO was then cancelled so it cannot enter planning. Domain, authorization, audit, numbering, database rollback, and authenticated route suites also passed. |
+| 2026-09-16 | Local Next.js + Supabase | Codex browser UAT | COPP-07, COPP-08, COPP-09 | Pass | Created Blanket PO `00094` with AUD 5,000 authority. Release `UAT-REL-002` exceeded the AUD 2,858.14 available balance, remained at PO Check, and reserved no value. An append-only AUD 2,000 top-up preserved the original authority; revalidation produced revision 2 and Ready for Planning. Cancelling both UAT releases preserved their revision history, restored committed value to AUD 0.00, and returned available authority to AUD 7,000.00. No ready UAT demand remains. |
 |  |  |  | COPP-01 to COPP-12, COPP-16 to COPP-20 | Ready | Standard, Blanket, legacy, table-navigation, numbering, PO Amount, and ERP table workflows |
 |  |  |  | COPP-13 to COPP-15 | Not ready | Production Planning implementation pending |
 
